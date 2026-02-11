@@ -9,6 +9,14 @@
 - Do not add dependencies, change Vite config, or do large refactors without approval.
 - Do not run `npq-hero`/`npm` commands without explicit permission.
 
+## Layout Decision (2026-02-11)
+- Primary layout should be vertical:
+  - Dice pool panel above the dice tray.
+  - Dice tray as the dominant visual region.
+- Treat tray size as a priority UX requirement for usability:
+  - Prefer giving the tray most of the available iframe height.
+  - Keep controls compact so they do not crowd the tray.
+
 ## Command Setup (Run First, When Authorized)
 Use `npq-hero` first. If not found, resolve the binary via `asdf`.
 
@@ -41,6 +49,8 @@ Goal: Create a consistent, minimal React/Vite app shell with dice control UI and
 Scope:
 - Create/confirm base app files (`src/App.jsx`, `src/main.jsx`, `src/*.css`).
 - Build a responsive single-page iframe-friendly layout.
+- Use a top-to-bottom layout with controls above tray.
+- Give the tray a larger footprint than the control panel.
 - Add controls for Attribute and Skill dice count.
 - Enforce minimum/maximum UI constraints:
   - Attribute dice minimum is `1`.
@@ -51,6 +61,7 @@ Done when:
 - App renders correctly on desktop/mobile.
 - No runtime errors.
 - Controls prevent invalid values.
+- Controls are clearly above the tray and tray area is visually dominant.
 
 Commands (when authorized):
 ```bash
@@ -162,15 +173,17 @@ Approval gate:
 - Confirm dependency choice before adding packages or changing Vite config.
 
 Scope:
-- Add tray viewport suitable for iframe usage.
+- Add tray viewport suitable for iframe usage with increased vertical space.
 - Map logical dice outcomes to 3D dice visuals (green/yellow/red).
 - Ensure push only re-animates dice eligible for reroll.
 - Preserve accessibility with a textual results summary alongside visuals.
+- Preserve the vertical hierarchy: controls first, tray second, tray larger.
 
 Done when:
 - Roll and push outcomes in 3D match core logic exactly.
 - App remains usable on smaller viewport sizes.
 - Existing unit tests remain green (logic unaffected by presentation layer changes).
+- Tray size is sufficient for clear 3D readability in extension-like iframe sizes.
 
 Commands (when authorized):
 ```bash
@@ -211,6 +224,7 @@ Scope:
 - Audit for null/undefined safety across render paths and state transitions.
 - Verify keyboard and screen-reader basics for controls/actions.
 - Validate responsive behavior for iframe-sized layouts.
+- Validate final vertical layout priorities (compact controls, larger tray) across breakpoints.
 - Clean up UI copy and edge-case states.
 - Update `README.md` with run instructions and feature summary.
 
