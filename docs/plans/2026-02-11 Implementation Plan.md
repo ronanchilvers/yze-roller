@@ -21,6 +21,10 @@
 - 2026-02-11: Completed initial layout checkpoint in app shell:
   - Controls panel is positioned above the tray.
   - Tray footprint was increased to be visually dominant across breakpoints.
+- 2026-02-11: Completed initial Phase 6 checkpoint:
+  - Added Three.js tray rendering and Cannon-ES dice physics simulation.
+  - Push action now visually re-animates only rerolled dice.
+  - Kept textual result summary and readout for accessibility.
 
 ## Command Setup (Run First, When Authorized)
 Use `npq-hero` first. If not found, resolve the binary via `asdf`.

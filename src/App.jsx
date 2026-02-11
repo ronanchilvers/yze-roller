@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { MAX_DICE, normalizeDiceCount, pushPool, rollPool } from "./lib/dice";
 import {
@@ -19,6 +19,7 @@ import {
 
 const MIN_ATTRIBUTE_DICE = 1;
 const MIN_SKILL_DICE = 0;
+const DiceTray3D = lazy(() => import("./components/DiceTray3D"));
 
 function App() {
   const [storage] = useState(() => getBrowserStorage());
@@ -177,7 +178,12 @@ function App() {
 
           <section className="panel tray-panel" aria-labelledby="tray-label">
             <h2 id="tray-label">Dice Tray</h2>
-            <div className="tray-placeholder" role="status" aria-live="polite">
+            <div className="tray-stage" aria-label="3D dice tray">
+              <Suspense fallback={<div className="tray-loading">Loading 3D tray…</div>}>
+                <DiceTray3D roll={currentRoll} />
+              </Suspense>
+            </div>
+            <div className="tray-results" role="status" aria-live="polite">
               {currentRoll ? (
                 <>
                   <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
