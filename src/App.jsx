@@ -151,7 +151,18 @@ function App() {
 
     if (resolution.action === "push") {
       nextState = transitionWithPush(currentSession, resolvedRoll, { rolledAt });
-      setStrainPoints((current) => incrementStrainPointsByBanes(current, nextState.currentRoll));
+      const previousBanes = Number(currentSession.currentRoll?.outcomes?.banes ?? 0);
+      const currentBanes = Number(nextState.currentRoll?.outcomes?.banes ?? 0);
+      const firstPushFromRoll = currentSession.currentRoll?.action !== "push";
+      const baneIncrease = firstPushFromRoll
+        ? Math.max(0, currentBanes)
+        : Math.max(0, currentBanes - previousBanes);
+
+      setStrainPoints((current) => incrementStrainPointsByBanes(current, {
+        outcomes: {
+          banes: baneIncrease,
+        },
+      }));
     } else {
       nextState = transitionWithRoll(currentSession, resolvedRoll, { rolledAt });
     }
@@ -162,7 +173,6 @@ function App() {
   }, []);
 
   const canPush = canPushCurrentRoll({ currentRoll, previousRoll })
-    && currentRoll?.action !== "push"
     && !isRolling;
   const activeDice = rollRequest?.dice ?? currentRoll?.dice ?? [];
 
@@ -254,8 +264,6 @@ function App() {
                   <p>
                     {canPush
                       ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
-                      : currentRoll.action === "push"
-                        ? "Result already pushed."
                       : "No dice can be pushed."}
                   </p>
                   <ul className="dice-readout">

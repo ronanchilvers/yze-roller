@@ -189,6 +189,7 @@ const freezeBodyInPlace = (body) => {
 const clampBodyInside = (body, bounds, allowBounce = true) => {
   const xLimit = Math.max(0.8, bounds.innerHalfWidth - DIE_SIZE * 0.5);
   const zLimit = Math.max(0.8, bounds.innerHalfDepth - DIE_SIZE * 0.5);
+  const minY = DIE_SIZE * 0.5 + 0.02;
 
   if (body.position.x > xLimit) {
     body.position.x = xLimit;
@@ -221,6 +222,14 @@ const clampBodyInside = (body, bounds, allowBounce = true) => {
       body.velocity.z *= -0.35;
     }
   }
+
+  if (body.position.y < minY) {
+    body.position.y = minY;
+
+    if (allowBounce && body.velocity.y < 0) {
+      body.velocity.y *= -0.15;
+    }
+  }
 };
 
 const spawnBodyInViewport = (body, bounds) => {
@@ -242,26 +251,26 @@ const launchRollingBody = (body, bounds, isPushReroll) => {
   if (isPushReroll) {
     body.position.set(
       body.position.x + randomBetween(-0.32, 0.32),
-      Math.max(body.position.y + 0.34, 1.0),
+      Math.max(body.position.y + 0.9, 1.8),
       body.position.z + randomBetween(-0.32, 0.32),
     );
   } else {
     body.position.set(
       randomBetween(-xSpread, xSpread),
-      randomBetween(2.0, 3.3),
+      randomBetween(4.6, 7.2),
       randomBetween(-zSpread, zSpread),
     );
   }
 
   body.velocity.set(
-    randomBetween(-4.7, 4.7),
-    randomBetween(2.2, 4.9),
-    randomBetween(-4.7, 4.7),
+    randomBetween(-5.8, 5.8),
+    randomBetween(3.4, 6.6),
+    randomBetween(-5.8, 5.8),
   );
   body.angularVelocity.set(
-    randomBetween(-18, 18),
-    randomBetween(-18, 18),
-    randomBetween(-18, 18),
+    randomBetween(-23, 23),
+    randomBetween(-23, 23),
+    randomBetween(-23, 23),
   );
 
   body.wakeUp();
@@ -603,7 +612,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[boundsRef.current.visibleHalfWidth * 2, boundsRef.current.visibleHalfDepth * 2]} />
-        <shadowMaterial opacity={0.18} transparent />
+        <meshStandardMaterial color="#dce8dc" roughness={0.94} metalness={0.02} />
       </mesh>
 
       {diceList.map((die, index) => {
