@@ -1,4 +1,4 @@
-# Fate Cards — Agents Instructions
+# Year Zero Dice Roller — Agents Instructions
 
 
 ## Commands (run early when relevant)
