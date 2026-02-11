@@ -1,19 +1,9 @@
 import { useMemo, useState } from "react";
 import "./App.css";
+import { MAX_DICE, normalizeDiceCount } from "./lib/dice";
 
 const MIN_ATTRIBUTE_DICE = 1;
 const MIN_SKILL_DICE = 0;
-const MAX_DICE = 20;
-
-const clampDice = (value, min) => {
-  const parsed = Number.parseInt(value, 10);
-
-  if (Number.isNaN(parsed)) {
-    return min;
-  }
-
-  return Math.max(min, Math.min(MAX_DICE, parsed));
-};
 
 function App() {
   const [attributeDice, setAttributeDice] = useState(2);
@@ -26,11 +16,23 @@ function App() {
   );
 
   const onAttributeChange = (event) => {
-    setAttributeDice(clampDice(event.target.value, MIN_ATTRIBUTE_DICE));
+    setAttributeDice(
+      normalizeDiceCount(event.target.value, {
+        min: MIN_ATTRIBUTE_DICE,
+        max: MAX_DICE,
+        fallback: MIN_ATTRIBUTE_DICE,
+      }),
+    );
   };
 
   const onSkillChange = (event) => {
-    setSkillDice(clampDice(event.target.value, MIN_SKILL_DICE));
+    setSkillDice(
+      normalizeDiceCount(event.target.value, {
+        min: MIN_SKILL_DICE,
+        max: MAX_DICE,
+        fallback: MIN_SKILL_DICE,
+      }),
+    );
   };
 
   return (
