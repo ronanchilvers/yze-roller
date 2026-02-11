@@ -1,14 +1,32 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
-import { MAX_DICE, normalizeDiceCount } from "./lib/dice";
+import { MAX_DICE, normalizeDiceCount, pushPool, rollPool } from "./lib/dice";
+import {
+  getBrowserStorage,
+  loadPoolSelection,
+  savePoolSelection,
+} from "./lib/pool-persistence";
+import {
+  canPushCurrentRoll,
+  transitionWithPush,
+  transitionWithRoll,
+} from "./lib/roll-session";
 
 const MIN_ATTRIBUTE_DICE = 1;
 const MIN_SKILL_DICE = 0;
 
 function App() {
-  const [attributeDice, setAttributeDice] = useState(2);
-  const [skillDice, setSkillDice] = useState(1);
+  const [storage] = useState(() => getBrowserStorage());
+  const [initialPoolSelection] = useState(() => loadPoolSelection(storage));
+  const [attributeDice, setAttributeDice] = useState(
+    initialPoolSelection.attributeDice,
+  );
+  const [skillDice, setSkillDice] = useState(
+    initialPoolSelection.skillDice,
+  );
   const [strainPoints] = useState(0);
+  const [currentRoll, setCurrentRoll] = useState(null);
+  const [previousRoll, setPreviousRoll] = useState(null);
 
   const totalDice = useMemo(
     () => attributeDice + skillDice + strainPoints,
@@ -34,6 +52,56 @@ function App() {
       }),
     );
   };
+
+  useEffect(() => {
+    savePoolSelection(storage, {
+      attributeDice,
+      skillDice,
+    });
+  }, [storage, attributeDice, skillDice]);
+
+  const onRoll = () => {
+    const rolled = rollPool({
+      attributeDice,
+      skillDice,
+      strainDice: strainPoints,
+    });
+    const nextState = transitionWithRoll(
+      { currentRoll, previousRoll },
+      rolled,
+      { rolledAt: Date.now() },
+    );
+
+    setCurrentRoll(nextState.currentRoll);
+    setPreviousRoll(nextState.previousRoll);
+  };
+
+  const onPush = () => {
+    if (!canPush) {
+      return;
+    }
+
+    const pushed = pushPool(currentRoll?.dice);
+    const nextState = transitionWithPush(
+      { currentRoll, previousRoll },
+      pushed,
+      { rolledAt: Date.now() },
+    );
+
+    setCurrentRoll(nextState.currentRoll);
+    setPreviousRoll(nextState.previousRoll);
+  };
+
+  const renderRollSummary = (roll) => {
+    if (!roll) {
+      return "No results yet";
+    }
+
+    const withStrain = roll.outcomes.hasStrain ? " (with Strain)" : "";
+    return `${roll.outcomes.successes} successes, ${roll.outcomes.banes} banes${withStrain}`;
+  };
+
+  const canPush = canPushCurrentRoll({ currentRoll, previousRoll });
 
   return (
     <main className="app-shell">
@@ -92,8 +160,10 @@ function App() {
             </div>
 
             <div className="actions">
-              <button type="button">Roll Dice</button>
-              <button type="button" disabled>
+              <button type="button" onClick={onRoll}>
+                Roll Dice
+              </button>
+              <button type="button" onClick={onPush} disabled={!canPush}>
                 Push (After Roll)
               </button>
             </div>
@@ -102,9 +172,32 @@ function App() {
           <section className="panel tray-panel" aria-labelledby="tray-label">
             <h2 id="tray-label">Dice Tray</h2>
             <div className="tray-placeholder" role="status" aria-live="polite">
-              <p>3D dice tray will render here.</p>
-              <p>Ready for Attribute, Skill, and Strain dice.</p>
+              {currentRoll ? (
+                <>
+                  <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
+                  <p>
+                    {currentRoll.canPush
+                      ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
+                      : "No dice can be pushed."}
+                  </p>
+                  <ul className="dice-readout">
+                    {currentRoll.dice.map((die) => (
+                      <li key={die.id}>
+                        <span>{die.type}</span>
+                        <strong>{die.face ?? "-"}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <>
+                  <p className="tray-lead">Roll the dice to see results.</p>
+                  <p>3D dice tray will render here.</p>
+                  <p>Ready for Attribute, Skill, and Strain dice.</p>
+                </>
+              )}
             </div>
+            {previousRoll ? <p className="previous-roll">Previous: {renderRollSummary(previousRoll)}</p> : null}
           </section>
         </div>
       </section>
