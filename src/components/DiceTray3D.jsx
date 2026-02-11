@@ -6,11 +6,11 @@ import { DICE_TYPE } from "../lib/dice.js";
 import { getDieColor } from "../lib/dice-visuals.js";
 
 const DIE_SIZE = 0.68;
-const FLOOR_THICKNESS = 0.22;
-const WALL_THICKNESS = 0.2;
-const WALL_HEIGHT = 1.5;
-const MIN_SETTLE_MS = 700;
-const MAX_SETTLE_MS = 2600;
+const FLOOR_THICKNESS = 0.24;
+const WALL_THICKNESS = 0.24;
+const WALL_HEIGHT = 3.2;
+const MIN_SETTLE_MS = 720;
+const MAX_SETTLE_MS = 2800;
 
 const FACE_ORDER_BY_SIDE = [2, 5, 1, 6, 3, 4];
 const FACE_NORMALS = [
@@ -60,7 +60,7 @@ const createFaceTexture = (faceValue, dieColor) => {
   context.lineWidth = 12;
   context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
 
-  context.fillStyle = "rgba(255, 255, 255, 0.82)";
+  context.fillStyle = "rgba(255, 255, 255, 0.84)";
   context.fillRect(32, 32, canvas.width - 64, canvas.height - 64);
 
   context.fillStyle = "#1d2528";
@@ -140,55 +140,29 @@ const quaternionForFaceValue = (faceValue, id) => {
   );
 };
 
-const layoutTargets = (count, bounds) => {
-  if (count <= 0) {
-    return [];
-  }
-
-  const trayWidth = bounds.halfWidth * 2 - 0.9;
-  const trayDepth = bounds.halfDepth * 2 - 0.9;
-  const columns = Math.max(3, Math.ceil(Math.sqrt(count * 1.3)));
-  const rows = Math.ceil(count / columns);
-  const xSpacing = Math.max(0.75, trayWidth / Math.max(1, columns));
-  const zSpacing = Math.max(0.75, trayDepth / Math.max(1, rows));
-  const startX = -((columns - 1) * xSpacing) / 2;
-  const startZ = -((rows - 1) * zSpacing) / 2;
-  const targets = [];
-
-  for (let index = 0; index < count; index += 1) {
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-
-    targets.push({
-      x: startX + column * xSpacing,
-      y: DIE_SIZE * 0.5,
-      z: startZ + row * zSpacing,
-    });
-  }
-
-  return targets;
-};
-
 const calculateBounds = (camera, size) => {
-  if (!camera || !size.height) {
-    return { halfWidth: 4.6, halfDepth: 3.1 };
-  }
+  let visibleHalfWidth = 4.6;
+  let visibleHalfDepth = 3.1;
 
-  if (camera.isPerspectiveCamera) {
+  if (camera?.isOrthographicCamera) {
+    visibleHalfWidth = Math.max(2.8, (camera.right - camera.left) * 0.5);
+    visibleHalfDepth = Math.max(2.2, (camera.top - camera.bottom) * 0.5);
+  } else if (camera?.isPerspectiveCamera && size.height) {
     const distance = Math.abs(camera.position.y);
     const verticalFov = THREE.MathUtils.degToRad(camera.fov);
-    const depth = 2 * Math.tan(verticalFov * 0.5) * distance;
-    const width = depth * (size.width / size.height);
-
-    return {
-      halfWidth: Math.max(3.6, width * 0.48),
-      halfDepth: Math.max(2.4, depth * 0.48),
-    };
+    const visibleDepth = 2 * Math.tan(verticalFov * 0.5) * distance;
+    const visibleWidth = visibleDepth * (size.width / size.height);
+    visibleHalfWidth = Math.max(2.8, visibleWidth * 0.48);
+    visibleHalfDepth = Math.max(2.2, visibleDepth * 0.48);
   }
 
+  const innerMargin = DIE_SIZE * 0.74 + WALL_THICKNESS;
+
   return {
-    halfWidth: Math.max(3.6, (camera.right - camera.left) * 0.5),
-    halfDepth: Math.max(2.4, (camera.top - camera.bottom) * 0.5),
+    visibleHalfWidth,
+    visibleHalfDepth,
+    innerHalfWidth: Math.max(1.4, visibleHalfWidth - innerMargin),
+    innerHalfDepth: Math.max(1.2, visibleHalfDepth - innerMargin),
   };
 };
 
@@ -202,10 +176,100 @@ const createStaticBox = (halfExtents, position) => {
   return body;
 };
 
+const freezeBodyInPlace = (body) => {
+  body.type = CANNON.Body.KINEMATIC;
+  body.mass = 0;
+  body.updateMassProperties();
+  body.velocity.set(0, 0, 0);
+  body.angularVelocity.set(0, 0, 0);
+  body.sleep();
+};
+
+const clampBodyInside = (body, bounds, allowBounce = true) => {
+  const xLimit = Math.max(0.8, bounds.innerHalfWidth - DIE_SIZE * 0.5);
+  const zLimit = Math.max(0.8, bounds.innerHalfDepth - DIE_SIZE * 0.5);
+
+  if (body.position.x > xLimit) {
+    body.position.x = xLimit;
+
+    if (allowBounce && body.velocity.x > 0) {
+      body.velocity.x *= -0.35;
+    }
+  }
+
+  if (body.position.x < -xLimit) {
+    body.position.x = -xLimit;
+
+    if (allowBounce && body.velocity.x < 0) {
+      body.velocity.x *= -0.35;
+    }
+  }
+
+  if (body.position.z > zLimit) {
+    body.position.z = zLimit;
+
+    if (allowBounce && body.velocity.z > 0) {
+      body.velocity.z *= -0.35;
+    }
+  }
+
+  if (body.position.z < -zLimit) {
+    body.position.z = -zLimit;
+
+    if (allowBounce && body.velocity.z < 0) {
+      body.velocity.z *= -0.35;
+    }
+  }
+};
+
+const spawnBodyInViewport = (body, bounds) => {
+  body.position.set(
+    randomBetween(-bounds.innerHalfWidth * 0.44, bounds.innerHalfWidth * 0.44),
+    DIE_SIZE * 0.5,
+    randomBetween(-bounds.innerHalfDepth * 0.44, bounds.innerHalfDepth * 0.44),
+  );
+};
+
+const launchRollingBody = (body, bounds, isPushReroll) => {
+  body.type = CANNON.Body.DYNAMIC;
+  body.mass = 1;
+  body.updateMassProperties();
+
+  const xSpread = bounds.innerHalfWidth * (isPushReroll ? 0.32 : 0.58);
+  const zSpread = bounds.innerHalfDepth * (isPushReroll ? 0.32 : 0.58);
+
+  if (isPushReroll) {
+    body.position.set(
+      body.position.x + randomBetween(-0.32, 0.32),
+      Math.max(body.position.y + 0.34, 1.0),
+      body.position.z + randomBetween(-0.32, 0.32),
+    );
+  } else {
+    body.position.set(
+      randomBetween(-xSpread, xSpread),
+      randomBetween(2.0, 3.3),
+      randomBetween(-zSpread, zSpread),
+    );
+  }
+
+  body.velocity.set(
+    randomBetween(-4.7, 4.7),
+    randomBetween(2.2, 4.9),
+    randomBetween(-4.7, 4.7),
+  );
+  body.angularVelocity.set(
+    randomBetween(-18, 18),
+    randomBetween(-18, 18),
+    randomBetween(-18, 18),
+  );
+
+  body.wakeUp();
+};
+
 const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const { camera, size } = useThree();
   const worldRef = useRef(null);
-  const boundsRef = useRef({ halfWidth: 4.6, halfDepth: 3.1 });
+  const boundsRef = useRef(calculateBounds(camera, size));
   const bodiesRef = useRef(new Map());
   const groupRefs = useRef(new Map());
   const staticBodiesRef = useRef([]);
@@ -278,80 +342,35 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     staticBodiesRef.current = [];
 
     const floor = createStaticBox(
-      new CANNON.Vec3(bounds.halfWidth, FLOOR_THICKNESS, bounds.halfDepth),
+      new CANNON.Vec3(bounds.innerHalfWidth + WALL_THICKNESS, FLOOR_THICKNESS, bounds.innerHalfDepth + WALL_THICKNESS),
       { x: 0, y: -FLOOR_THICKNESS, z: 0 },
     );
     const leftWall = createStaticBox(
-      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, bounds.halfDepth),
-      { x: -bounds.halfWidth - WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
+      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, bounds.innerHalfDepth + WALL_THICKNESS),
+      { x: -bounds.innerHalfWidth - WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
     );
     const rightWall = createStaticBox(
-      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, bounds.halfDepth),
-      { x: bounds.halfWidth + WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
+      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, bounds.innerHalfDepth + WALL_THICKNESS),
+      { x: bounds.innerHalfWidth + WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
     );
     const topWall = createStaticBox(
-      new CANNON.Vec3(bounds.halfWidth + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
-      { x: 0, y: WALL_HEIGHT / 2, z: -bounds.halfDepth - WALL_THICKNESS / 2 },
+      new CANNON.Vec3(bounds.innerHalfWidth + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
+      { x: 0, y: WALL_HEIGHT / 2, z: -bounds.innerHalfDepth - WALL_THICKNESS / 2 },
     );
     const bottomWall = createStaticBox(
-      new CANNON.Vec3(bounds.halfWidth + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
-      { x: 0, y: WALL_HEIGHT / 2, z: bounds.halfDepth + WALL_THICKNESS / 2 },
+      new CANNON.Vec3(bounds.innerHalfWidth + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
+      { x: 0, y: WALL_HEIGHT / 2, z: bounds.innerHalfDepth + WALL_THICKNESS / 2 },
     );
 
     for (const staticBody of [floor, leftWall, rightWall, topWall, bottomWall]) {
       world.addBody(staticBody);
       staticBodiesRef.current.push(staticBody);
     }
-  }, [camera, size.width, size.height]);
 
-  const lockBodyToTarget = (bodyState, target, faceValue, id) => {
-    const body = bodyState.body;
-    body.type = CANNON.Body.KINEMATIC;
-    body.mass = 0;
-    body.updateMassProperties();
-    body.velocity.set(0, 0, 0);
-    body.angularVelocity.set(0, 0, 0);
-    body.position.set(target.x, target.y, target.z);
-    body.quaternion.copy(quaternionForFaceValue(faceValue, id));
-    body.sleep();
-  };
-
-  const launchRollingBody = (bodyState, bounds, isPushReroll) => {
-    const body = bodyState.body;
-    body.type = CANNON.Body.DYNAMIC;
-    body.mass = 1;
-    body.updateMassProperties();
-
-    const xSpread = bounds.halfWidth * (isPushReroll ? 0.26 : 0.52);
-    const zSpread = bounds.halfDepth * (isPushReroll ? 0.26 : 0.52);
-
-    if (isPushReroll) {
-      body.position.set(
-        body.position.x + randomBetween(-0.35, 0.35),
-        Math.max(body.position.y + 0.36, 1.05),
-        body.position.z + randomBetween(-0.35, 0.35),
-      );
-    } else {
-      body.position.set(
-        randomBetween(-xSpread, xSpread),
-        randomBetween(2.1, 3.6),
-        randomBetween(-zSpread, zSpread),
-      );
+    for (const bodyState of bodiesRef.current.values()) {
+      clampBodyInside(bodyState.body, bounds, false);
     }
-
-    body.velocity.set(
-      randomBetween(-5.8, 5.8),
-      randomBetween(2.6, 5.8),
-      randomBetween(-5.8, 5.8),
-    );
-    body.angularVelocity.set(
-      randomBetween(-24, 24),
-      randomBetween(-24, 24),
-      randomBetween(-24, 24),
-    );
-
-    body.wakeUp();
-  };
+  }, [camera, size.width, size.height]);
 
   useEffect(() => {
     const world = worldRef.current;
@@ -361,7 +380,6 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     }
 
     const diceList = Array.isArray(dice) ? dice : [];
-    const targets = layoutTargets(diceList.length, boundsRef.current);
     const existingIds = new Set(bodiesRef.current.keys());
     const nextIds = new Set();
 
@@ -373,7 +391,13 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       if (!bodyState) {
         const body = new CANNON.Body({ mass: 1, shape: dieShapeRef.current });
         body.linearDamping = 0.34;
-        body.angularDamping = 0.29;
+        body.angularDamping = 0.3;
+        body.ccdSpeedThreshold = 0.1;
+        body.ccdIterations = 8;
+        spawnBodyInViewport(body, boundsRef.current);
+        const initialFace = Number.isInteger(die?.face) ? die.face : 1;
+        body.quaternion.copy(quaternionForFaceValue(initialFace, id));
+        freezeBodyInPlace(body);
         world.addBody(body);
         bodyState = { body, type: die?.type ?? DICE_TYPE.ATTRIBUTE };
         bodiesRef.current.set(id, bodyState);
@@ -381,9 +405,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       bodyState.type = die?.type ?? DICE_TYPE.ATTRIBUTE;
 
-      if (!rollRequest) {
-        const faceValue = Number.isInteger(die?.face) ? die.face : 1;
-        lockBodyToTarget(bodyState, targets[index], faceValue, id);
+      if (!rollRequest && bodyState.body.type !== CANNON.Body.DYNAMIC) {
+        clampBodyInside(bodyState.body, boundsRef.current, false);
       }
     });
 
@@ -424,8 +447,6 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
         : diceList.map((die, index) => String(die?.id ?? `die-${index + 1}`)),
     );
 
-    const targets = layoutTargets(diceList.length, bounds);
-
     diceList.forEach((die, index) => {
       const id = String(die?.id ?? `die-${index + 1}`);
       const bodyState = bodiesRef.current.get(id);
@@ -435,12 +456,27 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       }
 
       if (rerollSet.has(id)) {
-        launchRollingBody(bodyState, bounds, isPush);
+        launchRollingBody(bodyState.body, bounds, isPush);
       } else {
-        const faceValue = Number.isInteger(die?.face) ? die.face : 1;
-        lockBodyToTarget(bodyState, targets[index], faceValue, id);
+        freezeBodyInPlace(bodyState.body);
+        clampBodyInside(bodyState.body, bounds, false);
       }
     });
+
+    if (rerollSet.size === 0) {
+      onRollResolvedRef.current?.({
+        key: rollRequest.key,
+        action: rollRequest.action,
+        rolledAt: Number.isFinite(rollRequest.startedAt) ? rollRequest.startedAt : Date.now(),
+        dice: diceList.map((die, index) => ({
+          id: String(die?.id ?? `die-${index + 1}`),
+          type: die?.type ?? DICE_TYPE.ATTRIBUTE,
+          face: Number.isInteger(die?.face) ? die.face : 1,
+          wasPushed: false,
+        })),
+      });
+      return;
+    }
 
     pendingSimulationRef.current = {
       key: rollRequest.key,
@@ -469,6 +505,10 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     }
 
     for (const [id, bodyState] of bodiesRef.current) {
+      if (bodyState.body.type === CANNON.Body.DYNAMIC) {
+        clampBodyInside(bodyState.body, boundsRef.current, true);
+      }
+
       const group = groupRefs.current.get(id);
 
       if (!group) {
@@ -490,7 +530,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
     const pending = pendingSimulationRef.current;
 
-    if (!pending || pending.reported || pending.rerollSet.size === 0) {
+    if (!pending || pending.reported) {
       return;
     }
 
@@ -507,7 +547,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       const linearSpeed = bodyState.body.velocity.length();
       const angularSpeed = bodyState.body.angularVelocity.length();
 
-      if (linearSpeed > 0.2 || angularSpeed > 0.7) {
+      if (linearSpeed > 0.15 || angularSpeed > 0.65) {
         allSettled = false;
         break;
       }
@@ -521,13 +561,13 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       return;
     }
 
-    const targets = layoutTargets(pending.order.length, boundsRef.current);
-    const resolvedDice = pending.order.map((id, index) => {
+    const resolvedDice = pending.order.map((id) => {
       const bodyState = bodiesRef.current.get(id);
       const faceValue = bodyState ? faceValueFromQuaternion(bodyState.body.quaternion) : 1;
 
       if (bodyState) {
-        lockBodyToTarget(bodyState, targets[index], faceValue, id);
+        clampBodyInside(bodyState.body, boundsRef.current, false);
+        freezeBodyInPlace(bodyState.body);
       }
 
       return {
@@ -552,16 +592,17 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
   return (
     <>
-      <ambientLight intensity={0.62} />
+      <ambientLight intensity={0.64} />
       <directionalLight
         position={[0, 11, 0.001]}
-        intensity={0.9}
+        intensity={0.92}
         castShadow
         shadow-mapSize={[1024, 1024]}
       />
+
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[boundsRef.current.halfWidth * 2, boundsRef.current.halfDepth * 2]} />
-        <shadowMaterial opacity={0.24} transparent />
+        <planeGeometry args={[boundsRef.current.visibleHalfWidth * 2, boundsRef.current.visibleHalfDepth * 2]} />
+        <shadowMaterial opacity={0.18} transparent />
       </mesh>
 
       {diceList.map((die, index) => {
@@ -592,7 +633,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 function DiceTray3D({ dice, rollRequest, onRollResolved }) {
   return (
     <Canvas
-      camera={{ position: [0, 10, 0.001], fov: 34, near: 0.1, far: 50 }}
+      orthographic
+      camera={{ position: [0, 10, 0.001], zoom: 88, near: 0.1, far: 60 }}
       shadows
       dpr={[1, 1.7]}
     >
