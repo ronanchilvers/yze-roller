@@ -140,6 +140,41 @@ const quaternionForFaceValue = (faceValue, id) => {
   );
 };
 
+const yawFromQuaternion = (quaternion) => {
+  const sourceQuaternion = new THREE.Quaternion(
+    quaternion.x,
+    quaternion.y,
+    quaternion.z,
+    quaternion.w,
+  );
+  const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(sourceQuaternion);
+  forward.y = 0;
+
+  if (forward.lengthSq() < 1e-8) {
+    return 0;
+  }
+
+  forward.normalize();
+  return Math.atan2(forward.x, forward.z);
+};
+
+const quaternionForFaceValueWithYaw = (faceValue, yawRadians) => {
+  const faceNormal = FACE_NORMALS.find((face) => face.value === faceValue)?.normal ?? FACE_NORMALS[0].normal;
+  const baseQuaternion = new THREE.Quaternion().setFromUnitVectors(faceNormal, WORLD_UP);
+  const yawQuaternion = new THREE.Quaternion().setFromAxisAngle(
+    WORLD_UP,
+    Number.isFinite(yawRadians) ? yawRadians : 0,
+  );
+  baseQuaternion.premultiply(yawQuaternion);
+
+  return new CANNON.Quaternion(
+    baseQuaternion.x,
+    baseQuaternion.y,
+    baseQuaternion.z,
+    baseQuaternion.w,
+  );
+};
+
 const calculateBounds = (camera, size) => {
   let visibleHalfWidth = 4.6;
   let visibleHalfDepth = 3.1;
@@ -251,26 +286,26 @@ const launchRollingBody = (body, bounds, isPushReroll) => {
   if (isPushReroll) {
     body.position.set(
       body.position.x + randomBetween(-0.32, 0.32),
-      Math.max(body.position.y + 0.9, 1.8),
+      Math.max(body.position.y + 1.8, 3.2),
       body.position.z + randomBetween(-0.32, 0.32),
     );
   } else {
     body.position.set(
       randomBetween(-xSpread, xSpread),
-      randomBetween(4.6, 7.2),
+      randomBetween(8.2, 12.4),
       randomBetween(-zSpread, zSpread),
     );
   }
 
   body.velocity.set(
-    randomBetween(-5.8, 5.8),
-    randomBetween(3.4, 6.6),
-    randomBetween(-5.8, 5.8),
+    randomBetween(-6.4, 6.4),
+    randomBetween(4.2, 7.9),
+    randomBetween(-6.4, 6.4),
   );
   body.angularVelocity.set(
-    randomBetween(-23, 23),
-    randomBetween(-23, 23),
-    randomBetween(-23, 23),
+    randomBetween(-26, 26),
+    randomBetween(-26, 26),
+    randomBetween(-26, 26),
   );
 
   body.wakeUp();
@@ -576,6 +611,10 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       const faceValue = bodyState ? faceValueFromQuaternion(bodyState.body.quaternion) : 1;
 
       if (bodyState) {
+        const settledYaw = yawFromQuaternion(bodyState.body.quaternion);
+        bodyState.body.quaternion.copy(
+          quaternionForFaceValueWithYaw(faceValue, settledYaw),
+        );
         clampBodyInside(bodyState.body, boundsRef.current, false);
         freezeBodyInPlace(bodyState.body);
       }
@@ -604,7 +643,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     <>
       <ambientLight intensity={0.64} />
       <directionalLight
-        position={[0, 11, 0.001]}
+        position={[8, 11.31, -8]}
         intensity={0.92}
         castShadow
         shadow-mapSize={[1024, 1024]}
