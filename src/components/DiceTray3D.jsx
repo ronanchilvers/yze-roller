@@ -175,7 +175,7 @@ const freezeBodyInPlace = (body) => {
 const clampBodyInside = (body, bounds, allowBounce = true) => {
   const xLimit = Math.max(0.8, bounds.innerHalfWidth - DIE_SIZE * 0.5);
   const zLimit = Math.max(0.8, bounds.innerHalfDepth - DIE_SIZE * 0.5);
-  const minY = DIE_SIZE * 0.5 + 0.02;
+  const minY = DIE_SIZE * 0.5 + 0.002;
 
   if (body.position.x > xLimit) {
     body.position.x = xLimit;
@@ -212,8 +212,8 @@ const clampBodyInside = (body, bounds, allowBounce = true) => {
   if (body.position.y < minY) {
     body.position.y = minY;
 
-    if (allowBounce && body.velocity.y < 0) {
-      body.velocity.y *= -0.15;
+    if (body.velocity.y < 0) {
+      body.velocity.y = allowBounce ? body.velocity.y * -0.02 : 0;
     }
   }
 };
@@ -300,8 +300,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       gravity: new CANNON.Vec3(0, -30, 0),
       allowSleep: true,
     });
-    world.defaultContactMaterial.friction = 0.34;
-    world.defaultContactMaterial.restitution = 0.36;
+    world.defaultContactMaterial.friction = 0.52;
+    world.defaultContactMaterial.restitution = 0.2;
     worldRef.current = world;
 
     return () => {
@@ -386,8 +386,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       if (!bodyState) {
         const body = new CANNON.Body({ mass: 1, shape: dieShapeRef.current });
-        body.linearDamping = 0.34;
-        body.angularDamping = 0.3;
+        body.linearDamping = 0.42;
+        body.angularDamping = 0.56;
         body.ccdSpeedThreshold = 0.1;
         body.ccdIterations = 8;
         spawnBodyInViewport(body, boundsRef.current);
@@ -562,9 +562,6 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       const faceValue = bodyState ? faceValueFromQuaternion(bodyState.body.quaternion) : 1;
 
       if (bodyState) {
-        bodyState.body.quaternion.copy(
-          quaternionForFaceValue(faceValue),
-        );
         clampBodyInside(bodyState.body, boundsRef.current, false);
         freezeBodyInPlace(bodyState.body);
       }
