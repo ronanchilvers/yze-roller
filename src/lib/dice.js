@@ -1,4 +1,5 @@
 export const MAX_DICE = 20;
+export const MAX_STRAIN_DICE = 999;
 export const DICE_TYPE = Object.freeze({
   ATTRIBUTE: "attribute",
   SKILL: "skill",
@@ -50,7 +51,7 @@ export const sanitizePoolCounts = (counts) => {
     }),
     strainDice: normalizeDiceCount(source.strainDice, {
       min: 0,
-      max: MAX_DICE,
+      max: MAX_STRAIN_DICE,
       fallback: 0,
     }),
   };

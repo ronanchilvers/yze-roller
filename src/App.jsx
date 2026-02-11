@@ -11,6 +11,11 @@ import {
   transitionWithPush,
   transitionWithRoll,
 } from "./lib/roll-session";
+import {
+  buildCountsWithStrain,
+  incrementStrainPointsByBanes,
+  normalizeStrainPoints,
+} from "./lib/strain-points";
 
 const MIN_ATTRIBUTE_DICE = 1;
 const MIN_SKILL_DICE = 0;
@@ -24,13 +29,14 @@ function App() {
   const [skillDice, setSkillDice] = useState(
     initialPoolSelection.skillDice,
   );
-  const [strainPoints] = useState(0);
+  const [strainPoints, setStrainPoints] = useState(0);
   const [currentRoll, setCurrentRoll] = useState(null);
   const [previousRoll, setPreviousRoll] = useState(null);
 
+  const normalizedStrainPoints = normalizeStrainPoints(strainPoints);
   const totalDice = useMemo(
-    () => attributeDice + skillDice + strainPoints,
-    [attributeDice, skillDice, strainPoints],
+    () => attributeDice + skillDice + normalizedStrainPoints,
+    [attributeDice, skillDice, normalizedStrainPoints],
   );
 
   const onAttributeChange = (event) => {
@@ -61,11 +67,10 @@ function App() {
   }, [storage, attributeDice, skillDice]);
 
   const onRoll = () => {
-    const rolled = rollPool({
+    const rolled = rollPool(buildCountsWithStrain({
       attributeDice,
       skillDice,
-      strainDice: strainPoints,
-    });
+    }, normalizedStrainPoints));
     const nextState = transitionWithRoll(
       { currentRoll, previousRoll },
       rolled,
@@ -90,6 +95,7 @@ function App() {
 
     setCurrentRoll(nextState.currentRoll);
     setPreviousRoll(nextState.previousRoll);
+    setStrainPoints((current) => incrementStrainPointsByBanes(current, pushed));
   };
 
   const renderRollSummary = (roll) => {
@@ -101,7 +107,7 @@ function App() {
     return `${roll.outcomes.successes} successes, ${roll.outcomes.banes} banes${withStrain}`;
   };
 
-  const canPush = canPushCurrentRoll({ currentRoll, previousRoll });
+  const canPush = canPushCurrentRoll({ currentRoll, previousRoll }) && currentRoll?.action !== "push";
 
   return (
     <main className="app-shell">
@@ -113,7 +119,7 @@ function App() {
           </div>
           <output className="strain-pill" aria-label="Current strain points">
             <span>Strain Points</span>
-            <strong>{strainPoints}</strong>
+            <strong>{normalizedStrainPoints}</strong>
           </output>
         </header>
 
@@ -176,8 +182,10 @@ function App() {
                 <>
                   <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
                   <p>
-                    {currentRoll.canPush
+                    {canPush
                       ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
+                      : currentRoll.action === "push"
+                        ? "Result already pushed."
                       : "No dice can be pushed."}
                   </p>
                   <ul className="dice-readout">
