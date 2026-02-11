@@ -84,11 +84,11 @@ function App() {
                   onChange={onSkillChange}
                 />
               </label>
-            </div>
 
-            <div className="pool-summary" aria-live="polite">
-              <p>Total Dice This Roll</p>
-              <strong>{totalDice}</strong>
+              <div className="pool-summary" aria-live="polite">
+                <p>Total Dice This Roll</p>
+                <strong>{totalDice}</strong>
+              </div>
             </div>
 
             <div className="actions">
