@@ -1,0 +1,58 @@
+# Fate Cards — Agents Instructions
+
+
+## Commands (run early when relevant)
+Some important points first:
+- Use of `npq-hero` instead of `npm` is preferred
+- Both `npq-hero` and `npm` may have been installed using `asdf`. The `asdf` binary can be found in the `bin` directory in the user's home directory.
+- If the `npq-hero` or `npm` binaries are not found, it may be necessary to query `asdf` for the correct location and run them directly.
+
+Common commands:
+- Install deps: `npq-hero ci`
+- Dev server: `npq-hero run dev`
+- Build: `npq-hero run build`
+- Preview build: `npq-hero run preview`
+
+## Project knowledge
+- **Tech stack:** React 18, Vite 5, JavaScript (ESM)
+- **Key files:**
+  - `src/App.jsx` — top-level state, persistence, and app UI
+  - `src/components/Card.jsx` — card editor and element renderers
+  - `src/*.css` — styling
+  - `public/` — static assets
+  - `example-designs/` — reference screenshots (do not edit unless asked)
+
+## Your role
+- Build or modify UI features.
+- Keep the UI responsive and accessible.
+- Prefer small, focused changes and preserve existing behavior.
+- Follow security best practices
+
+## Coding style (examples)
+✅ Prefer small helpers and clear names:
+```jsx
+const updateThing = (updates) => {
+  onUpdate(thing.id, { ...thing, ...updates })
+}
+```
+
+✅ Guard user input before mutating state:
+```jsx
+if (!variable.trim()) return
+```
+
+❌ Avoid large inline state blocks without grouping or helper functions.
+
+## Defensive coding expectations
+- Validate and normalize any imported or persisted data before use.
+- Guard for missing/null fields before rendering arrays or accessing properties.
+- Prefer non-throwing fallbacks when data is malformed.
+
+## Boundaries
+- ✅ **Always:** Keep changes in `src/` unless explicitly asked otherwise.
+- ⚠️ **Ask first:** Adding dependencies, changing Vite config, or large UI refactors.
+- 🚫 **Never:** Edit `node_modules/`, delete user data, or introduce secrets.
+
+## Git workflow
+- No commits unless explicitly requested.
+- Describe what changed and why; list follow-up steps when relevant.
