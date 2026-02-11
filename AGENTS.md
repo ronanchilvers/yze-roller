@@ -14,13 +14,10 @@ Common commands:
 - Preview build: `npq-hero run preview`
 
 ## Project knowledge
-- **Tech stack:** React 18, Vite 5, JavaScript (ESM)
+- **Tech stack:** React, Vite, JavaScript (ESM)
 - **Key files:**
-  - `src/App.jsx` — top-level state, persistence, and app UI
-  - `src/components/Card.jsx` — card editor and element renderers
+  - `src/*App*.jsx` — javascript source code
   - `src/*.css` — styling
-  - `public/` — static assets
-  - `example-designs/` — reference screenshots (do not edit unless asked)
 
 ## Your role
 - Build or modify UI features.
@@ -50,8 +47,10 @@ if (!variable.trim()) return
 
 ## Boundaries
 - ✅ **Always:** Keep changes in `src/` unless explicitly asked otherwise.
+- ✅ **Always:** Minimize dependencies and make sure to include vanilla options when suggesting solutions
 - ⚠️ **Ask first:** Adding dependencies, changing Vite config, or large UI refactors.
 - 🚫 **Never:** Edit `node_modules/`, delete user data, or introduce secrets.
+- 🚫 **Never:** Run `npm` or `npq-hero` commands without explicit permission from the user
 
 ## Git workflow
 - No commits unless explicitly requested.
