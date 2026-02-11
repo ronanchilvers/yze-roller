@@ -4,6 +4,11 @@ export const DICE_TYPE = Object.freeze({
   SKILL: "skill",
   STRAIN: "strain",
 });
+export const EMPTY_OUTCOME = Object.freeze({
+  successes: 0,
+  banes: 0,
+  hasStrain: false,
+});
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -70,6 +75,14 @@ const normalizeDie = (die, index) => {
   };
 };
 
+export const normalizeDicePool = (dicePool) => {
+  if (!Array.isArray(dicePool)) {
+    return [];
+  }
+
+  return dicePool.map((die, index) => normalizeDie(die, index));
+};
+
 export const buildDicePool = (counts) => {
   const normalized = sanitizePoolCounts(counts);
   const pool = [];
@@ -123,32 +136,48 @@ export const rollD6 = (randomSource = Math.random) => {
   return Math.floor(normalized * 6) + 1;
 };
 
+export const rollDice = (dicePool, randomSource = Math.random) => {
+  return normalizeDicePool(dicePool).map((die) => ({
+    ...die,
+    face: rollD6(randomSource),
+    wasPushed: false,
+  }));
+};
+
+export const getPushableDiceIds = (dicePool) => {
+  return normalizeDicePool(dicePool)
+    .filter((die) => isPushableFace(die.face))
+    .map((die) => die.id);
+};
+
 export const pushDice = (dicePool, randomSource = Math.random) => {
-  if (!Array.isArray(dicePool)) {
-    return [];
-  }
-
-  return dicePool.map((die, index) => {
-    const normalizedDie = normalizeDie(die, index);
-
-    if (isPushableFace(normalizedDie.face)) {
-      return { ...normalizedDie, face: rollD6(randomSource), wasPushed: true };
+  return normalizeDicePool(dicePool).map((die) => {
+    if (!isPushableFace(die.face)) {
+      return { ...die, wasPushed: false };
     }
 
-    if (normalizedDie.face === null) {
-      return { ...normalizedDie, face: rollD6(randomSource), wasPushed: true };
-    }
-
-    return { ...normalizedDie, wasPushed: false };
+    return { ...die, face: rollD6(randomSource), wasPushed: true };
   });
 };
 
-export const countOutcomes = (dicePool) => {
-  if (!Array.isArray(dicePool)) {
-    return { successes: 0, banes: 0, hasStrain: false };
+export const aggregateDiceById = (originalDice, updates) => {
+  const normalizedOriginal = normalizeDicePool(originalDice);
+  const normalizedUpdates = normalizeDicePool(updates);
+  const updateById = new Map(normalizedUpdates.map((die) => [die.id, die]));
+  const merged = normalizedOriginal.map((die) => updateById.get(die.id) ?? die);
+  const originalIds = new Set(normalizedOriginal.map((die) => die.id));
+
+  for (const update of normalizedUpdates) {
+    if (!originalIds.has(update.id)) {
+      merged.push(update);
+    }
   }
 
-  return dicePool.reduce(
+  return merged;
+};
+
+export const countOutcomes = (dicePool) => {
+  return normalizeDicePool(dicePool).reduce(
     (summary, die, index) => {
       const normalizedDie = normalizeDie(die, index);
       const classified = classifyFace(normalizedDie.face);
@@ -167,6 +196,32 @@ export const countOutcomes = (dicePool) => {
 
       return summary;
     },
-    { successes: 0, banes: 0, hasStrain: false },
+    { ...EMPTY_OUTCOME },
   );
+};
+
+export const summarizeRoll = (dicePool) => {
+  const dice = normalizeDicePool(dicePool);
+  const pushableDiceIds = getPushableDiceIds(dice);
+
+  return {
+    dice,
+    outcomes: countOutcomes(dice),
+    pushableDiceIds,
+    canPush: pushableDiceIds.length > 0,
+  };
+};
+
+export const rollPool = (counts, randomSource = Math.random) => {
+  const pool = buildDicePool(counts);
+  const rolledDice = rollDice(pool, randomSource);
+  return summarizeRoll(rolledDice);
+};
+
+export const pushPool = (dicePool, randomSource = Math.random) => {
+  const initialRoll = summarizeRoll(dicePool);
+  const pushCandidates = initialRoll.dice.filter((die) => isPushableFace(die.face));
+  const pushedCandidates = pushDice(pushCandidates, randomSource);
+  const merged = aggregateDiceById(initialRoll.dice, pushedCandidates);
+  return summarizeRoll(merged);
 };
