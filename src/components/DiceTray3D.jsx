@@ -24,17 +24,6 @@ const FACE_NORMALS = [
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
-const hashCode = (value) => {
-  const text = String(value ?? "");
-  let hash = 0;
-
-  for (let index = 0; index < text.length; index += 1) {
-    hash = (hash * 31 + text.charCodeAt(index)) | 0;
-  }
-
-  return Math.abs(hash);
-};
-
 const randomBetween = (min, max) => {
   return min + Math.random() * (max - min);
 };
@@ -125,47 +114,9 @@ const faceValueFromQuaternion = (quaternion) => {
   return bestFace;
 };
 
-const quaternionForFaceValue = (faceValue, id) => {
+const quaternionForFaceValue = (faceValue) => {
   const faceNormal = FACE_NORMALS.find((face) => face.value === faceValue)?.normal ?? FACE_NORMALS[0].normal;
   const baseQuaternion = new THREE.Quaternion().setFromUnitVectors(faceNormal, WORLD_UP);
-  const yawRadians = (hashCode(id) % 360) * (Math.PI / 180);
-  const yawQuaternion = new THREE.Quaternion().setFromAxisAngle(WORLD_UP, yawRadians);
-  baseQuaternion.premultiply(yawQuaternion);
-
-  return new CANNON.Quaternion(
-    baseQuaternion.x,
-    baseQuaternion.y,
-    baseQuaternion.z,
-    baseQuaternion.w,
-  );
-};
-
-const yawFromQuaternion = (quaternion) => {
-  const sourceQuaternion = new THREE.Quaternion(
-    quaternion.x,
-    quaternion.y,
-    quaternion.z,
-    quaternion.w,
-  );
-  const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(sourceQuaternion);
-  forward.y = 0;
-
-  if (forward.lengthSq() < 1e-8) {
-    return 0;
-  }
-
-  forward.normalize();
-  return Math.atan2(forward.x, forward.z);
-};
-
-const quaternionForFaceValueWithYaw = (faceValue, yawRadians) => {
-  const faceNormal = FACE_NORMALS.find((face) => face.value === faceValue)?.normal ?? FACE_NORMALS[0].normal;
-  const baseQuaternion = new THREE.Quaternion().setFromUnitVectors(faceNormal, WORLD_UP);
-  const yawQuaternion = new THREE.Quaternion().setFromAxisAngle(
-    WORLD_UP,
-    Number.isFinite(yawRadians) ? yawRadians : 0,
-  );
-  baseQuaternion.premultiply(yawQuaternion);
 
   return new CANNON.Quaternion(
     baseQuaternion.x,
@@ -292,7 +243,7 @@ const launchRollingBody = (body, bounds, isPushReroll) => {
   } else {
     body.position.set(
       randomBetween(-xSpread, xSpread),
-      randomBetween(8.2, 12.4),
+      randomBetween(9.2, 13.8),
       randomBetween(-zSpread, zSpread),
     );
   }
@@ -338,7 +289,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   }, [onRollResolved]);
 
   useEffect(() => {
-    camera.position.set(0, 10, 0.001);
+    camera.position.set(0, 16, 0.001);
     camera.up.set(0, 0, -1);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
@@ -441,7 +392,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
         body.ccdIterations = 8;
         spawnBodyInViewport(body, boundsRef.current);
         const initialFace = Number.isInteger(die?.face) ? die.face : 1;
-        body.quaternion.copy(quaternionForFaceValue(initialFace, id));
+        body.quaternion.copy(quaternionForFaceValue(initialFace));
         freezeBodyInPlace(body);
         world.addBody(body);
         bodyState = { body, type: die?.type ?? DICE_TYPE.ATTRIBUTE };
@@ -611,9 +562,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       const faceValue = bodyState ? faceValueFromQuaternion(bodyState.body.quaternion) : 1;
 
       if (bodyState) {
-        const settledYaw = yawFromQuaternion(bodyState.body.quaternion);
         bodyState.body.quaternion.copy(
-          quaternionForFaceValueWithYaw(faceValue, settledYaw),
+          quaternionForFaceValue(faceValue),
         );
         clampBodyInside(bodyState.body, boundsRef.current, false);
         freezeBodyInPlace(bodyState.body);
@@ -683,7 +633,7 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
   return (
     <Canvas
       orthographic
-      camera={{ position: [0, 10, 0.001], zoom: 88, near: 0.1, far: 60 }}
+      camera={{ position: [0, 16, 0.001], zoom: 88, near: 0.1, far: 70 }}
       shadows
       dpr={[1, 1.7]}
     >
