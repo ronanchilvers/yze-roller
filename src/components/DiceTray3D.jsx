@@ -39,23 +39,18 @@ const createFaceTexture = (faceValue, dieColor) => {
   }
 
   const base = new THREE.Color(dieColor);
-  const light = base.clone().lerp(new THREE.Color("#ffffff"), 0.35);
-  const dark = base.clone().multiplyScalar(0.55);
+  const luminance = 0.2126 * base.r + 0.7152 * base.g + 0.0722 * base.b;
+  const glyphColor = luminance > 0.58 ? "#20282b" : "#f4f9f4";
 
-  context.fillStyle = light.getStyle();
+  context.fillStyle = base.getStyle();
   context.fillRect(0, 0, canvas.width, canvas.height);
-
-  context.strokeStyle = dark.getStyle();
-  context.lineWidth = 12;
-  context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
-
-  context.fillStyle = "rgba(255, 255, 255, 0.84)";
-  context.fillRect(32, 32, canvas.width - 64, canvas.height - 64);
-
-  context.fillStyle = "#1d2528";
+  context.fillStyle = glyphColor;
   context.font = "700 122px Avenir Next, Trebuchet MS, sans-serif";
   context.textAlign = "center";
   context.textBaseline = "middle";
+  context.shadowColor = "rgba(0, 0, 0, 0.22)";
+  context.shadowBlur = 4;
+  context.shadowOffsetY = 1;
   context.fillText(String(faceValue), canvas.width / 2, canvas.height / 2);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -593,12 +588,14 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
         position={[8, 11.31, -8]}
         intensity={0.92}
         castShadow
+        shadow-radius={6}
+        shadow-bias={-0.00012}
         shadow-mapSize={[1024, 1024]}
       />
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[boundsRef.current.visibleHalfWidth * 2, boundsRef.current.visibleHalfDepth * 2]} />
-        <meshStandardMaterial color="#dce8dc" roughness={0.94} metalness={0.02} />
+        <meshStandardMaterial color="#e8f2e7" roughness={0.94} metalness={0.02} />
       </mesh>
 
       {diceList.map((die, index) => {
@@ -631,10 +628,10 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
     <Canvas
       orthographic
       camera={{ position: [0, 16, 0.001], zoom: 88, near: 0.1, far: 70 }}
-      shadows
+      shadows={{ type: THREE.PCFSoftShadowMap }}
       dpr={[1, 1.7]}
     >
-      <color attach="background" args={["#edf3eb"]} />
+      <color attach="background" args={["#f4f9f2"]} />
       <DicePhysicsScene
         dice={dice}
         rollRequest={rollRequest}
