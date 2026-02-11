@@ -17,6 +17,11 @@
   - Prefer giving the tray most of the available iframe height.
   - Keep controls compact so they do not crowd the tray.
 
+## Progress Log
+- 2026-02-11: Completed initial layout checkpoint in app shell:
+  - Controls panel is positioned above the tray.
+  - Tray footprint was increased to be visually dominant across breakpoints.
+
 ## Command Setup (Run First, When Authorized)
 Use `npq-hero` first. If not found, resolve the binary via `asdf`.
 
