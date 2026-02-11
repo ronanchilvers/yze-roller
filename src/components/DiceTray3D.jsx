@@ -10,7 +10,11 @@ const FLOOR_THICKNESS = 0.24;
 const WALL_THICKNESS = 0.24;
 const WALL_HEIGHT = 3.2;
 const MIN_SETTLE_MS = 720;
-const MAX_SETTLE_MS = 2800;
+const MAX_SETTLE_MS = 4200;
+const SETTLE_LINEAR_SPEED = 0.08;
+const SETTLE_ANGULAR_SPEED = 0.2;
+const SETTLE_FACE_ALIGNMENT = 0.9;
+const SETTLE_REST_Y = DIE_SIZE * 0.5 + 0.03;
 
 const FACE_ORDER_BY_SIDE = [2, 5, 1, 6, 3, 4];
 const FACE_NORMALS = [
@@ -39,18 +43,12 @@ const createFaceTexture = (faceValue, dieColor) => {
   }
 
   const base = new THREE.Color(dieColor);
-  const luminance = 0.2126 * base.r + 0.7152 * base.g + 0.0722 * base.b;
-  const glyphColor = luminance > 0.58 ? "#20282b" : "#f4f9f4";
-
   context.fillStyle = base.getStyle();
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = glyphColor;
+  context.fillStyle = "#ffffff";
   context.font = "700 122px Avenir Next, Trebuchet MS, sans-serif";
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.shadowColor = "rgba(0, 0, 0, 0.22)";
-  context.shadowBlur = 4;
-  context.shadowOffsetY = 1;
   context.fillText(String(faceValue), canvas.width / 2, canvas.height / 2);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -85,7 +83,7 @@ const disposeMaterialSet = (materialSet) => {
   }
 };
 
-const faceValueFromQuaternion = (quaternion) => {
+const topFaceFromQuaternion = (quaternion) => {
   const threeQuat = new THREE.Quaternion(
     quaternion.x,
     quaternion.y,
@@ -106,7 +104,7 @@ const faceValueFromQuaternion = (quaternion) => {
     }
   }
 
-  return bestFace;
+  return { faceValue: bestFace, alignment: bestDot };
 };
 
 const quaternionForFaceValue = (faceValue) => {
@@ -170,7 +168,7 @@ const freezeBodyInPlace = (body) => {
 const clampBodyInside = (body, bounds, allowBounce = true) => {
   const xLimit = Math.max(0.8, bounds.innerHalfWidth - DIE_SIZE * 0.5);
   const zLimit = Math.max(0.8, bounds.innerHalfDepth - DIE_SIZE * 0.5);
-  const minY = DIE_SIZE * 0.5 + 0.002;
+  const minY = DIE_SIZE * 0.5;
 
   if (body.position.x > xLimit) {
     body.position.x = xLimit;
@@ -537,8 +535,15 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       const linearSpeed = bodyState.body.velocity.length();
       const angularSpeed = bodyState.body.angularVelocity.length();
+      const { alignment } = topFaceFromQuaternion(bodyState.body.quaternion);
+      const isNearFloor = bodyState.body.position.y <= SETTLE_REST_Y;
 
-      if (linearSpeed > 0.15 || angularSpeed > 0.65) {
+      if (
+        linearSpeed > SETTLE_LINEAR_SPEED ||
+        angularSpeed > SETTLE_ANGULAR_SPEED ||
+        alignment < SETTLE_FACE_ALIGNMENT ||
+        !isNearFloor
+      ) {
         allSettled = false;
         break;
       }
@@ -554,7 +559,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
     const resolvedDice = pending.order.map((id) => {
       const bodyState = bodiesRef.current.get(id);
-      const faceValue = bodyState ? faceValueFromQuaternion(bodyState.body.quaternion) : 1;
+      const faceValue = bodyState ? topFaceFromQuaternion(bodyState.body.quaternion).faceValue : 1;
 
       if (bodyState) {
         clampBodyInside(bodyState.body, boundsRef.current, false);
@@ -588,8 +593,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
         position={[8, 11.31, -8]}
         intensity={0.92}
         castShadow
-        shadow-radius={6}
-        shadow-bias={-0.00012}
+        shadow-radius={4}
         shadow-mapSize={[1024, 1024]}
       />
 
