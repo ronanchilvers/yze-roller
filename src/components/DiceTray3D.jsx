@@ -145,8 +145,9 @@ const calculateBounds = (camera, size) => {
   let visibleHalfDepth = 3.1;
 
   if (camera?.isOrthographicCamera) {
-    visibleHalfWidth = Math.max(2.8, (camera.right - camera.left) * 0.5);
-    visibleHalfDepth = Math.max(2.2, (camera.top - camera.bottom) * 0.5);
+    const zoom = Number.isFinite(camera.zoom) && camera.zoom > 0 ? camera.zoom : 1;
+    visibleHalfWidth = Math.max(2.8, (camera.right - camera.left) / (2 * zoom));
+    visibleHalfDepth = Math.max(2.2, (camera.top - camera.bottom) / (2 * zoom));
   } else if (camera?.isPerspectiveCamera && size.height) {
     const distance = Math.abs(camera.position.y);
     const verticalFov = THREE.MathUtils.degToRad(camera.fov);
