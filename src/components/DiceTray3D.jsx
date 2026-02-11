@@ -1,14 +1,28 @@
 import { useEffect, useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
-import { getDieColor, selectAnimatedDiceIds } from "../lib/dice-visuals.js";
+import { DICE_TYPE } from "../lib/dice.js";
+import { getDieColor } from "../lib/dice-visuals.js";
 
 const DIE_SIZE = 0.68;
-const TRAY_WIDTH = 9.6;
-const TRAY_DEPTH = 6;
-const WALL_HEIGHT = 1.15;
-const WALL_THICKNESS = 0.18;
+const FLOOR_THICKNESS = 0.22;
+const WALL_THICKNESS = 0.2;
+const WALL_HEIGHT = 1.5;
+const MIN_SETTLE_MS = 700;
+const MAX_SETTLE_MS = 2600;
+
+const FACE_ORDER_BY_SIDE = [2, 5, 1, 6, 3, 4];
+const FACE_NORMALS = [
+  { value: 1, normal: new THREE.Vector3(0, 1, 0) },
+  { value: 2, normal: new THREE.Vector3(1, 0, 0) },
+  { value: 3, normal: new THREE.Vector3(0, 0, 1) },
+  { value: 4, normal: new THREE.Vector3(0, 0, -1) },
+  { value: 5, normal: new THREE.Vector3(-1, 0, 0) },
+  { value: 6, normal: new THREE.Vector3(0, -1, 0) },
+];
+
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
 const hashCode = (value) => {
   const text = String(value ?? "");
@@ -21,58 +35,127 @@ const hashCode = (value) => {
   return Math.abs(hash);
 };
 
-const settledQuaternionFor = (id, face) => {
-  const yaw = ((hashCode(id) + Number(face ?? 0) * 37) % 360) * (Math.PI / 180);
-  const quaternion = new CANNON.Quaternion();
-  quaternion.setFromEuler(0, yaw, 0);
-  return quaternion;
+const randomBetween = (min, max) => {
+  return min + Math.random() * (max - min);
 };
 
-const createLabelTexture = (face, dieType) => {
-  if (!Number.isInteger(face)) {
-    return null;
-  }
-
+const createFaceTexture = (faceValue, dieColor) => {
   const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
+  canvas.width = 256;
+  canvas.height = 256;
   const context = canvas.getContext("2d");
 
   if (!context) {
     return null;
   }
 
-  context.fillStyle = "rgba(250, 248, 241, 0.96)";
+  const base = new THREE.Color(dieColor);
+  const light = base.clone().lerp(new THREE.Color("#ffffff"), 0.35);
+  const dark = base.clone().multiplyScalar(0.55);
+
+  context.fillStyle = light.getStyle();
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.lineWidth = 8;
-  context.strokeStyle = getDieColor(dieType);
-  context.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
-  context.fillStyle = "#1f2d30";
-  context.font = "700 74px Avenir Next, Trebuchet MS, sans-serif";
+
+  context.strokeStyle = dark.getStyle();
+  context.lineWidth = 12;
+  context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+
+  context.fillStyle = "rgba(255, 255, 255, 0.82)";
+  context.fillRect(32, 32, canvas.width - 64, canvas.height - 64);
+
+  context.fillStyle = "#1d2528";
+  context.font = "700 122px Avenir Next, Trebuchet MS, sans-serif";
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(String(face), canvas.width / 2, canvas.height / 2);
+  context.fillText(String(faceValue), canvas.width / 2, canvas.height / 2);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
+  texture.anisotropy = 8;
+  texture.needsUpdate = true;
   return texture;
 };
 
-const layoutDiceTargets = (diceCount) => {
-  if (diceCount <= 0) {
+const createMaterialSet = (dieType) => {
+  const dieColor = getDieColor(dieType);
+
+  return FACE_ORDER_BY_SIDE.map((faceValue) => {
+    const texture = createFaceTexture(faceValue, dieColor);
+
+    return new THREE.MeshStandardMaterial({
+      map: texture,
+      color: "#ffffff",
+      roughness: 0.34,
+      metalness: 0.08,
+    });
+  });
+};
+
+const disposeMaterialSet = (materialSet) => {
+  for (const material of materialSet) {
+    if (material.map) {
+      material.map.dispose();
+    }
+
+    material.dispose();
+  }
+};
+
+const faceValueFromQuaternion = (quaternion) => {
+  const threeQuat = new THREE.Quaternion(
+    quaternion.x,
+    quaternion.y,
+    quaternion.z,
+    quaternion.w,
+  );
+
+  let bestFace = 1;
+  let bestDot = -Infinity;
+
+  for (const candidate of FACE_NORMALS) {
+    const worldNormal = candidate.normal.clone().applyQuaternion(threeQuat);
+    const dot = worldNormal.dot(WORLD_UP);
+
+    if (dot > bestDot) {
+      bestDot = dot;
+      bestFace = candidate.value;
+    }
+  }
+
+  return bestFace;
+};
+
+const quaternionForFaceValue = (faceValue, id) => {
+  const faceNormal = FACE_NORMALS.find((face) => face.value === faceValue)?.normal ?? FACE_NORMALS[0].normal;
+  const baseQuaternion = new THREE.Quaternion().setFromUnitVectors(faceNormal, WORLD_UP);
+  const yawRadians = (hashCode(id) % 360) * (Math.PI / 180);
+  const yawQuaternion = new THREE.Quaternion().setFromAxisAngle(WORLD_UP, yawRadians);
+  baseQuaternion.premultiply(yawQuaternion);
+
+  return new CANNON.Quaternion(
+    baseQuaternion.x,
+    baseQuaternion.y,
+    baseQuaternion.z,
+    baseQuaternion.w,
+  );
+};
+
+const layoutTargets = (count, bounds) => {
+  if (count <= 0) {
     return [];
   }
 
-  const columns = Math.min(8, Math.max(3, Math.ceil(Math.sqrt(diceCount * 1.6))));
-  const rows = Math.ceil(diceCount / columns);
-  const xSpacing = Math.min(1.12, (TRAY_WIDTH - 1.1) / Math.max(1, columns));
-  const zSpacing = Math.min(1.05, (TRAY_DEPTH - 1.1) / Math.max(1, rows));
+  const trayWidth = bounds.halfWidth * 2 - 0.9;
+  const trayDepth = bounds.halfDepth * 2 - 0.9;
+  const columns = Math.max(3, Math.ceil(Math.sqrt(count * 1.3)));
+  const rows = Math.ceil(count / columns);
+  const xSpacing = Math.max(0.75, trayWidth / Math.max(1, columns));
+  const zSpacing = Math.max(0.75, trayDepth / Math.max(1, rows));
   const startX = -((columns - 1) * xSpacing) / 2;
   const startZ = -((rows - 1) * zSpacing) / 2;
   const targets = [];
 
-  for (let index = 0; index < diceCount; index += 1) {
+  for (let index = 0; index < count; index += 1) {
     const column = index % columns;
     const row = Math.floor(index / columns);
 
@@ -86,88 +169,189 @@ const layoutDiceTargets = (diceCount) => {
   return targets;
 };
 
-const DieFaceLabel = ({ face, dieType }) => {
-  const texture = useMemo(() => createLabelTexture(face, dieType), [face, dieType]);
-
-  useEffect(() => {
-    return () => {
-      texture?.dispose();
-    };
-  }, [texture]);
-
-  if (!texture) {
-    return null;
+const calculateBounds = (camera, size) => {
+  if (!camera || !size.height) {
+    return { halfWidth: 4.6, halfDepth: 3.1 };
   }
 
-  return (
-    <sprite scale={[0.46, 0.46, 0.46]} position={[0, DIE_SIZE * 0.66, 0]}>
-      <spriteMaterial map={texture} toneMapped={false} transparent depthWrite={false} />
-    </sprite>
-  );
+  if (camera.isPerspectiveCamera) {
+    const distance = Math.abs(camera.position.y);
+    const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+    const depth = 2 * Math.tan(verticalFov * 0.5) * distance;
+    const width = depth * (size.width / size.height);
+
+    return {
+      halfWidth: Math.max(3.6, width * 0.48),
+      halfDepth: Math.max(2.4, depth * 0.48),
+    };
+  }
+
+  return {
+    halfWidth: Math.max(3.6, (camera.right - camera.left) * 0.5),
+    halfDepth: Math.max(2.4, (camera.top - camera.bottom) * 0.5),
+  };
 };
 
-const DicePhysicsScene = ({ dice, animatedIds, simulationKey }) => {
+const createStaticBox = (halfExtents, position) => {
+  const body = new CANNON.Body({
+    mass: 0,
+    type: CANNON.Body.STATIC,
+    shape: new CANNON.Box(halfExtents),
+  });
+  body.position.set(position.x, position.y, position.z);
+  return body;
+};
+
+const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
+  const { camera, size } = useThree();
   const worldRef = useRef(null);
+  const boundsRef = useRef({ halfWidth: 4.6, halfDepth: 3.1 });
   const bodiesRef = useRef(new Map());
   const groupRefs = useRef(new Map());
-  const stepAccumulatorRef = useRef(0);
   const staticBodiesRef = useRef([]);
+  const pendingSimulationRef = useRef(null);
+  const onRollResolvedRef = useRef(onRollResolved);
+  const stepAccumulatorRef = useRef(0);
+  const lastRequestKeyRef = useRef(null);
   const dieShapeRef = useRef(new CANNON.Box(new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)));
+
+  const materialSets = useMemo(
+    () => ({
+      [DICE_TYPE.ATTRIBUTE]: createMaterialSet(DICE_TYPE.ATTRIBUTE),
+      [DICE_TYPE.SKILL]: createMaterialSet(DICE_TYPE.SKILL),
+      [DICE_TYPE.STRAIN]: createMaterialSet(DICE_TYPE.STRAIN),
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    onRollResolvedRef.current = onRollResolved;
+  }, [onRollResolved]);
+
+  useEffect(() => {
+    camera.position.set(0, 10, 0.001);
+    camera.up.set(0, 0, -1);
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+  }, [camera]);
 
   useEffect(() => {
     const world = new CANNON.World({
-      gravity: new CANNON.Vec3(0, -24, 0),
+      gravity: new CANNON.Vec3(0, -30, 0),
       allowSleep: true,
     });
-    world.defaultContactMaterial.friction = 0.32;
-    world.defaultContactMaterial.restitution = 0.26;
+    world.defaultContactMaterial.friction = 0.34;
+    world.defaultContactMaterial.restitution = 0.36;
     worldRef.current = world;
 
-    const addStaticBox = (halfExtents, position) => {
-      const body = new CANNON.Body({
-        mass: 0,
-        type: CANNON.Body.STATIC,
-        shape: new CANNON.Box(halfExtents),
-      });
-      body.position.set(position.x, position.y, position.z);
-      world.addBody(body);
-      staticBodiesRef.current.push(body);
-    };
-
-    addStaticBox(
-      new CANNON.Vec3(TRAY_WIDTH / 2, 0.2, TRAY_DEPTH / 2),
-      { x: 0, y: -0.2, z: 0 },
-    );
-    addStaticBox(
-      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, TRAY_DEPTH / 2),
-      { x: TRAY_WIDTH / 2 + WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
-    );
-    addStaticBox(
-      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, TRAY_DEPTH / 2),
-      { x: -TRAY_WIDTH / 2 - WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
-    );
-    addStaticBox(
-      new CANNON.Vec3(TRAY_WIDTH / 2 + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
-      { x: 0, y: WALL_HEIGHT / 2, z: TRAY_DEPTH / 2 + WALL_THICKNESS / 2 },
-    );
-    addStaticBox(
-      new CANNON.Vec3(TRAY_WIDTH / 2 + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
-      { x: 0, y: WALL_HEIGHT / 2, z: -TRAY_DEPTH / 2 - WALL_THICKNESS / 2 },
-    );
-
     return () => {
-      for (const body of bodiesRef.current.values()) {
-        world.removeBody(body.body);
+      for (const bodyState of bodiesRef.current.values()) {
+        world.removeBody(bodyState.body);
       }
       for (const body of staticBodiesRef.current) {
         world.removeBody(body);
+      }
+      for (const materialSet of Object.values(materialSets)) {
+        disposeMaterialSet(materialSet);
       }
       bodiesRef.current.clear();
       groupRefs.current.clear();
       staticBodiesRef.current = [];
       worldRef.current = null;
+      pendingSimulationRef.current = null;
     };
-  }, []);
+  }, [materialSets]);
+
+  useEffect(() => {
+    const world = worldRef.current;
+
+    if (!world) {
+      return;
+    }
+
+    const bounds = calculateBounds(camera, size);
+    boundsRef.current = bounds;
+
+    for (const body of staticBodiesRef.current) {
+      world.removeBody(body);
+    }
+    staticBodiesRef.current = [];
+
+    const floor = createStaticBox(
+      new CANNON.Vec3(bounds.halfWidth, FLOOR_THICKNESS, bounds.halfDepth),
+      { x: 0, y: -FLOOR_THICKNESS, z: 0 },
+    );
+    const leftWall = createStaticBox(
+      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, bounds.halfDepth),
+      { x: -bounds.halfWidth - WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
+    );
+    const rightWall = createStaticBox(
+      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, bounds.halfDepth),
+      { x: bounds.halfWidth + WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
+    );
+    const topWall = createStaticBox(
+      new CANNON.Vec3(bounds.halfWidth + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
+      { x: 0, y: WALL_HEIGHT / 2, z: -bounds.halfDepth - WALL_THICKNESS / 2 },
+    );
+    const bottomWall = createStaticBox(
+      new CANNON.Vec3(bounds.halfWidth + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
+      { x: 0, y: WALL_HEIGHT / 2, z: bounds.halfDepth + WALL_THICKNESS / 2 },
+    );
+
+    for (const staticBody of [floor, leftWall, rightWall, topWall, bottomWall]) {
+      world.addBody(staticBody);
+      staticBodiesRef.current.push(staticBody);
+    }
+  }, [camera, size.width, size.height]);
+
+  const lockBodyToTarget = (bodyState, target, faceValue, id) => {
+    const body = bodyState.body;
+    body.type = CANNON.Body.KINEMATIC;
+    body.mass = 0;
+    body.updateMassProperties();
+    body.velocity.set(0, 0, 0);
+    body.angularVelocity.set(0, 0, 0);
+    body.position.set(target.x, target.y, target.z);
+    body.quaternion.copy(quaternionForFaceValue(faceValue, id));
+    body.sleep();
+  };
+
+  const launchRollingBody = (bodyState, bounds, isPushReroll) => {
+    const body = bodyState.body;
+    body.type = CANNON.Body.DYNAMIC;
+    body.mass = 1;
+    body.updateMassProperties();
+
+    const xSpread = bounds.halfWidth * (isPushReroll ? 0.26 : 0.52);
+    const zSpread = bounds.halfDepth * (isPushReroll ? 0.26 : 0.52);
+
+    if (isPushReroll) {
+      body.position.set(
+        body.position.x + randomBetween(-0.35, 0.35),
+        Math.max(body.position.y + 0.36, 1.05),
+        body.position.z + randomBetween(-0.35, 0.35),
+      );
+    } else {
+      body.position.set(
+        randomBetween(-xSpread, xSpread),
+        randomBetween(2.1, 3.6),
+        randomBetween(-zSpread, zSpread),
+      );
+    }
+
+    body.velocity.set(
+      randomBetween(-5.8, 5.8),
+      randomBetween(2.6, 5.8),
+      randomBetween(-5.8, 5.8),
+    );
+    body.angularVelocity.set(
+      randomBetween(-24, 24),
+      randomBetween(-24, 24),
+      randomBetween(-24, 24),
+    );
+
+    body.wakeUp();
+  };
 
   useEffect(() => {
     const world = worldRef.current;
@@ -177,74 +361,29 @@ const DicePhysicsScene = ({ dice, animatedIds, simulationKey }) => {
     }
 
     const diceList = Array.isArray(dice) ? dice : [];
-    const animateSet = new Set(animatedIds);
+    const targets = layoutTargets(diceList.length, boundsRef.current);
     const existingIds = new Set(bodiesRef.current.keys());
     const nextIds = new Set();
-    const targets = layoutDiceTargets(diceList.length);
-
-    const snapBody = (body, target, id, face) => {
-      body.type = CANNON.Body.KINEMATIC;
-      body.mass = 0;
-      body.updateMassProperties();
-      body.velocity.set(0, 0, 0);
-      body.angularVelocity.set(0, 0, 0);
-      body.position.set(target.x, target.y, target.z);
-      const quaternion = settledQuaternionFor(id, face);
-      body.quaternion.copy(quaternion);
-      body.sleep();
-    };
 
     diceList.forEach((die, index) => {
       const id = String(die?.id ?? `die-${index + 1}`);
-      const target = targets[index];
       nextIds.add(id);
       let bodyState = bodiesRef.current.get(id);
 
       if (!bodyState) {
-        const body = new CANNON.Body({
-          mass: 1,
-          shape: dieShapeRef.current,
-        });
-        body.linearDamping = 0.4;
-        body.angularDamping = 0.38;
+        const body = new CANNON.Body({ mass: 1, shape: dieShapeRef.current });
+        body.linearDamping = 0.34;
+        body.angularDamping = 0.29;
         world.addBody(body);
-        bodyState = {
-          body,
-          target,
-          settleAt: 0,
-          face: die?.face ?? null,
-        };
+        bodyState = { body, type: die?.type ?? DICE_TYPE.ATTRIBUTE };
         bodiesRef.current.set(id, bodyState);
       }
 
-      bodyState.target = target;
-      bodyState.face = die?.face ?? null;
+      bodyState.type = die?.type ?? DICE_TYPE.ATTRIBUTE;
 
-      if (animateSet.has(id)) {
-        const body = bodyState.body;
-        body.type = CANNON.Body.DYNAMIC;
-        body.mass = 1;
-        body.updateMassProperties();
-        body.position.set(
-          (Math.random() - 0.5) * 3.2,
-          1.9 + Math.random() * 0.7,
-          (Math.random() - 0.5) * 1.9,
-        );
-        body.velocity.set(
-          (Math.random() - 0.5) * 6.2,
-          2 + Math.random() * 2.8,
-          (Math.random() - 0.5) * 6.2,
-        );
-        body.angularVelocity.set(
-          (Math.random() - 0.5) * 18,
-          (Math.random() - 0.5) * 18,
-          (Math.random() - 0.5) * 18,
-        );
-        body.wakeUp();
-        bodyState.settleAt = performance.now() + 900 + Math.random() * 240;
-      } else {
-        snapBody(bodyState.body, target, id, die?.face ?? null);
-        bodyState.settleAt = 0;
+      if (!rollRequest) {
+        const faceValue = Number.isInteger(die?.face) ? die.face : 1;
+        lockBodyToTarget(bodyState, targets[index], faceValue, id);
       }
     });
 
@@ -263,7 +402,56 @@ const DicePhysicsScene = ({ dice, animatedIds, simulationKey }) => {
       bodiesRef.current.delete(staleId);
       groupRefs.current.delete(staleId);
     }
-  }, [dice, animatedIds, simulationKey]);
+  }, [dice, rollRequest]);
+
+  useEffect(() => {
+    if (!rollRequest || !Array.isArray(rollRequest.dice) || rollRequest.key == null) {
+      return;
+    }
+
+    if (lastRequestKeyRef.current === rollRequest.key) {
+      return;
+    }
+
+    lastRequestKeyRef.current = rollRequest.key;
+
+    const diceList = rollRequest.dice;
+    const bounds = boundsRef.current;
+    const isPush = rollRequest.action === "push";
+    const rerollSet = new Set(
+      Array.isArray(rollRequest.rerollIds) && rollRequest.rerollIds.length > 0
+        ? rollRequest.rerollIds.map((id) => String(id))
+        : diceList.map((die, index) => String(die?.id ?? `die-${index + 1}`)),
+    );
+
+    const targets = layoutTargets(diceList.length, bounds);
+
+    diceList.forEach((die, index) => {
+      const id = String(die?.id ?? `die-${index + 1}`);
+      const bodyState = bodiesRef.current.get(id);
+
+      if (!bodyState) {
+        return;
+      }
+
+      if (rerollSet.has(id)) {
+        launchRollingBody(bodyState, bounds, isPush);
+      } else {
+        const faceValue = Number.isInteger(die?.face) ? die.face : 1;
+        lockBodyToTarget(bodyState, targets[index], faceValue, id);
+      }
+    });
+
+    pendingSimulationRef.current = {
+      key: rollRequest.key,
+      action: rollRequest.action,
+      order: diceList.map((die, index) => String(die?.id ?? `die-${index + 1}`)),
+      rerollSet,
+      startedAt: performance.now(),
+      rolledAt: Number.isFinite(rollRequest.startedAt) ? rollRequest.startedAt : Date.now(),
+      reported: false,
+    };
+  }, [rollRequest]);
 
   useFrame((_, deltaSeconds) => {
     const world = worldRef.current;
@@ -280,73 +468,105 @@ const DicePhysicsScene = ({ dice, animatedIds, simulationKey }) => {
       stepAccumulatorRef.current -= fixedStep;
     }
 
-    const now = performance.now();
-
     for (const [id, bodyState] of bodiesRef.current) {
-      const { body, target, settleAt, face } = bodyState;
-
-      if (body.type === CANNON.Body.DYNAMIC && settleAt > 0 && now >= settleAt) {
-        body.type = CANNON.Body.KINEMATIC;
-        body.mass = 0;
-        body.updateMassProperties();
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.position.set(target.x, target.y, target.z);
-        body.quaternion.copy(settledQuaternionFor(id, face));
-        body.sleep();
-        bodyState.settleAt = 0;
-      }
-
       const group = groupRefs.current.get(id);
 
       if (!group) {
         continue;
       }
 
-      group.position.set(body.position.x, body.position.y, body.position.z);
+      group.position.set(
+        bodyState.body.position.x,
+        bodyState.body.position.y,
+        bodyState.body.position.z,
+      );
       group.quaternion.set(
-        body.quaternion.x,
-        body.quaternion.y,
-        body.quaternion.z,
-        body.quaternion.w,
+        bodyState.body.quaternion.x,
+        bodyState.body.quaternion.y,
+        bodyState.body.quaternion.z,
+        bodyState.body.quaternion.w,
       );
     }
+
+    const pending = pendingSimulationRef.current;
+
+    if (!pending || pending.reported || pending.rerollSet.size === 0) {
+      return;
+    }
+
+    const elapsed = performance.now() - pending.startedAt;
+    let allSettled = elapsed >= MIN_SETTLE_MS;
+
+    for (const id of pending.rerollSet) {
+      const bodyState = bodiesRef.current.get(id);
+
+      if (!bodyState) {
+        continue;
+      }
+
+      const linearSpeed = bodyState.body.velocity.length();
+      const angularSpeed = bodyState.body.angularVelocity.length();
+
+      if (linearSpeed > 0.2 || angularSpeed > 0.7) {
+        allSettled = false;
+        break;
+      }
+    }
+
+    if (elapsed >= MAX_SETTLE_MS) {
+      allSettled = true;
+    }
+
+    if (!allSettled) {
+      return;
+    }
+
+    const targets = layoutTargets(pending.order.length, boundsRef.current);
+    const resolvedDice = pending.order.map((id, index) => {
+      const bodyState = bodiesRef.current.get(id);
+      const faceValue = bodyState ? faceValueFromQuaternion(bodyState.body.quaternion) : 1;
+
+      if (bodyState) {
+        lockBodyToTarget(bodyState, targets[index], faceValue, id);
+      }
+
+      return {
+        id,
+        type: bodyState?.type ?? DICE_TYPE.ATTRIBUTE,
+        face: faceValue,
+        wasPushed: pending.action === "push" && pending.rerollSet.has(id),
+      };
+    });
+
+    pending.reported = true;
+    pendingSimulationRef.current = null;
+    onRollResolvedRef.current?.({
+      key: pending.key,
+      action: pending.action,
+      rolledAt: pending.rolledAt,
+      dice: resolvedDice,
+    });
   });
+
+  const diceList = Array.isArray(dice) ? dice : [];
 
   return (
     <>
-      <ambientLight intensity={0.45} />
+      <ambientLight intensity={0.62} />
       <directionalLight
-        position={[4.5, 8.4, 5]}
+        position={[0, 11, 0.001]}
         intensity={0.9}
         castShadow
         shadow-mapSize={[1024, 1024]}
       />
-
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[TRAY_WIDTH, TRAY_DEPTH]} />
-        <meshStandardMaterial color="#dce9dc" roughness={0.94} metalness={0.01} />
+        <planeGeometry args={[boundsRef.current.halfWidth * 2, boundsRef.current.halfDepth * 2]} />
+        <shadowMaterial opacity={0.24} transparent />
       </mesh>
 
-      <mesh position={[TRAY_WIDTH / 2 + WALL_THICKNESS / 2, WALL_HEIGHT / 2 - 0.02, 0]}>
-        <boxGeometry args={[WALL_THICKNESS, WALL_HEIGHT, TRAY_DEPTH + WALL_THICKNESS]} />
-        <meshStandardMaterial color="#90a78f" roughness={0.88} />
-      </mesh>
-      <mesh position={[-TRAY_WIDTH / 2 - WALL_THICKNESS / 2, WALL_HEIGHT / 2 - 0.02, 0]}>
-        <boxGeometry args={[WALL_THICKNESS, WALL_HEIGHT, TRAY_DEPTH + WALL_THICKNESS]} />
-        <meshStandardMaterial color="#90a78f" roughness={0.88} />
-      </mesh>
-      <mesh position={[0, WALL_HEIGHT / 2 - 0.02, TRAY_DEPTH / 2 + WALL_THICKNESS / 2]}>
-        <boxGeometry args={[TRAY_WIDTH + WALL_THICKNESS * 2, WALL_HEIGHT, WALL_THICKNESS]} />
-        <meshStandardMaterial color="#90a78f" roughness={0.88} />
-      </mesh>
-      <mesh position={[0, WALL_HEIGHT / 2 - 0.02, -TRAY_DEPTH / 2 - WALL_THICKNESS / 2]}>
-        <boxGeometry args={[TRAY_WIDTH + WALL_THICKNESS * 2, WALL_HEIGHT, WALL_THICKNESS]} />
-        <meshStandardMaterial color="#90a78f" roughness={0.88} />
-      </mesh>
-
-      {dice.map((die, index) => {
+      {diceList.map((die, index) => {
         const id = String(die?.id ?? `die-${index + 1}`);
+        const materialSet = materialSets[die?.type] ?? materialSets[DICE_TYPE.ATTRIBUTE];
 
         return (
           <group
@@ -359,15 +579,9 @@ const DicePhysicsScene = ({ dice, animatedIds, simulationKey }) => {
               }
             }}
           >
-            <mesh castShadow receiveShadow>
+            <mesh castShadow receiveShadow material={materialSet}>
               <boxGeometry args={[DIE_SIZE, DIE_SIZE, DIE_SIZE]} />
-              <meshStandardMaterial
-                color={getDieColor(die?.type)}
-                roughness={0.38}
-                metalness={0.08}
-              />
             </mesh>
-            <DieFaceLabel face={die?.face} dieType={die?.type} />
           </group>
         );
       })}
@@ -375,19 +589,19 @@ const DicePhysicsScene = ({ dice, animatedIds, simulationKey }) => {
   );
 };
 
-function DiceTray3D({ roll }) {
-  const dice = Array.isArray(roll?.dice) ? roll.dice : [];
-  const animatedIds = useMemo(() => selectAnimatedDiceIds(roll), [roll]);
-  const simulationKey = Number.isFinite(roll?.rolledAt) ? roll.rolledAt : 0;
-
+function DiceTray3D({ dice, rollRequest, onRollResolved }) {
   return (
     <Canvas
-      camera={{ position: [0, 7, 6.6], fov: 34, near: 0.1, far: 50 }}
+      camera={{ position: [0, 10, 0.001], fov: 34, near: 0.1, far: 50 }}
       shadows
       dpr={[1, 1.7]}
     >
-      <color attach="background" args={["#ebf2e9"]} />
-      <DicePhysicsScene dice={dice} animatedIds={animatedIds} simulationKey={simulationKey} />
+      <color attach="background" args={["#edf3eb"]} />
+      <DicePhysicsScene
+        dice={dice}
+        rollRequest={rollRequest}
+        onRollResolved={onRollResolved}
+      />
     </Canvas>
   );
 }

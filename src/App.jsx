@@ -1,6 +1,6 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
-import { MAX_DICE, normalizeDiceCount, pushPool, rollPool } from "./lib/dice";
+import { MAX_DICE, buildDicePool, normalizeDiceCount } from "./lib/dice";
 import {
   getBrowserStorage,
   loadPoolSelection,
@@ -33,12 +33,18 @@ function App() {
   const [strainPoints, setStrainPoints] = useState(0);
   const [currentRoll, setCurrentRoll] = useState(null);
   const [previousRoll, setPreviousRoll] = useState(null);
+  const [rollRequest, setRollRequest] = useState(null);
+  const rollRequestRef = useRef(null);
+  const requestCounterRef = useRef(0);
+  const currentRollRef = useRef(null);
+  const previousRollRef = useRef(null);
 
   const normalizedStrainPoints = normalizeStrainPoints(strainPoints);
   const totalDice = useMemo(
     () => attributeDice + skillDice + normalizedStrainPoints,
     [attributeDice, skillDice, normalizedStrainPoints],
   );
+  const isRolling = Boolean(rollRequest);
 
   const onAttributeChange = (event) => {
     setAttributeDice(
@@ -67,36 +73,56 @@ function App() {
     });
   }, [storage, attributeDice, skillDice]);
 
+  useEffect(() => {
+    rollRequestRef.current = rollRequest;
+  }, [rollRequest]);
+
+  useEffect(() => {
+    currentRollRef.current = currentRoll;
+  }, [currentRoll]);
+
+  useEffect(() => {
+    previousRollRef.current = previousRoll;
+  }, [previousRoll]);
+
   const onRoll = () => {
-    const rolled = rollPool(buildCountsWithStrain({
-      attributeDice,
-      skillDice,
-    }, normalizedStrainPoints));
-    const nextState = transitionWithRoll(
-      { currentRoll, previousRoll },
-      rolled,
-      { rolledAt: Date.now() },
-    );
-
-    setCurrentRoll(nextState.currentRoll);
-    setPreviousRoll(nextState.previousRoll);
-  };
-
-  const onPush = () => {
-    if (!canPush) {
+    if (isRolling) {
       return;
     }
 
-    const pushed = pushPool(currentRoll?.dice);
-    const nextState = transitionWithPush(
-      { currentRoll, previousRoll },
-      pushed,
-      { rolledAt: Date.now() },
+    const dicePool = buildDicePool(
+      buildCountsWithStrain(
+        {
+          attributeDice,
+          skillDice,
+        },
+        normalizedStrainPoints,
+      ),
     );
 
-    setCurrentRoll(nextState.currentRoll);
-    setPreviousRoll(nextState.previousRoll);
-    setStrainPoints((current) => incrementStrainPointsByBanes(current, pushed));
+    requestCounterRef.current += 1;
+    setRollRequest({
+      key: requestCounterRef.current,
+      action: "roll",
+      dice: dicePool,
+      rerollIds: dicePool.map((die) => die.id),
+      startedAt: Date.now(),
+    });
+  };
+
+  const onPush = () => {
+    if (!canPush || isRolling) {
+      return;
+    }
+
+    requestCounterRef.current += 1;
+    setRollRequest({
+      key: requestCounterRef.current,
+      action: "push",
+      dice: currentRoll?.dice ?? [],
+      rerollIds: currentRoll?.pushableDiceIds ?? [],
+      startedAt: Date.now(),
+    });
   };
 
   const renderRollSummary = (roll) => {
@@ -108,7 +134,37 @@ function App() {
     return `${roll.outcomes.successes} successes, ${roll.outcomes.banes} banes${withStrain}`;
   };
 
-  const canPush = canPushCurrentRoll({ currentRoll, previousRoll }) && currentRoll?.action !== "push";
+  const onRollResolved = useCallback((resolution) => {
+    const activeRequest = rollRequestRef.current;
+
+    if (!activeRequest || !resolution || resolution.key !== activeRequest.key) {
+      return;
+    }
+
+    const resolvedRoll = { dice: Array.isArray(resolution.dice) ? resolution.dice : [] };
+    const currentSession = {
+      currentRoll: currentRollRef.current,
+      previousRoll: previousRollRef.current,
+    };
+    const rolledAt = Number.isFinite(resolution.rolledAt) ? resolution.rolledAt : Date.now();
+    let nextState = currentSession;
+
+    if (resolution.action === "push") {
+      nextState = transitionWithPush(currentSession, resolvedRoll, { rolledAt });
+      setStrainPoints((current) => incrementStrainPointsByBanes(current, nextState.currentRoll));
+    } else {
+      nextState = transitionWithRoll(currentSession, resolvedRoll, { rolledAt });
+    }
+
+    setCurrentRoll(nextState.currentRoll);
+    setPreviousRoll(nextState.previousRoll);
+    setRollRequest(null);
+  }, []);
+
+  const canPush = canPushCurrentRoll({ currentRoll, previousRoll })
+    && currentRoll?.action !== "push"
+    && !isRolling;
+  const activeDice = rollRequest?.dice ?? currentRoll?.dice ?? [];
 
   return (
     <main className="app-shell">
@@ -167,11 +223,11 @@ function App() {
             </div>
 
             <div className="actions">
-              <button type="button" onClick={onRoll}>
-                Roll Dice
+              <button type="button" onClick={onRoll} disabled={isRolling}>
+                {isRolling && rollRequest?.action === "roll" ? "Rolling..." : "Roll Dice"}
               </button>
               <button type="button" onClick={onPush} disabled={!canPush}>
-                Push (After Roll)
+                {isRolling && rollRequest?.action === "push" ? "Pushing..." : "Push (After Roll)"}
               </button>
             </div>
           </section>
@@ -180,11 +236,19 @@ function App() {
             <h2 id="tray-label">Dice Tray</h2>
             <div className="tray-stage" aria-label="3D dice tray">
               <Suspense fallback={<div className="tray-loading">Loading 3D tray…</div>}>
-                <DiceTray3D roll={currentRoll} />
+                <DiceTray3D
+                  dice={activeDice}
+                  rollRequest={rollRequest}
+                  onRollResolved={onRollResolved}
+                />
               </Suspense>
             </div>
             <div className="tray-results" role="status" aria-live="polite">
-              {currentRoll ? (
+              {isRolling ? (
+                <p className="tray-lead">
+                  {rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice..."}
+                </p>
+              ) : currentRoll ? (
                 <>
                   <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
                   <p>
@@ -206,8 +270,7 @@ function App() {
               ) : (
                 <>
                   <p className="tray-lead">Roll the dice to see results.</p>
-                  <p>3D dice tray will render here.</p>
-                  <p>Ready for Attribute, Skill, and Strain dice.</p>
+                  <p>Results and roll breakdown will appear here.</p>
                 </>
               )}
             </div>
