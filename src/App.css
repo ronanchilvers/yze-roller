@@ -232,6 +232,25 @@ h2 {
   color: var(--ink-900);
 }
 
+.tray-results-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tray-results-row .tray-lead {
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.tray-pushable {
+  margin-bottom: 0;
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .previous-roll {
   margin: 0.7rem 0 0;
   color: var(--ink-700);
@@ -263,5 +282,14 @@ h2 {
 
   .tray-results {
     width: 100%;
+  }
+
+  .tray-results-row {
+    flex-wrap: wrap;
+  }
+
+  .tray-pushable {
+    width: 100%;
+    white-space: normal;
   }
 }

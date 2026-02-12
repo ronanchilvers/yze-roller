@@ -251,14 +251,14 @@ function App() {
                     {rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice..."}
                   </p>
                 ) : currentRoll ? (
-                  <>
+                  <div className="tray-results-row">
                     <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
-                    <p>
+                    <p className="tray-pushable">
                       {canPush
                         ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
                         : "No dice can be pushed."}
                     </p>
-                  </>
+                  </div>
                 ) : (
                   <>
                     <p className="tray-lead">Roll the dice to see results.</p>
