@@ -6,6 +6,7 @@ import { DICE_TYPE } from "../lib/dice.js";
 import { getDieColor } from "../lib/dice-visuals.js";
 
 const DIE_SIZE = 0.68;
+const DIE_CHAMFER = 0.055;
 const FLOOR_THICKNESS = 0.24;
 const WALL_THICKNESS = 0.24;
 const WALL_HEIGHT = 3.2;
@@ -30,6 +31,37 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
 const randomBetween = (min, max) => {
   return min + Math.random() * (max - min);
+};
+
+const createChamferedDieGeometry = (size, chamfer, segments = 5) => {
+  const half = size * 0.5;
+  const safeChamfer = THREE.MathUtils.clamp(chamfer, 0.01, half * 0.24);
+  const inner = half - safeChamfer;
+  const geometry = new THREE.BoxGeometry(size, size, size, segments, segments, segments);
+  const position = geometry.attributes.position;
+  const vertex = new THREE.Vector3();
+  const innerPoint = new THREE.Vector3();
+  const roundOffset = new THREE.Vector3();
+
+  for (let index = 0; index < position.count; index += 1) {
+    vertex.fromBufferAttribute(position, index);
+    innerPoint.set(
+      THREE.MathUtils.clamp(vertex.x, -inner, inner),
+      THREE.MathUtils.clamp(vertex.y, -inner, inner),
+      THREE.MathUtils.clamp(vertex.z, -inner, inner),
+    );
+    roundOffset.copy(vertex).sub(innerPoint);
+
+    if (roundOffset.lengthSq() > 0) {
+      roundOffset.normalize().multiplyScalar(safeChamfer);
+      innerPoint.add(roundOffset);
+    }
+
+    position.setXYZ(index, innerPoint.x, innerPoint.y, innerPoint.z);
+  }
+
+  geometry.computeVertexNormals();
+  return geometry;
 };
 
 const createFaceTexture = (faceValue, dieColor) => {
@@ -64,11 +96,13 @@ const createMaterialSet = (dieType) => {
   return FACE_ORDER_BY_SIDE.map((faceValue) => {
     const texture = createFaceTexture(faceValue, dieColor);
 
-    return new THREE.MeshStandardMaterial({
+    return new THREE.MeshPhysicalMaterial({
       map: texture,
       color: "#ffffff",
-      roughness: 0.34,
-      metalness: 0.08,
+      roughness: 0.22,
+      metalness: 0.02,
+      clearcoat: 0.34,
+      clearcoatRoughness: 0.26,
     });
   });
 };
@@ -267,6 +301,10 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const stepAccumulatorRef = useRef(0);
   const lastRequestKeyRef = useRef(null);
   const dieShapeRef = useRef(new CANNON.Box(new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)));
+  const dieGeometry = useMemo(
+    () => createChamferedDieGeometry(DIE_SIZE, DIE_CHAMFER),
+    [],
+  );
 
   const materialSets = useMemo(
     () => ({
@@ -307,13 +345,14 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       for (const materialSet of Object.values(materialSets)) {
         disposeMaterialSet(materialSet);
       }
+      dieGeometry.dispose();
       bodiesRef.current.clear();
       groupRefs.current.clear();
       staticBodiesRef.current = [];
       worldRef.current = null;
       pendingSimulationRef.current = null;
     };
-  }, [materialSets]);
+  }, [materialSets, dieGeometry]);
 
   useEffect(() => {
     const world = worldRef.current;
@@ -617,9 +656,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
               }
             }}
           >
-            <mesh castShadow receiveShadow material={materialSet}>
-              <boxGeometry args={[DIE_SIZE, DIE_SIZE, DIE_SIZE]} />
-            </mesh>
+            <mesh castShadow receiveShadow material={materialSet} geometry={dieGeometry} />
           </group>
         );
       })}
