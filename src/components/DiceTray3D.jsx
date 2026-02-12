@@ -33,34 +33,69 @@ const randomBetween = (min, max) => {
   return min + Math.random() * (max - min);
 };
 
-const createChamferedDieGeometry = (size, chamfer, segments = 5) => {
+const createChamferedDieGeometry = (size, chamfer, segments = 6) => {
   const half = size * 0.5;
   const safeChamfer = THREE.MathUtils.clamp(chamfer, 0.01, half * 0.24);
   const inner = half - safeChamfer;
-  const geometry = new THREE.BoxGeometry(size, size, size, segments, segments, segments);
+  const geometry = new THREE.BoxGeometry(size, size, size, segments, segments, segments).toNonIndexed();
   const position = geometry.attributes.position;
   const vertex = new THREE.Vector3();
+  const nextVertex = new THREE.Vector3();
   const innerPoint = new THREE.Vector3();
   const roundOffset = new THREE.Vector3();
+  const normal = new THREE.Vector3();
+  const normals = new Float32Array(position.count * 3);
+  const edgeEpsilon = 1e-5;
 
   for (let index = 0; index < position.count; index += 1) {
     vertex.fromBufferAttribute(position, index);
-    innerPoint.set(
-      THREE.MathUtils.clamp(vertex.x, -inner, inner),
-      THREE.MathUtils.clamp(vertex.y, -inner, inner),
-      THREE.MathUtils.clamp(vertex.z, -inner, inner),
-    );
-    roundOffset.copy(vertex).sub(innerPoint);
+    const onX = Math.abs(vertex.x) >= inner - edgeEpsilon;
+    const onY = Math.abs(vertex.y) >= inner - edgeEpsilon;
+    const onZ = Math.abs(vertex.z) >= inner - edgeEpsilon;
+    const activeAxes = Number(onX) + Number(onY) + Number(onZ);
 
-    if (roundOffset.lengthSq() > 0) {
-      roundOffset.normalize().multiplyScalar(safeChamfer);
-      innerPoint.add(roundOffset);
+    nextVertex.copy(vertex);
+
+    if (activeAxes >= 2) {
+      innerPoint.set(
+        THREE.MathUtils.clamp(vertex.x, -inner, inner),
+        THREE.MathUtils.clamp(vertex.y, -inner, inner),
+        THREE.MathUtils.clamp(vertex.z, -inner, inner),
+      );
+      roundOffset.copy(vertex).sub(innerPoint);
+
+      if (roundOffset.lengthSq() > 0) {
+        roundOffset.normalize().multiplyScalar(safeChamfer);
+        nextVertex.copy(innerPoint).add(roundOffset);
+      }
     }
 
-    position.setXYZ(index, innerPoint.x, innerPoint.y, innerPoint.z);
+    position.setXYZ(index, nextVertex.x, nextVertex.y, nextVertex.z);
+
+    if (activeAxes >= 2) {
+      if (roundOffset.lengthSq() > 0) {
+        normal.copy(roundOffset).normalize();
+      } else {
+        normal.set(
+          onX ? Math.sign(vertex.x) : 0,
+          onY ? Math.sign(vertex.y) : 0,
+          onZ ? Math.sign(vertex.z) : 0,
+        ).normalize();
+      }
+    } else if (onX) {
+      normal.set(Math.sign(vertex.x), 0, 0);
+    } else if (onY) {
+      normal.set(0, Math.sign(vertex.y), 0);
+    } else {
+      normal.set(0, 0, Math.sign(vertex.z));
+    }
+
+    normals[index * 3] = normal.x;
+    normals[index * 3 + 1] = normal.y;
+    normals[index * 3 + 2] = normal.z;
   }
 
-  geometry.computeVertexNormals();
+  geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
   return geometry;
 };
 
