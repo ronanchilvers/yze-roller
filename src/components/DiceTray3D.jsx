@@ -6,7 +6,7 @@ import { DICE_TYPE } from "../lib/dice.js";
 import { getDieColor } from "../lib/dice-visuals.js";
 
 const DIE_SIZE = 0.68;
-const DIE_CHAMFER = 0.028;
+const DIE_CHAMFER = 0.016;
 const FLOOR_THICKNESS = 0.24;
 const WALL_THICKNESS = 0.24;
 const WALL_HEIGHT = 3.2;
