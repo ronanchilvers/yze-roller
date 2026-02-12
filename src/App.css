@@ -191,7 +191,7 @@ h2 {
   border-radius: 0.8rem;
   overflow: hidden;
   min-height: clamp(240px, 42dvh, 520px);
-  background: #ebf2e9;
+  background: #f5faf3;
 }
 
 .tray-stage canvas {
