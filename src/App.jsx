@@ -258,14 +258,6 @@ function App() {
                         ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
                         : "No dice can be pushed."}
                     </p>
-                    <ul className="dice-readout">
-                      {currentRoll.dice.map((die) => (
-                        <li key={die.id}>
-                          <span>{die.type}</span>
-                          <strong>{die.face ?? "-"}</strong>
-                        </li>
-                      ))}
-                    </ul>
                   </>
                 ) : (
                   <>

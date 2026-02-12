@@ -593,8 +593,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
         position={[8, 11.31, -8]}
         intensity={0.92}
         castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-blurSamples={24}
+        shadow-mapSize={[1024, 1024]}
+        shadow-blurSamples={48}
       />
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
