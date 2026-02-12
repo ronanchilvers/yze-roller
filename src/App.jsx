@@ -242,30 +242,24 @@ function App() {
             </div>
           </section>
 
-          <section className="panel tray-panel" aria-labelledby="tray-label">
-            <div className="tray-header">
-              <h2 id="tray-label">Dice Tray</h2>
-              <div className="tray-results" role="status" aria-live="polite">
-                {isRolling ? (
-                  <p className="tray-lead">
-                    {rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice..."}
+          <section className="panel tray-panel" aria-label="Dice tray">
+            <div className="tray-results" role="status" aria-live="polite">
+              {isRolling ? (
+                <p className="tray-lead">
+                  {rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice..."}
+                </p>
+              ) : currentRoll ? (
+                <div className="tray-results-row">
+                  <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
+                  <p className="tray-pushable">
+                    {canPush
+                      ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
+                      : "No dice can be pushed."}
                   </p>
-                ) : currentRoll ? (
-                  <div className="tray-results-row">
-                    <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
-                    <p className="tray-pushable">
-                      {canPush
-                        ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
-                        : "No dice can be pushed."}
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <p className="tray-lead">Roll the dice to see results.</p>
-                    <p>Results and roll breakdown will appear here.</p>
-                  </>
-                )}
-              </div>
+                </div>
+              ) : (
+                <p className="tray-lead">Roll the dice to see results.</p>
+              )}
             </div>
             <div className="tray-stage" aria-label="3D dice tray">
               <Suspense fallback={<div className="tray-loading">Loading 3D tray…</div>}>
