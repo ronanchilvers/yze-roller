@@ -178,6 +178,13 @@ h2 {
   min-height: clamp(360px, 58dvh, 680px);
 }
 
+.tray-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
 .tray-stage {
   margin-top: 0.8rem;
   border: 1px solid #b6c8b6;
@@ -202,12 +209,13 @@ h2 {
 }
 
 .tray-results {
-  margin-top: 0.8rem;
+  margin-top: 0;
   border: 1px solid #b9cbb9;
   border-radius: 0.75rem;
   background: linear-gradient(180deg, #f4f8f4, #ecf3ec);
   padding: 0.85rem 0.95rem;
   color: var(--ink-700);
+  width: min(100%, 26rem);
 }
 
 .tray-results p {
@@ -269,5 +277,13 @@ h2 {
   .tray-panel {
     min-height: clamp(320px, 52dvh, 560px);
     grid-template-rows: auto minmax(220px, 1fr) auto;
+  }
+
+  .tray-header {
+    flex-direction: column;
+  }
+
+  .tray-results {
+    width: 100%;
   }
 }

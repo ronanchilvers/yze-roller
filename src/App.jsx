@@ -243,7 +243,38 @@ function App() {
           </section>
 
           <section className="panel tray-panel" aria-labelledby="tray-label">
-            <h2 id="tray-label">Dice Tray</h2>
+            <div className="tray-header">
+              <h2 id="tray-label">Dice Tray</h2>
+              <div className="tray-results" role="status" aria-live="polite">
+                {isRolling ? (
+                  <p className="tray-lead">
+                    {rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice..."}
+                  </p>
+                ) : currentRoll ? (
+                  <>
+                    <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
+                    <p>
+                      {canPush
+                        ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
+                        : "No dice can be pushed."}
+                    </p>
+                    <ul className="dice-readout">
+                      {currentRoll.dice.map((die) => (
+                        <li key={die.id}>
+                          <span>{die.type}</span>
+                          <strong>{die.face ?? "-"}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <>
+                    <p className="tray-lead">Roll the dice to see results.</p>
+                    <p>Results and roll breakdown will appear here.</p>
+                  </>
+                )}
+              </div>
+            </div>
             <div className="tray-stage" aria-label="3D dice tray">
               <Suspense fallback={<div className="tray-loading">Loading 3D tray…</div>}>
                 <DiceTray3D
@@ -252,35 +283,6 @@ function App() {
                   onRollResolved={onRollResolved}
                 />
               </Suspense>
-            </div>
-            <div className="tray-results" role="status" aria-live="polite">
-              {isRolling ? (
-                <p className="tray-lead">
-                  {rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice..."}
-                </p>
-              ) : currentRoll ? (
-                <>
-                  <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
-                  <p>
-                    {canPush
-                      ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
-                      : "No dice can be pushed."}
-                  </p>
-                  <ul className="dice-readout">
-                    {currentRoll.dice.map((die) => (
-                      <li key={die.id}>
-                        <span>{die.type}</span>
-                        <strong>{die.face ?? "-"}</strong>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <>
-                  <p className="tray-lead">Roll the dice to see results.</p>
-                  <p>Results and roll breakdown will appear here.</p>
-                </>
-              )}
             </div>
             {previousRoll ? <p className="previous-roll">Previous: {renderRollSummary(previousRoll)}</p> : null}
           </section>
