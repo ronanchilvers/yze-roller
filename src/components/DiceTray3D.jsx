@@ -593,8 +593,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
         position={[8, 11.31, -8]}
         intensity={0.92}
         castShadow
-        shadow-radius={10}
-        shadow-mapSize={[2048, 2048]}
+        shadow-radius={12}
+        shadow-mapSize={[1024, 1024]}
       />
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
@@ -632,7 +632,7 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
     <Canvas
       orthographic
       camera={{ position: [0, 16, 0.001], zoom: 88, near: 0.1, far: 70 }}
-      shadows={{ type: THREE.PCFSoftShadowMap }}
+      shadows={{ type: THREE.PCFShadowMap }}
       dpr={[1, 1.7]}
     >
       <color attach="background" args={["#f4f9f2"]} />
