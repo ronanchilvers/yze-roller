@@ -205,11 +205,11 @@ h2 {
 
 .tray-stage {
   margin-top: 0.8rem;
-  border: 1px solid #b6c8b6;
+  border: 1px solid #d9d9d9;
   border-radius: 0.8rem;
   overflow: hidden;
   min-height: clamp(240px, 42dvh, 520px);
-  background: #f5faf3;
+  background: #ffffff;
 }
 
 .tray-stage canvas {

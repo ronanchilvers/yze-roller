@@ -673,7 +673,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[boundsRef.current.visibleHalfWidth * 2, boundsRef.current.visibleHalfDepth * 2]} />
-        <meshStandardMaterial color="#f2f8ef" roughness={0.94} metalness={0.02} />
+        <meshStandardMaterial color="#ffffff" roughness={0.94} metalness={0.02} />
       </mesh>
 
       {diceList.map((die, index) => {
@@ -707,7 +707,7 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
       shadows={{ type: THREE.VSMShadowMap }}
       dpr={[1, 1.7]}
     >
-      <color attach="background" args={["#f8fcf6"]} />
+      <color attach="background" args={["#ffffff"]} />
       <DicePhysicsScene
         dice={dice}
         rollRequest={rollRequest}
