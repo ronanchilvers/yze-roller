@@ -64,11 +64,35 @@ h2 {
   background: linear-gradient(165deg, #fff7f2 0%, #ffe4d6 100%);
 }
 
+.strain-pill-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
 .strain-pill span {
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ink-700);
+}
+
+.strain-reset-button {
+  border: 1px solid var(--line);
+  background: #fffaf6;
+  color: var(--ink-700);
+  border-radius: 0.45rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.strain-reset-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .strain-pill strong {
@@ -167,7 +191,8 @@ h2 {
 }
 
 .actions button:focus-visible,
-.number-field input:focus-visible {
+.number-field input:focus-visible,
+.strain-reset-button:focus-visible {
   outline: 2px solid #1d6f68;
   outline-offset: 2px;
 }

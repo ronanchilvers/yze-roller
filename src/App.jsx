@@ -66,6 +66,10 @@ function App() {
     );
   };
 
+  const onResetStrain = () => {
+    setStrainPoints(0);
+  };
+
   useEffect(() => {
     savePoolSelection(storage, {
       attributeDice,
@@ -185,7 +189,18 @@ function App() {
             <h1>Dice Roller</h1>
           </div>
           <output className="strain-pill" aria-label="Current strain points">
-            <span>Strain Points</span>
+            <div className="strain-pill-head">
+              <span>Strain Points</span>
+              <button
+                type="button"
+                className="strain-reset-button"
+                aria-label="Reset strain points"
+                onClick={onResetStrain}
+                disabled={normalizedStrainPoints === 0}
+              >
+                ↺
+              </button>
+            </div>
             <strong>{normalizedStrainPoints}</strong>
           </output>
         </header>
