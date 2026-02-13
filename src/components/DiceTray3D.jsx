@@ -23,6 +23,7 @@ const MAX_SETTLE_MS = 4200;
 const SETTLE_LINEAR_SPEED = 0.12;
 const SETTLE_ANGULAR_SPEED = 0.18;
 const SETTLE_FRAMES = 18;
+const SETTLE_FACE_ALIGNMENT = 0.9;
 
 const FACE_ORDER_BY_SIDE = [2, 5, 1, 6, 3, 4];
 const FACE_NORMALS = [
@@ -583,6 +584,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
     const elapsed = performance.now() - pending.startedAt;
     let isMoving = false;
+    let hasEdgeLeaningDie = false;
 
     for (const id of pending.rerollSet) {
       const bodyState = bodiesRef.current.get(id);
@@ -593,6 +595,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       const linearSpeedSq = bodyState.body.velocity.lengthSquared();
       const angularSpeedSq = bodyState.body.angularVelocity.lengthSquared();
+      const { alignment } = topFaceFromQuaternion(bodyState.body.quaternion);
 
       if (
         linearSpeedSq > SETTLE_LINEAR_SPEED * SETTLE_LINEAR_SPEED ||
@@ -600,6 +603,10 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       ) {
         isMoving = true;
         break;
+      }
+
+      if (alignment < SETTLE_FACE_ALIGNMENT) {
+        hasEdgeLeaningDie = true;
       }
     }
 
@@ -609,7 +616,9 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       settleFramesRef.current += 1;
     }
 
-    let allSettled = elapsed >= MIN_SETTLE_MS && settleFramesRef.current >= SETTLE_FRAMES;
+    let allSettled = elapsed >= MIN_SETTLE_MS
+      && settleFramesRef.current >= SETTLE_FRAMES
+      && !hasEdgeLeaningDie;
 
     if (elapsed >= MAX_SETTLE_MS) {
       allSettled = true;
@@ -621,9 +630,15 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
     const resolvedDice = pending.order.map((id) => {
       const bodyState = bodiesRef.current.get(id);
-      const faceValue = bodyState ? topFaceFromQuaternion(bodyState.body.quaternion).faceValue : 1;
+      const resolvedFace = bodyState ? topFaceFromQuaternion(bodyState.body.quaternion) : null;
+      const faceValue = resolvedFace?.faceValue ?? 1;
 
       if (bodyState) {
+        // Edge-leaning dice can sometimes sleep in an unstable orientation.
+        // On timeout, clamp to the nearest face so resolved state is valid.
+        if (resolvedFace && resolvedFace.alignment < SETTLE_FACE_ALIGNMENT) {
+          bodyState.body.quaternion.copy(quaternionForFaceValue(faceValue));
+        }
         clampBodyInside(bodyState.body, boundsRef.current, false);
         freezeBodyInPlace(bodyState.body);
       }
