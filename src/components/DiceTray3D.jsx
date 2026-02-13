@@ -12,6 +12,11 @@ const CHAMFER_RADIUS = DIE_SIZE * 0.08;
 const FLOOR_THICKNESS = 0.24;
 const WALL_THICKNESS = 0.24;
 const WALL_HEIGHT = 3.2;
+const CAMERA_DISTANCE = 16;
+const CAMERA_TILT_DEGREES = 5;
+const CAMERA_TILT_RADIANS = THREE.MathUtils.degToRad(CAMERA_TILT_DEGREES);
+const CAMERA_Y = CAMERA_DISTANCE * Math.cos(CAMERA_TILT_RADIANS);
+const CAMERA_Z = CAMERA_DISTANCE * Math.sin(CAMERA_TILT_RADIANS);
 const MIN_SETTLE_MS = 720;
 const MAX_SETTLE_MS = 4200;
 const SETTLE_LINEAR_SPEED = 0.12;
@@ -326,7 +331,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   }, [onRollResolved]);
 
   useEffect(() => {
-    camera.position.set(0, 16, 0.001);
+    camera.position.set(0, CAMERA_Y, CAMERA_Z);
     camera.up.set(0, 0, -1);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
@@ -692,7 +697,7 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
   return (
     <Canvas
       orthographic
-      camera={{ position: [0, 16, 0.001], zoom: 88, near: 0.1, far: 70 }}
+      camera={{ position: [0, CAMERA_Y, CAMERA_Z], zoom: 88, near: 0.1, far: 70 }}
       shadows={{ type: THREE.VSMShadowMap }}
       dpr={[1, 1.7]}
     >
