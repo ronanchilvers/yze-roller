@@ -30,6 +30,23 @@
   margin: 0 auto;
 }
 
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #ffffff;
+  color: var(--ink-900);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  z-index: 20;
+}
+
+.skip-link:focus {
+  left: 0.75rem;
+}
+
 /* ── Top bar & heading ─────────────────────────────────────────────── */
 
 .top-bar {
@@ -317,6 +334,28 @@ h2 {
   padding: 0.45rem 0.55rem;
   box-shadow: 0 0 10px 1px rgba(28, 43, 28, 0.4);
   z-index: 6;
+}
+
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.35rem;
+}
+
+.history-close {
+  border: 1px solid #b9cbb9;
+  border-radius: 0.45rem;
+  background: #f9fcf9;
+  color: var(--ink-700);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+}
+
+.history-close:focus-visible {
+  outline: 2px solid #1d6f68;
+  outline-offset: 2px;
 }
 
 .history-list {

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useRef } from "react";
 import "./App.css";
 import { MAX_DICE } from "./lib/dice";
 import { usePoolSelection } from "./hooks/usePoolSelection";
@@ -64,6 +64,9 @@ function App() {
       ? formatRollSummary(currentRoll)
       : "Roll the dice to see results.";
 
+  const historyPanelRef = useRef(null);
+  const closeButtonRef = useRef(null);
+
   const onPrimaryAction = () => {
     if (hasRolled) {
       onPush();
@@ -73,9 +76,47 @@ function App() {
     onRoll();
   };
 
+  useEffect(() => {
+    if (!isHistoryOpen) {
+      return;
+    }
+
+    if (closeButtonRef.current) {
+      closeButtonRef.current.focus();
+      return;
+    }
+
+    if (historyPanelRef.current) {
+      historyPanelRef.current.focus();
+    }
+  }, [isHistoryOpen]);
+
+  const handleHistoryKeyDown = (event) => {
+    if (event.key === "Escape") {
+      setIsHistoryOpen(false);
+      return;
+    }
+
+    if (event.key === "Tab") {
+      event.preventDefault();
+      closeButtonRef.current?.focus();
+    }
+  };
+
+  const handleHistoryClose = () => {
+    setIsHistoryOpen(false);
+  };
+
   return (
     <main className="app-shell">
-      <section className="dice-layout" aria-label="Year Zero dice roller">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+      <section
+        id="main-content"
+        className="dice-layout"
+        aria-label="Year Zero dice roller"
+      >
         <header className="top-bar">
           <div>
             <p className="eyebrow">Year Zero Engine</p>
@@ -155,7 +196,11 @@ function App() {
             </div>
           </section>
 
-          <section className="panel tray-panel" aria-label="Dice tray">
+          <section
+            className="panel tray-panel"
+            aria-label="Dice tray"
+            aria-busy={isRolling}
+          >
             <div className="tray-results" role="status" aria-live="polite">
               <div className="tray-results-row">
                 <div className="tray-summary-wrap">
@@ -187,7 +232,23 @@ function App() {
                 </button>
               </div>
               {hasPreviousResults && isHistoryOpen ? (
-                <div className="history-dropdown" id="previous-results-list">
+                <div
+                  className="history-dropdown"
+                  id="previous-results-list"
+                  tabIndex={-1}
+                  ref={historyPanelRef}
+                  onKeyDown={handleHistoryKeyDown}
+                >
+                  <div className="history-actions">
+                    <button
+                      type="button"
+                      className="history-close"
+                      onClick={handleHistoryClose}
+                      ref={closeButtonRef}
+                    >
+                      Close
+                    </button>
+                  </div>
                   <ul className="history-list">
                     {previousResults.map((entry) => (
                       <li key={entry.id}>{entry.summary}</li>
