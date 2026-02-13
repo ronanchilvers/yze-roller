@@ -11,6 +11,15 @@ export const EMPTY_OUTCOME = Object.freeze({
   hasStrain: false,
 });
 
+/** Normalization options for attribute dice (min 1, max MAX_DICE, fallback 1). */
+export const ATTRIBUTE_DICE_OPTS = Object.freeze({ min: 1, max: MAX_DICE, fallback: 1 });
+
+/** Normalization options for skill dice (min 0, max MAX_DICE, fallback 0). */
+export const SKILL_DICE_OPTS = Object.freeze({ min: 0, max: MAX_DICE, fallback: 0 });
+
+/** Normalization options for strain dice (min 0, max MAX_STRAIN_DICE, fallback 0). */
+export const STRAIN_DICE_OPTS = Object.freeze({ min: 0, max: MAX_STRAIN_DICE, fallback: 0 });
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const toSafeInteger = (value, fallback) => {
@@ -39,21 +48,9 @@ export const sanitizePoolCounts = (counts) => {
   const source = counts && typeof counts === "object" ? counts : {};
 
   return {
-    attributeDice: normalizeDiceCount(source.attributeDice, {
-      min: 1,
-      max: MAX_DICE,
-      fallback: 1,
-    }),
-    skillDice: normalizeDiceCount(source.skillDice, {
-      min: 0,
-      max: MAX_DICE,
-      fallback: 0,
-    }),
-    strainDice: normalizeDiceCount(source.strainDice, {
-      min: 0,
-      max: MAX_STRAIN_DICE,
-      fallback: 0,
-    }),
+    attributeDice: normalizeDiceCount(source.attributeDice, ATTRIBUTE_DICE_OPTS),
+    skillDice: normalizeDiceCount(source.skillDice, SKILL_DICE_OPTS),
+    strainDice: normalizeDiceCount(source.strainDice, STRAIN_DICE_OPTS),
   };
 };
 
@@ -224,12 +221,32 @@ export const summarizeRoll = (dicePool) => {
   };
 };
 
+/**
+ * Headless convenience wrapper: builds a pool from counts, rolls all dice,
+ * and returns a summarized result. Not used by the visual 3D tray (which
+ * resolves faces via physics simulation), but serves as the public API
+ * for non-visual / integration testing (e.g. strain accumulation tests).
+ *
+ * @param {{ attributeDice?: number, skillDice?: number, strainDice?: number }} counts
+ * @param {() => number} [randomSource=Math.random]
+ * @returns {{ dice: object[], outcomes: object, pushableDiceIds: string[], canPush: boolean }}
+ */
 export const rollPool = (counts, randomSource = Math.random) => {
   const pool = buildDicePool(counts);
   const rolledDice = rollDice(pool, randomSource);
   return summarizeRoll(rolledDice);
 };
 
+/**
+ * Headless convenience wrapper: takes an already-rolled dice pool, pushes
+ * eligible dice, and returns a summarized result. Like {@link rollPool},
+ * this is not used by the visual 3D tray but provides a composable API
+ * for integration tests that need deterministic push outcomes.
+ *
+ * @param {object[]} dicePool - Array of dice objects with face values
+ * @param {() => number} [randomSource=Math.random]
+ * @returns {{ dice: object[], outcomes: object, pushableDiceIds: string[], canPush: boolean }}
+ */
 export const pushPool = (dicePool, randomSource = Math.random) => {
   const initialRoll = summarizeRoll(dicePool);
   const pushCandidates = initialRoll.dice.filter((die) => isPushableFace(die.face));

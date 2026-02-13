@@ -1,3 +1,5 @@
+/* ── Design tokens ─────────────────────────────────────────────────── */
+
 :root {
   --ink-900: #152226;
   --ink-700: #2f474e;
@@ -10,6 +12,8 @@
   --strain-line: #721e1b;
   --shadow: 0 14px 30px rgba(37, 40, 26, 0.12);
 }
+
+/* ── Layout shell ──────────────────────────────────────────────────── */
 
 .app-shell {
   min-width: 450px;
@@ -26,6 +30,8 @@
   max-width: 1040px;
   margin: 0 auto;
 }
+
+/* ── Top bar & heading ─────────────────────────────────────────────── */
 
 .top-bar {
   display: flex;
@@ -55,6 +61,8 @@ h1 {
 h2 {
   font-size: 1.15rem;
 }
+
+/* ── Strain pill ───────────────────────────────────────────────────── */
 
 .strain-pill {
   display: grid;
@@ -101,6 +109,8 @@ h2 {
   font-size: 1.35rem;
 }
 
+/* ── Content grid & panels ─────────────────────────────────────────── */
+
 .content-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -143,6 +153,8 @@ h2 {
   cursor: pointer;
 }
 
+/* ── Dice pool controls ────────────────────────────────────────────── */
+
 .control-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -153,12 +165,6 @@ h2 {
 .number-field {
   display: grid;
   gap: 0.4rem;
-  &.number-field--attribute span {
-      color: #0aa300;
-  }
-  &.number-field--skill span {
-      color: #dbdd33;
-  }
 }
 
 .number-field span {
@@ -200,6 +206,8 @@ h2 {
   outline-offset: 2px;
 }
 
+/* ── Dice tray ─────────────────────────────────────────────────────── */
+
 .tray-panel {
   display: grid;
   grid-template-rows: auto minmax(260px, 1fr) auto;
@@ -215,6 +223,11 @@ h2 {
   background: #ffffff;
 }
 
+/*
+ * react-three/fiber's <Canvas> sets explicit pixel dimensions via inline
+ * styles on the <canvas> element.  !important is required here to override
+ * those inline values so the canvas fills its container responsively.
+ */
 .tray-stage canvas {
   width: 100% !important;
   height: 100% !important;
@@ -228,6 +241,8 @@ h2 {
   color: var(--ink-700);
   font-weight: 600;
 }
+
+/* ── Tray results & history ────────────────────────────────────────── */
 
 .tray-results {
   position: relative;
@@ -321,6 +336,8 @@ h2 {
 .tray-clear-button {
   white-space: nowrap;
 }
+
+/* ── Responsive overrides ──────────────────────────────────────────── */
 
 @media (max-width: 760px) {
   .top-bar {

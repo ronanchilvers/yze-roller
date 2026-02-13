@@ -7,16 +7,7 @@ import {
   incrementStrainPointsByBanes,
   normalizeStrainPoints,
 } from "./strain-points.js";
-
-const createSequenceRng = (samples) => {
-  let index = 0;
-
-  return () => {
-    const sample = samples[index];
-    index = Math.min(index + 1, samples.length);
-    return sample;
-  };
-};
+import { createSequenceRng } from "./test-helpers.js";
 
 test("normalizeStrainPoints enforces non-negative integers", () => {
   assert.equal(normalizeStrainPoints(-1), 0);

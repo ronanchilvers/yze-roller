@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
-import { MAX_DICE, normalizeDiceCount } from "../lib/dice.js";
+import { ATTRIBUTE_DICE_OPTS, SKILL_DICE_OPTS, normalizeDiceCount } from "../lib/dice.js";
 import {
   getBrowserStorage,
   loadPoolSelection,
   savePoolSelection,
 } from "../lib/pool-persistence.js";
-
-const MIN_ATTRIBUTE_DICE = 1;
-const MIN_SKILL_DICE = 0;
 
 /**
  * Manages dice pool selection with localStorage persistence.
@@ -41,21 +38,13 @@ export const usePoolSelection = () => {
 
   const onAttributeChange = (event) => {
     setAttributeDice(
-      normalizeDiceCount(event.target.value, {
-        min: MIN_ATTRIBUTE_DICE,
-        max: MAX_DICE,
-        fallback: MIN_ATTRIBUTE_DICE,
-      }),
+      normalizeDiceCount(event.target.value, ATTRIBUTE_DICE_OPTS),
     );
   };
 
   const onSkillChange = (event) => {
     setSkillDice(
-      normalizeDiceCount(event.target.value, {
-        min: MIN_SKILL_DICE,
-        max: MAX_DICE,
-        fallback: MIN_SKILL_DICE,
-      }),
+      normalizeDiceCount(event.target.value, SKILL_DICE_OPTS),
     );
   };
 

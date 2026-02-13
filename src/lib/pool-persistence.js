@@ -1,4 +1,4 @@
-import { MAX_DICE, normalizeDiceCount, sanitizePoolCounts } from "./dice.js";
+import { ATTRIBUTE_DICE_OPTS, SKILL_DICE_OPTS, normalizeDiceCount, sanitizePoolCounts } from "./dice.js";
 
 export const POOL_STORAGE_KEY = "yze:dice-pool-selection:v1";
 export const DEFAULT_POOL_SELECTION = Object.freeze({
@@ -12,20 +12,16 @@ const sanitizeSelection = (selection, fallback = DEFAULT_POOL_SELECTION) => {
 
   return {
     attributeDice: normalizeDiceCount(source.attributeDice, {
-      min: 1,
-      max: MAX_DICE,
+      ...ATTRIBUTE_DICE_OPTS,
       fallback: normalizeDiceCount(fallbackSource.attributeDice, {
-        min: 1,
-        max: MAX_DICE,
+        ...ATTRIBUTE_DICE_OPTS,
         fallback: DEFAULT_POOL_SELECTION.attributeDice,
       }),
     }),
     skillDice: normalizeDiceCount(source.skillDice, {
-      min: 0,
-      max: MAX_DICE,
+      ...SKILL_DICE_OPTS,
       fallback: normalizeDiceCount(fallbackSource.skillDice, {
-        min: 0,
-        max: MAX_DICE,
+        ...SKILL_DICE_OPTS,
         fallback: DEFAULT_POOL_SELECTION.skillDice,
       }),
     }),
