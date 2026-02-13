@@ -209,11 +209,6 @@ function App() {
   const trayLead = isRolling
     ? (rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice...")
     : (currentRoll ? formatRollSummary(currentRoll) : "Roll the dice to see results.");
-  const pushableSummary = currentRoll
-    ? (canPush
-      ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
-      : "No dice can be pushed.")
-    : "0 dice can be pushed.";
   const onPrimaryAction = () => {
     if (hasRolled) {
       onPush();
@@ -317,7 +312,6 @@ function App() {
                     </button>
                   ) : null}
                 </div>
-                <p className="tray-pushable">{pushableSummary}</p>
                 <button
                   type="button"
                   className="panel-reset-button tray-clear-button"

@@ -134,7 +134,7 @@ h2 {
 .panel-reset-button {
   border: 1px solid transparent;
   border-radius: 0.7rem;
-  padding: 0.55rem 0.95rem;
+  padding: 0.25rem 1rem;
   font: inherit;
   font-weight: 700;
   color: #fffaf5;
@@ -251,12 +251,13 @@ h2 {
 .tray-results-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
 }
 
 .tray-summary-wrap {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.45rem;
 }
 
@@ -310,13 +311,6 @@ h2 {
   color: var(--ink-700);
 }
 
-.tray-pushable {
-  margin-bottom: 0;
-  margin-left: auto;
-  text-align: right;
-  white-space: nowrap;
-}
-
 .tray-clear-button {
   white-space: nowrap;
 }
@@ -348,15 +342,6 @@ h2 {
   }
 
   .tray-results-row {
-    flex-wrap: wrap;
-  }
-
-  .tray-pushable {
-    width: 100%;
-    white-space: normal;
-  }
-
-  .tray-clear-button {
-    margin-left: auto;
+    flex-wrap: nowrap;
   }
 }
