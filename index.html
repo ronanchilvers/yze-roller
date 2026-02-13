@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Content Security Policy: defense-in-depth against XSS and injection attacks -->
+    <!-- script-src 'self': Only load scripts from same origin (blocks inline scripts, Vite handles this) -->
+    <!-- style-src 'unsafe-inline': Required for react-three/fiber canvas inline styles -->
+    <!-- img-src blob: data:: Required for canvas-generated textures in textures.js -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
+    <meta name="referrer" content="no-referrer" />
     <title>Year Zero Dice Roller</title>
   </head>
   <body>
