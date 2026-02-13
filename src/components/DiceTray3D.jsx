@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import PropTypes from "prop-types";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
@@ -572,5 +573,31 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
     </Canvas>
   );
 }
+
+DiceTray3D.propTypes = {
+  dice: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      type: PropTypes.string,
+      face: PropTypes.number,
+      wasPushed: PropTypes.bool,
+    }),
+  ),
+  rollRequest: PropTypes.shape({
+    key: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    action: PropTypes.oneOf(["roll", "push"]),
+    dice: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string,
+        type: PropTypes.string,
+        face: PropTypes.number,
+        wasPushed: PropTypes.bool,
+      }),
+    ),
+    rerollIds: PropTypes.arrayOf(PropTypes.string),
+    startedAt: PropTypes.number,
+  }),
+  onRollResolved: PropTypes.func.isRequired,
+};
 
 export default DiceTray3D;
