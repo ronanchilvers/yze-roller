@@ -30,3 +30,23 @@ export const buildCountsWithStrain = (selection, strainPoints) => {
     strainDice: normalizeStrainPoints(strainPoints),
   };
 };
+
+/**
+ * Calculates how many banes should be added to strain points after a push.
+ * On the first push of a roll, all banes count. On subsequent pushes, only new banes count.
+ *
+ * @param {object} previousRoll - The roll state before pushing
+ * @param {object} nextRoll - The roll state after pushing
+ * @param {boolean} isFirstPush - Whether this is the first push of the current roll
+ * @returns {number} The number of banes to add to strain points
+ */
+export const calculateBaneIncrease = (previousRoll, nextRoll, isFirstPush) => {
+  const previousBanes = Number(previousRoll?.outcomes?.banes ?? 0);
+  const currentBanes = Number(nextRoll?.outcomes?.banes ?? 0);
+
+  if (isFirstPush) {
+    return Math.max(0, currentBanes);
+  }
+
+  return Math.max(0, currentBanes - previousBanes);
+};

@@ -5,7 +5,10 @@ import {
   transitionWithPush,
   transitionWithRoll,
 } from "../lib/roll-session.js";
-import { buildCountsWithStrain } from "../lib/strain-points.js";
+import {
+  buildCountsWithStrain,
+  calculateBaneIncrease,
+} from "../lib/strain-points.js";
 import { useLatestRef } from "./useLatestRef.js";
 
 const MAX_PREVIOUS_RESULTS = 10;
@@ -17,6 +20,21 @@ const formatRollSummary = (roll) => {
 
   const withStrain = roll.outcomes.hasStrain ? " (with Strain)" : "";
   return `${roll.outcomes.successes} successes, ${roll.outcomes.banes} banes${withStrain}`;
+};
+
+/**
+ * Creates a history entry for a completed roll.
+ *
+ * @param {object} roll - The completed roll state
+ * @param {string|number} key - Unique key for the entry
+ * @param {number} rolledAt - Timestamp when the roll completed
+ * @returns {{ id: string, summary: string }} History entry
+ */
+const createHistoryEntry = (roll, key, rolledAt) => {
+  return {
+    id: `${key}-${rolledAt}`,
+    summary: formatRollSummary(roll),
+  };
 };
 
 /**
@@ -130,13 +148,12 @@ export const useRollSession = ({
 
     if (resolution.action === "push") {
       nextState = transitionWithPush(currentSession, resolvedRoll, { rolledAt });
-      const previousBanes = Number(currentSession.currentRoll?.outcomes?.banes ?? 0);
-      const currentBanes = Number(nextState.currentRoll?.outcomes?.banes ?? 0);
-      const firstPushFromRoll = currentSession.currentRoll?.action !== "push";
-      const baneIncrease = firstPushFromRoll
-        ? Math.max(0, currentBanes)
-        : Math.max(0, currentBanes - previousBanes);
-
+      const isFirstPush = currentSession.currentRoll?.action !== "push";
+      const baneIncrease = calculateBaneIncrease(
+        currentSession.currentRoll,
+        nextState.currentRoll,
+        isFirstPush,
+      );
       onBaneIncrement(baneIncrease);
     } else {
       nextState = transitionWithRoll(currentSession, resolvedRoll, { rolledAt });
@@ -145,10 +162,7 @@ export const useRollSession = ({
     setCurrentRoll(nextState.currentRoll);
     setPreviousRoll(nextState.previousRoll);
     if (nextState.currentRoll) {
-      const entry = {
-        id: `${resolution.key}-${rolledAt}`,
-        summary: formatRollSummary(nextState.currentRoll),
-      };
+      const entry = createHistoryEntry(nextState.currentRoll, resolution.key, rolledAt);
       setRecentResults((current) => [entry, ...current].slice(0, MAX_PREVIOUS_RESULTS + 1));
     }
     setRollRequest(null);

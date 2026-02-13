@@ -3,6 +3,7 @@ import test from "node:test";
 import { DICE_TYPE, rollPool } from "./dice.js";
 import {
   buildCountsWithStrain,
+  calculateBaneIncrease,
   incrementStrainPointsByBanes,
   normalizeStrainPoints,
 } from "./strain-points.js";
@@ -72,4 +73,30 @@ test("strain accumulation is reflected in subsequent roll strain dice", () => {
     nextRoll.dice.filter((die) => die.type === DICE_TYPE.STRAIN).length,
     3,
   );
+});
+
+test("calculateBaneIncrease returns all banes on first push", () => {
+  const previousRoll = { outcomes: { banes: 0 } };
+  const nextRoll = { outcomes: { banes: 3 } };
+
+  assert.equal(calculateBaneIncrease(previousRoll, nextRoll, true), 3);
+});
+
+test("calculateBaneIncrease returns only new banes on subsequent pushes", () => {
+  const previousRoll = { outcomes: { banes: 2 } };
+  const nextRoll = { outcomes: { banes: 4 } };
+
+  assert.equal(calculateBaneIncrease(previousRoll, nextRoll, false), 2);
+});
+
+test("calculateBaneIncrease returns zero when banes decrease", () => {
+  const previousRoll = { outcomes: { banes: 5 } };
+  const nextRoll = { outcomes: { banes: 2 } };
+
+  assert.equal(calculateBaneIncrease(previousRoll, nextRoll, false), 0);
+});
+
+test("calculateBaneIncrease handles missing outcomes gracefully", () => {
+  assert.equal(calculateBaneIncrease(null, { outcomes: { banes: 2 } }, true), 2);
+  assert.equal(calculateBaneIncrease({ outcomes: {} }, { outcomes: { banes: 3 } }, true), 3);
 });
