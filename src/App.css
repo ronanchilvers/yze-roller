@@ -231,6 +231,7 @@ h2 {
 }
 
 .tray-stage {
+  position: relative;
   margin-top: 0.8rem;
   border: 1px solid #d9d9d9;
   border-radius: 0.8rem;
@@ -253,9 +254,55 @@ h2 {
 .tray-loading {
   display: grid;
   place-items: center;
+  gap: 0.5rem;
   height: 100%;
   color: var(--ink-700);
   font-weight: 600;
+}
+
+.tray-spinner {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 3px solid rgba(47, 71, 78, 0.2);
+  border-top-color: rgba(47, 71, 78, 0.7);
+  animation: tray-spin 0.9s linear infinite;
+}
+
+@keyframes tray-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tray-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 1.2rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.92),
+    rgba(255, 255, 255, 0.78)
+  );
+  color: var(--ink-900);
+}
+
+.tray-empty-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.tray-empty-copy {
+  margin: 0;
+  color: var(--ink-700);
+  max-width: 22rem;
 }
 
 /* ── Tray results & history ────────────────────────────────────────── */

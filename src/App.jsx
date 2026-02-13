@@ -258,10 +258,21 @@ function App() {
               ) : null}
             </div>
             <div className="tray-stage" aria-label="3D dice tray">
+              {!isRolling && activeDice.length === 0 ? (
+                <div className="tray-empty" role="note">
+                  <p className="tray-empty-title">Ready to roll</p>
+                  <p className="tray-empty-copy">
+                    Choose your dice and press “Roll Dice” to start.
+                  </p>
+                </div>
+              ) : null}
               <ErrorBoundary>
                 <Suspense
                   fallback={
-                    <div className="tray-loading">Loading 3D tray…</div>
+                    <div className="tray-loading">
+                      <span className="tray-spinner" aria-hidden="true" />
+                      Loading 3D tray…
+                    </div>
                   }
                 >
                   <DiceTray3D
