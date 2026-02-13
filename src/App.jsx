@@ -65,7 +65,6 @@ function App() {
       : "Roll the dice to see results.";
 
   const historyPanelRef = useRef(null);
-  const closeButtonRef = useRef(null);
 
   const onPrimaryAction = () => {
     if (hasRolled) {
@@ -81,30 +80,13 @@ function App() {
       return;
     }
 
-    if (closeButtonRef.current) {
-      closeButtonRef.current.focus();
-      return;
-    }
-
-    if (historyPanelRef.current) {
-      historyPanelRef.current.focus();
-    }
+    historyPanelRef.current?.focus();
   }, [isHistoryOpen]);
 
   const handleHistoryKeyDown = (event) => {
     if (event.key === "Escape") {
       setIsHistoryOpen(false);
-      return;
     }
-
-    if (event.key === "Tab") {
-      event.preventDefault();
-      closeButtonRef.current?.focus();
-    }
-  };
-
-  const handleHistoryClose = () => {
-    setIsHistoryOpen(false);
   };
 
   return (
@@ -238,19 +220,10 @@ function App() {
                   role="dialog"
                   aria-modal="false"
                   tabIndex={-1}
+                  onKeyDown={handleHistoryKeyDown}
                   ref={historyPanelRef}
                 >
-                  <div className="history-actions">
-                    <button
-                      type="button"
-                      className="history-close"
-                      onClick={handleHistoryClose}
-                      onKeyDown={handleHistoryKeyDown}
-                      ref={closeButtonRef}
-                    >
-                      Close
-                    </button>
-                  </div>
+
                   <ul className="history-list">
                     {previousResults.map((entry) => (
                       <li key={entry.id}>{entry.summary}</li>

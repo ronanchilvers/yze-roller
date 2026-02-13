@@ -383,27 +383,9 @@ h2 {
   z-index: 6;
 }
 
-.history-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.35rem;
-}
 
-.history-close {
-  border: 1px solid #b9cbb9;
-  border-radius: 0.45rem;
-  background: #f9fcf9;
-  color: var(--ink-700);
-  font: inherit;
-  font-size: 0.85rem;
-  padding: 0.2rem 0.6rem;
-  cursor: pointer;
-}
 
-.history-close:focus-visible {
-  outline: 2px solid #1d6f68;
-  outline-offset: 2px;
-}
+
 
 .history-list {
   margin: 0;
