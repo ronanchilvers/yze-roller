@@ -47,6 +47,14 @@ const SETTLE_FACE_ALIGNMENT = 0.9;
 const EDGE_NUDGE_COOLDOWN_MS = 140;
 const EDGE_NUDGE_MAX_ATTEMPTS = 10;
 
+/**
+ * Runs the 3D physics simulation for dice rolls and pushes.
+ *
+ * @param {object[]} dice - Current dice pool to render and simulate.
+ * @param {object|null} rollRequest - Roll request payload from useRollSession.
+ * @param {(resolution: object) => void} onRollResolved - Callback when the roll settles.
+ * @returns {JSX.Element} The Three.js scene elements for the dice simulation.
+ */
 const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const { camera, size } = useThree();
   const worldRef = useRef(null);
@@ -551,6 +559,14 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   );
 };
 
+/**
+ * Renders the 3D dice tray and forwards roll lifecycle callbacks.
+ *
+ * @param {object[]} dice - Dice pool to render.
+ * @param {object|null} rollRequest - Roll or push request payload.
+ * @param {(resolution: object) => void} onRollResolved - Called with resolved roll data.
+ * @returns {JSX.Element} Canvas container for the dice tray.
+ */
 function DiceTray3D({ dice, rollRequest, onRollResolved }) {
   return (
     <Canvas

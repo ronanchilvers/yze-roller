@@ -13,6 +13,7 @@ import {
 /**
  * Manages dice pool selection with localStorage persistence.
  * Handles attribute and skill dice counts with automatic save/load.
+ * This hook takes no parameters.
  *
  * @returns {{
  *   attributeDice: number,
