@@ -1,15 +1,15 @@
 import { Suspense, lazy, useEffect, useRef } from "react";
 import "./App.css";
-import { MAX_DICE } from "./lib/dice";
-import { usePoolSelection } from "./hooks/usePoolSelection";
-import { useStrainTracker } from "./hooks/useStrainTracker";
-import { useRollSession } from "./hooks/useRollSession";
-import ErrorBoundary from "./components/ErrorBoundary";
+import { MAX_DICE } from "./lib/dice.js";
+import { usePoolSelection } from "./hooks/usePoolSelection.js";
+import { useStrainTracker } from "./hooks/useStrainTracker.js";
+import { useRollSession } from "./hooks/useRollSession.js";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 const MIN_ATTRIBUTE_DICE = 1;
 const MIN_SKILL_DICE = 0;
 const MAX_PREVIOUS_RESULTS = 10;
-const DiceTray3D = lazy(() => import("./components/DiceTray3D"));
+const DiceTray3D = lazy(() => import("./components/DiceTray3D.jsx"));
 
 function App() {
   const { attributeDice, skillDice, onAttributeChange, onSkillChange } =
