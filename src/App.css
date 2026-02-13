@@ -16,7 +16,7 @@
 /* ── Layout shell ──────────────────────────────────────────────────── */
 
 .app-shell {
-  min-width: 450px;
+  min-width: 400px;
   min-height: 100dvh;
   padding: clamp(0.9rem, 1.8vw, 1.5rem);
   background: radial-gradient(circle at 15% 20%, #fffdf0 0%, transparent 38%),
