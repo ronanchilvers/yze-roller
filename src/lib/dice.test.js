@@ -224,3 +224,25 @@ test("pushPool is non-throwing for malformed input", () => {
     hasStrain: false,
   });
 });
+
+test("sanitizePoolCounts ignores prototype pollution attempts", () => {
+  const maliciousInput = {
+    attributeDice: 5,
+    skillDice: 2,
+    __proto__: { polluted: true },
+    constructor: { name: "FakeConstructor" },
+  };
+
+  const sanitized = sanitizePoolCounts(maliciousInput);
+
+  // Should return expected values
+  assert.deepEqual(sanitized, {
+    attributeDice: 5,
+    skillDice: 2,
+    strainDice: 0,
+  });
+
+  // Verify no prototype pollution occurred
+  assert.equal(Object.prototype.polluted, undefined);
+  assert.notEqual(sanitized.constructor.name, "FakeConstructor");
+});
