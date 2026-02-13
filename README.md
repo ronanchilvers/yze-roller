@@ -1,4 +1,5 @@
 # Year Zero Engine Dice Roller
+![CI](https://github.com/ronanchilvers/yze-roller/actions/workflows/ci.yml/badge.svg)
 
 ## Commands
 - `npq-hero run dev`
