@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { DICE_TYPE } from "../lib/dice.js";
 import { getDieColor } from "../lib/dice-visuals.js";
 
 const DIE_SIZE = 0.68;
-const DIE_CHAMFER = 0.004;
+const CHAMFER_SEGMENTS = 3;
+const CHAMFER_RADIUS = DIE_SIZE * 0.08;
 const FLOOR_THICKNESS = 0.24;
 const WALL_THICKNESS = 0.24;
 const WALL_HEIGHT = 3.2;
@@ -31,72 +33,6 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
 const randomBetween = (min, max) => {
   return min + Math.random() * (max - min);
-};
-
-const createChamferedDieGeometry = (size, chamfer, segments = 6) => {
-  const half = size * 0.5;
-  const safeChamfer = THREE.MathUtils.clamp(chamfer, 0.001, half * 0.24);
-  const inner = half - safeChamfer;
-  const geometry = new THREE.BoxGeometry(size, size, size, segments, segments, segments).toNonIndexed();
-  const position = geometry.attributes.position;
-  const vertex = new THREE.Vector3();
-  const nextVertex = new THREE.Vector3();
-  const innerPoint = new THREE.Vector3();
-  const roundOffset = new THREE.Vector3();
-  const normal = new THREE.Vector3();
-  const normals = new Float32Array(position.count * 3);
-  const edgeEpsilon = 1e-5;
-
-  for (let index = 0; index < position.count; index += 1) {
-    vertex.fromBufferAttribute(position, index);
-    const onX = Math.abs(vertex.x) >= inner - edgeEpsilon;
-    const onY = Math.abs(vertex.y) >= inner - edgeEpsilon;
-    const onZ = Math.abs(vertex.z) >= inner - edgeEpsilon;
-    const activeAxes = Number(onX) + Number(onY) + Number(onZ);
-
-    nextVertex.copy(vertex);
-
-    if (activeAxes >= 2) {
-      innerPoint.set(
-        THREE.MathUtils.clamp(vertex.x, -inner, inner),
-        THREE.MathUtils.clamp(vertex.y, -inner, inner),
-        THREE.MathUtils.clamp(vertex.z, -inner, inner),
-      );
-      roundOffset.copy(vertex).sub(innerPoint);
-
-      if (roundOffset.lengthSq() > 0) {
-        roundOffset.normalize().multiplyScalar(safeChamfer);
-        nextVertex.copy(innerPoint).add(roundOffset);
-      }
-    }
-
-    position.setXYZ(index, nextVertex.x, nextVertex.y, nextVertex.z);
-
-    if (activeAxes >= 2) {
-      if (roundOffset.lengthSq() > 0) {
-        normal.copy(roundOffset).normalize();
-      } else {
-        normal.set(
-          onX ? Math.sign(vertex.x) : 0,
-          onY ? Math.sign(vertex.y) : 0,
-          onZ ? Math.sign(vertex.z) : 0,
-        ).normalize();
-      }
-    } else if (onX) {
-      normal.set(Math.sign(vertex.x), 0, 0);
-    } else if (onY) {
-      normal.set(0, Math.sign(vertex.y), 0);
-    } else {
-      normal.set(0, 0, Math.sign(vertex.z));
-    }
-
-    normals[index * 3] = normal.x;
-    normals[index * 3 + 1] = normal.y;
-    normals[index * 3 + 2] = normal.z;
-  }
-
-  geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
-  return geometry;
 };
 
 const createFaceTexture = (faceValue, dieColor) => {
@@ -131,13 +67,11 @@ const createMaterialSet = (dieType) => {
   return FACE_ORDER_BY_SIDE.map((faceValue) => {
     const texture = createFaceTexture(faceValue, dieColor);
 
-    return new THREE.MeshPhysicalMaterial({
+    return new THREE.MeshPhongMaterial({
       map: texture,
       color: "#ffffff",
-      roughness: 0.22,
-      metalness: 0.02,
-      clearcoat: 0.34,
-      clearcoatRoughness: 0.26,
+      shininess: 25,
+      specular: 0xf0f3ff,
     });
   });
 };
@@ -337,7 +271,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const lastRequestKeyRef = useRef(null);
   const dieShapeRef = useRef(new CANNON.Box(new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)));
   const dieGeometry = useMemo(
-    () => createChamferedDieGeometry(DIE_SIZE, DIE_CHAMFER),
+    () => new RoundedBoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, CHAMFER_SEGMENTS, CHAMFER_RADIUS),
     [],
   );
 
@@ -662,14 +596,16 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
   return (
     <>
-      <ambientLight intensity={0.64} />
+      <ambientLight intensity={0.25} />
       <directionalLight
-        position={[8, 11.31, -8]}
-        intensity={0.92}
+        position={[6, 8, 4]}
+        intensity={0.8}
         castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-blurSamples={48}
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0001}
+        shadow-radius={4}
       />
+      <directionalLight position={[-3, 5, -2]} intensity={0.3} />
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[boundsRef.current.visibleHalfWidth * 2, boundsRef.current.visibleHalfDepth * 2]} />
