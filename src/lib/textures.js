@@ -36,8 +36,16 @@ export const createFeltTexture = (feltPlaneScale = 3) => {
   for (let index = 0; index < pixels.length; index += 4) {
     const grain = (cryptoRandom() - 0.5) * 42;
     pixels[index] = THREE.MathUtils.clamp(pixels[index] + grain * 0.45, 0, 255);
-    pixels[index + 1] = THREE.MathUtils.clamp(pixels[index + 1] + grain * 0.7, 0, 255);
-    pixels[index + 2] = THREE.MathUtils.clamp(pixels[index + 2] + grain * 0.35, 0, 255);
+    pixels[index + 1] = THREE.MathUtils.clamp(
+      pixels[index + 1] + grain * 0.7,
+      0,
+      255,
+    );
+    pixels[index + 2] = THREE.MathUtils.clamp(
+      pixels[index + 2] + grain * 0.35,
+      0,
+      255,
+    );
   }
 
   context.putImageData(imageData, 0, 0);
@@ -53,7 +61,7 @@ export const createFeltTexture = (feltPlaneScale = 3) => {
   // NOTE: Do not null out canvas dimensions here. THREE.CanvasTexture
   // references the canvas element and needs it intact until the texture
   // is uploaded to the GPU. Cleanup happens via disposeMaterialSet().
-  
+
   return texture;
 };
 
@@ -95,7 +103,7 @@ export const createFaceTexture = (faceValue, dieColor) => {
   // NOTE: Do not null out canvas dimensions here. THREE.CanvasTexture
   // references the canvas element and needs it intact until the texture
   // is uploaded to the GPU. Cleanup happens via disposeMaterialSet().
-  
+
   return texture;
 };
 

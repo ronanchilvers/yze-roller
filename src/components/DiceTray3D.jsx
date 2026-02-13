@@ -58,9 +58,18 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const stepAccumulatorRef = useRef(0);
   const settleFramesRef = useRef(0);
   const lastRequestKeyRef = useRef(null);
-  const dieShapeRef = useRef(new CANNON.Box(new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)));
+  const dieShapeRef = useRef(
+    new CANNON.Box(new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)),
+  );
   const dieGeometry = useMemo(
-    () => new RoundedBoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, CHAMFER_SEGMENTS, CHAMFER_RADIUS),
+    () =>
+      new RoundedBoxGeometry(
+        DIE_SIZE,
+        DIE_SIZE,
+        DIE_SIZE,
+        CHAMFER_SEGMENTS,
+        CHAMFER_RADIUS,
+      ),
     [],
   );
   const feltTexture = useMemo(() => createFeltTexture(FELT_PLANE_SCALE), []);
@@ -132,27 +141,69 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     staticBodiesRef.current = [];
 
     const floor = createStaticBox(
-      new CANNON.Vec3(bounds.innerHalfWidth + WALL_THICKNESS, FLOOR_THICKNESS, bounds.innerHalfDepth + WALL_THICKNESS),
+      new CANNON.Vec3(
+        bounds.innerHalfWidth + WALL_THICKNESS,
+        FLOOR_THICKNESS,
+        bounds.innerHalfDepth + WALL_THICKNESS,
+      ),
       { x: 0, y: -FLOOR_THICKNESS, z: 0 },
     );
     const leftWall = createStaticBox(
-      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, bounds.innerHalfDepth + WALL_THICKNESS),
-      { x: -bounds.innerHalfWidth - WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
+      new CANNON.Vec3(
+        WALL_THICKNESS / 2,
+        WALL_HEIGHT / 2,
+        bounds.innerHalfDepth + WALL_THICKNESS,
+      ),
+      {
+        x: -bounds.innerHalfWidth - WALL_THICKNESS / 2,
+        y: WALL_HEIGHT / 2,
+        z: 0,
+      },
     );
     const rightWall = createStaticBox(
-      new CANNON.Vec3(WALL_THICKNESS / 2, WALL_HEIGHT / 2, bounds.innerHalfDepth + WALL_THICKNESS),
-      { x: bounds.innerHalfWidth + WALL_THICKNESS / 2, y: WALL_HEIGHT / 2, z: 0 },
+      new CANNON.Vec3(
+        WALL_THICKNESS / 2,
+        WALL_HEIGHT / 2,
+        bounds.innerHalfDepth + WALL_THICKNESS,
+      ),
+      {
+        x: bounds.innerHalfWidth + WALL_THICKNESS / 2,
+        y: WALL_HEIGHT / 2,
+        z: 0,
+      },
     );
     const topWall = createStaticBox(
-      new CANNON.Vec3(bounds.innerHalfWidth + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
-      { x: 0, y: WALL_HEIGHT / 2, z: -bounds.innerHalfDepth - WALL_THICKNESS / 2 },
+      new CANNON.Vec3(
+        bounds.innerHalfWidth + WALL_THICKNESS,
+        WALL_HEIGHT / 2,
+        WALL_THICKNESS / 2,
+      ),
+      {
+        x: 0,
+        y: WALL_HEIGHT / 2,
+        z: -bounds.innerHalfDepth - WALL_THICKNESS / 2,
+      },
     );
     const bottomWall = createStaticBox(
-      new CANNON.Vec3(bounds.innerHalfWidth + WALL_THICKNESS, WALL_HEIGHT / 2, WALL_THICKNESS / 2),
-      { x: 0, y: WALL_HEIGHT / 2, z: bounds.innerHalfDepth + WALL_THICKNESS / 2 },
+      new CANNON.Vec3(
+        bounds.innerHalfWidth + WALL_THICKNESS,
+        WALL_HEIGHT / 2,
+        WALL_THICKNESS / 2,
+      ),
+      {
+        x: 0,
+        y: WALL_HEIGHT / 2,
+        z: bounds.innerHalfDepth + WALL_THICKNESS / 2,
+      },
     );
 
-    for (const staticBody of [floor, leftWall, rightWall, topWall, bottomWall]) {
+    for (const staticBody of [
+      floor,
+      leftWall,
+      rightWall,
+      topWall,
+      bottomWall,
+    ]) {
       world.addBody(staticBody);
       staticBodiesRef.current.push(staticBody);
     }
@@ -224,7 +275,10 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     // Validate rollRequest shape at component boundary
     if (!isValidRollRequest(rollRequest)) {
       if (rollRequest) {
-        console.warn("Invalid rollRequest received in DiceTray3D:", rollRequest);
+        console.warn(
+          "Invalid rollRequest received in DiceTray3D:",
+          rollRequest,
+        );
       }
       return;
     }
@@ -264,7 +318,9 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       onRollResolvedRef.current?.({
         key: rollRequest.key,
         action: rollRequest.action,
-        rolledAt: Number.isFinite(rollRequest.startedAt) ? rollRequest.startedAt : Date.now(),
+        rolledAt: Number.isFinite(rollRequest.startedAt)
+          ? rollRequest.startedAt
+          : Date.now(),
         dice: diceList.map((die, index) => ({
           id: getDieId(die, index),
           type: die?.type ?? DICE_TYPE.ATTRIBUTE,
@@ -281,7 +337,9 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       order: diceList.map((die, index) => getDieId(die, index)),
       rerollSet,
       startedAt: performance.now(),
-      rolledAt: Number.isFinite(rollRequest.startedAt) ? rollRequest.startedAt : Date.now(),
+      rolledAt: Number.isFinite(rollRequest.startedAt)
+        ? rollRequest.startedAt
+        : Date.now(),
       lastNudgeAt: 0,
       nudgeAttempts: 0,
       reported: false,
@@ -370,16 +428,17 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       settleFramesRef.current += 1;
     }
 
-    let allSettled = elapsed >= MIN_SETTLE_MS
-      && settleFramesRef.current >= SETTLE_FRAMES
-      && !hasEdgeLeaningDie;
+    let allSettled =
+      elapsed >= MIN_SETTLE_MS &&
+      settleFramesRef.current >= SETTLE_FRAMES &&
+      !hasEdgeLeaningDie;
 
     if (
-      hasEdgeLeaningDie
-      && !isMoving
-      && pending.nudgeAttempts < EDGE_NUDGE_MAX_ATTEMPTS
-      && elapsed >= MIN_SETTLE_MS
-      && performance.now() - pending.lastNudgeAt >= EDGE_NUDGE_COOLDOWN_MS
+      hasEdgeLeaningDie &&
+      !isMoving &&
+      pending.nudgeAttempts < EDGE_NUDGE_MAX_ATTEMPTS &&
+      elapsed >= MIN_SETTLE_MS &&
+      performance.now() - pending.lastNudgeAt >= EDGE_NUDGE_COOLDOWN_MS
     ) {
       for (const body of edgeLeaningBodies) {
         nudgeEdgeLeaningDie(body);
@@ -388,7 +447,11 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       pending.nudgeAttempts += 1;
       settleFramesRef.current = 0;
       allSettled = false;
-    } else if (elapsed >= MAX_SETTLE_MS && hasEdgeLeaningDie && pending.nudgeAttempts >= EDGE_NUDGE_MAX_ATTEMPTS) {
+    } else if (
+      elapsed >= MAX_SETTLE_MS &&
+      hasEdgeLeaningDie &&
+      pending.nudgeAttempts >= EDGE_NUDGE_MAX_ATTEMPTS
+    ) {
       allSettled = true;
     } else if (elapsed >= MAX_SETTLE_MS && !hasEdgeLeaningDie) {
       allSettled = true;
@@ -400,7 +463,9 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
     const resolvedDice = pending.order.map((id) => {
       const bodyState = bodiesRef.current.get(id);
-      const resolvedFace = bodyState ? topFaceFromQuaternion(bodyState.body.quaternion) : null;
+      const resolvedFace = bodyState
+        ? topFaceFromQuaternion(bodyState.body.quaternion)
+        : null;
       const faceValue = resolvedFace?.faceValue ?? 1;
 
       if (bodyState) {
@@ -458,7 +523,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       {diceList.map((die, index) => {
         const id = getDieId(die, index);
-        const materialSet = materialSets[die?.type] ?? materialSets[DICE_TYPE.ATTRIBUTE];
+        const materialSet =
+          materialSets[die?.type] ?? materialSets[DICE_TYPE.ATTRIBUTE];
 
         return (
           <group
@@ -471,7 +537,12 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
               }
             }}
           >
-            <mesh castShadow receiveShadow material={materialSet} geometry={dieGeometry} />
+            <mesh
+              castShadow
+              receiveShadow
+              material={materialSet}
+              geometry={dieGeometry}
+            />
           </group>
         );
       })}
@@ -483,7 +554,12 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
   return (
     <Canvas
       orthographic
-      camera={{ position: [0, CAMERA_Y, CAMERA_Z], zoom: 88, near: 0.1, far: 70 }}
+      camera={{
+        position: [0, CAMERA_Y, CAMERA_Z],
+        zoom: 88,
+        near: 0.1,
+        far: 70,
+      }}
       shadows={{ type: THREE.VSMShadowMap }}
       dpr={[1, 1.7]}
     >

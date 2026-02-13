@@ -51,8 +51,14 @@ test("calculateBounds handles orthographic camera", () => {
 
   assert.equal(bounds.visibleHalfWidth, 10);
   assert.equal(bounds.visibleHalfDepth, 8);
-  assert.ok(bounds.innerHalfWidth < bounds.visibleHalfWidth, "Inner width should be smaller than visible");
-  assert.ok(bounds.innerHalfDepth < bounds.visibleHalfDepth, "Inner depth should be smaller than visible");
+  assert.ok(
+    bounds.innerHalfWidth < bounds.visibleHalfWidth,
+    "Inner width should be smaller than visible",
+  );
+  assert.ok(
+    bounds.innerHalfDepth < bounds.visibleHalfDepth,
+    "Inner depth should be smaller than visible",
+  );
 });
 
 test("calculateBounds orthographic camera respects zoom", () => {
@@ -95,8 +101,14 @@ test("calculateBounds handles perspective camera", () => {
   const size = createSize(1200, 800);
   const bounds = calculateBounds(camera, size);
 
-  assert.ok(bounds.visibleHalfWidth > 0, "Visible half width should be positive");
-  assert.ok(bounds.visibleHalfDepth > 0, "Visible half depth should be positive");
+  assert.ok(
+    bounds.visibleHalfWidth > 0,
+    "Visible half width should be positive",
+  );
+  assert.ok(
+    bounds.visibleHalfDepth > 0,
+    "Visible half depth should be positive",
+  );
   assert.ok(bounds.innerHalfWidth > 0, "Inner half width should be positive");
   assert.ok(bounds.innerHalfDepth > 0, "Inner half depth should be positive");
 });
@@ -144,16 +156,28 @@ test("calculateBounds enforces minimum visible dimensions", () => {
   const camera = createOrthographicCamera(-0.5, 0.5, 0.5, -0.5, 1);
   const bounds = calculateBounds(camera, createSize());
 
-  assert.ok(bounds.visibleHalfWidth >= 2.8, `visibleHalfWidth ${bounds.visibleHalfWidth} should be >= 2.8`);
-  assert.ok(bounds.visibleHalfDepth >= 2.2, `visibleHalfDepth ${bounds.visibleHalfDepth} should be >= 2.2`);
+  assert.ok(
+    bounds.visibleHalfWidth >= 2.8,
+    `visibleHalfWidth ${bounds.visibleHalfWidth} should be >= 2.8`,
+  );
+  assert.ok(
+    bounds.visibleHalfDepth >= 2.2,
+    `visibleHalfDepth ${bounds.visibleHalfDepth} should be >= 2.2`,
+  );
 });
 
 test("calculateBounds enforces minimum inner dimensions", () => {
   const camera = createOrthographicCamera(-0.5, 0.5, 0.5, -0.5, 1);
   const bounds = calculateBounds(camera, createSize());
 
-  assert.ok(bounds.innerHalfWidth >= 1.4, `innerHalfWidth ${bounds.innerHalfWidth} should be >= 1.4`);
-  assert.ok(bounds.innerHalfDepth >= 1.2, `innerHalfDepth ${bounds.innerHalfDepth} should be >= 1.2`);
+  assert.ok(
+    bounds.innerHalfWidth >= 1.4,
+    `innerHalfWidth ${bounds.innerHalfWidth} should be >= 1.4`,
+  );
+  assert.ok(
+    bounds.innerHalfDepth >= 1.2,
+    `innerHalfDepth ${bounds.innerHalfDepth} should be >= 1.2`,
+  );
 });
 
 test("calculateBounds inner dimensions are smaller than visible dimensions", () => {
@@ -177,7 +201,11 @@ test("calculateBounds returns consistent results for same input", () => {
   const bounds1 = calculateBounds(camera, size);
   const bounds2 = calculateBounds(camera, size);
 
-  assert.deepEqual(bounds1, bounds2, "Same input should produce identical output");
+  assert.deepEqual(
+    bounds1,
+    bounds2,
+    "Same input should produce identical output",
+  );
 });
 
 test("calculateBounds ignores unrecognized camera types gracefully", () => {

@@ -88,6 +88,12 @@ test("calculateBaneIncrease returns zero when banes decrease", () => {
 });
 
 test("calculateBaneIncrease handles missing outcomes gracefully", () => {
-  assert.equal(calculateBaneIncrease(null, { outcomes: { banes: 2 } }, true), 2);
-  assert.equal(calculateBaneIncrease({ outcomes: {} }, { outcomes: { banes: 3 } }, true), 3);
+  assert.equal(
+    calculateBaneIncrease(null, { outcomes: { banes: 2 } }, true),
+    2,
+  );
+  assert.equal(
+    calculateBaneIncrease({ outcomes: {} }, { outcomes: { banes: 3 } }, true),
+    3,
+  );
 });

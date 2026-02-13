@@ -143,9 +143,15 @@ export const clampBodyInside = (body, bounds, allowBounce = true) => {
  */
 export const spawnBodyInViewport = (body, bounds) => {
   body.position.set(
-    randomBetween(-bounds.innerHalfWidth * SPAWN_POSITION_FACTOR, bounds.innerHalfWidth * SPAWN_POSITION_FACTOR),
+    randomBetween(
+      -bounds.innerHalfWidth * SPAWN_POSITION_FACTOR,
+      bounds.innerHalfWidth * SPAWN_POSITION_FACTOR,
+    ),
     DIE_SIZE * 0.5,
-    randomBetween(-bounds.innerHalfDepth * SPAWN_POSITION_FACTOR, bounds.innerHalfDepth * SPAWN_POSITION_FACTOR),
+    randomBetween(
+      -bounds.innerHalfDepth * SPAWN_POSITION_FACTOR,
+      bounds.innerHalfDepth * SPAWN_POSITION_FACTOR,
+    ),
   );
 };
 
@@ -162,15 +168,21 @@ export const launchRollingBody = (body, bounds, isPushReroll) => {
   body.mass = 1;
   body.updateMassProperties();
 
-  const xSpread = bounds.innerHalfWidth * (isPushReroll ? PUSH_SPREAD_FACTOR : ROLL_SPREAD_FACTOR);
-  const zSpread = bounds.innerHalfDepth * (isPushReroll ? PUSH_SPREAD_FACTOR : ROLL_SPREAD_FACTOR);
+  const xSpread =
+    bounds.innerHalfWidth *
+    (isPushReroll ? PUSH_SPREAD_FACTOR : ROLL_SPREAD_FACTOR);
+  const zSpread =
+    bounds.innerHalfDepth *
+    (isPushReroll ? PUSH_SPREAD_FACTOR : ROLL_SPREAD_FACTOR);
 
   if (isPushReroll) {
     // Push: lift die from current position with small horizontal jitter
     body.position.set(
-      body.position.x + randomBetween(-PUSH_HORIZONTAL_JITTER, PUSH_HORIZONTAL_JITTER),
+      body.position.x +
+        randomBetween(-PUSH_HORIZONTAL_JITTER, PUSH_HORIZONTAL_JITTER),
       Math.max(body.position.y + PUSH_VERTICAL_LIFT, PUSH_MIN_HEIGHT),
-      body.position.z + randomBetween(-PUSH_HORIZONTAL_JITTER, PUSH_HORIZONTAL_JITTER),
+      body.position.z +
+        randomBetween(-PUSH_HORIZONTAL_JITTER, PUSH_HORIZONTAL_JITTER),
     );
   } else {
     // Roll: spawn dice from high above with wide spread
@@ -210,9 +222,12 @@ export const nudgeEdgeLeaningDie = (body) => {
 
   body.applyImpulse(impulse, body.position);
   body.angularVelocity.set(
-    body.angularVelocity.x + randomBetween(-EDGE_NUDGE_ANGULAR_RANGE_XZ, EDGE_NUDGE_ANGULAR_RANGE_XZ),
-    body.angularVelocity.y + randomBetween(-EDGE_NUDGE_ANGULAR_RANGE_Y, EDGE_NUDGE_ANGULAR_RANGE_Y),
-    body.angularVelocity.z + randomBetween(-EDGE_NUDGE_ANGULAR_RANGE_XZ, EDGE_NUDGE_ANGULAR_RANGE_XZ),
+    body.angularVelocity.x +
+      randomBetween(-EDGE_NUDGE_ANGULAR_RANGE_XZ, EDGE_NUDGE_ANGULAR_RANGE_XZ),
+    body.angularVelocity.y +
+      randomBetween(-EDGE_NUDGE_ANGULAR_RANGE_Y, EDGE_NUDGE_ANGULAR_RANGE_Y),
+    body.angularVelocity.z +
+      randomBetween(-EDGE_NUDGE_ANGULAR_RANGE_XZ, EDGE_NUDGE_ANGULAR_RANGE_XZ),
   );
   body.wakeUp();
 };

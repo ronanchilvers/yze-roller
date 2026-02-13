@@ -107,7 +107,8 @@ export const useRollSession = ({
     });
   };
 
-  const canPush = canPushCurrentRoll({ currentRoll, previousRoll }) && !isRolling;
+  const canPush =
+    canPushCurrentRoll({ currentRoll, previousRoll }) && !isRolling;
 
   const onPush = () => {
     if (!canPush || isRolling) {
@@ -132,48 +133,65 @@ export const useRollSession = ({
     setRollRequest(null);
   };
 
-  const onRollResolved = useCallback((resolution) => {
-    const activeRequest = rollRequestRef.current;
+  const onRollResolved = useCallback(
+    (resolution) => {
+      const activeRequest = rollRequestRef.current;
 
-    // Validate resolution shape at component boundary
-    if (!isValidResolution(resolution)) {
-      console.warn("Invalid resolution payload received:", resolution);
-      return;
-    }
+      // Validate resolution shape at component boundary
+      if (!isValidResolution(resolution)) {
+        console.warn("Invalid resolution payload received:", resolution);
+        return;
+      }
 
-    if (!activeRequest || resolution.key !== activeRequest.key) {
-      return;
-    }
+      if (!activeRequest || resolution.key !== activeRequest.key) {
+        return;
+      }
 
-    const resolvedRoll = { dice: Array.isArray(resolution.dice) ? resolution.dice : [] };
-    const currentSession = {
-      currentRoll: currentRollRef.current,
-      previousRoll: previousRollRef.current,
-    };
-    const rolledAt = Number.isFinite(resolution.rolledAt) ? resolution.rolledAt : Date.now();
-    let nextState = currentSession;
+      const resolvedRoll = {
+        dice: Array.isArray(resolution.dice) ? resolution.dice : [],
+      };
+      const currentSession = {
+        currentRoll: currentRollRef.current,
+        previousRoll: previousRollRef.current,
+      };
+      const rolledAt = Number.isFinite(resolution.rolledAt)
+        ? resolution.rolledAt
+        : Date.now();
+      let nextState = currentSession;
 
-    if (resolution.action === "push") {
-      nextState = transitionWithPush(currentSession, resolvedRoll, { rolledAt });
-      const isFirstPush = currentSession.currentRoll?.action !== "push";
-      const baneIncrease = calculateBaneIncrease(
-        currentSession.currentRoll,
-        nextState.currentRoll,
-        isFirstPush,
-      );
-      onBaneIncrement(baneIncrease);
-    } else {
-      nextState = transitionWithRoll(currentSession, resolvedRoll, { rolledAt });
-    }
+      if (resolution.action === "push") {
+        nextState = transitionWithPush(currentSession, resolvedRoll, {
+          rolledAt,
+        });
+        const isFirstPush = currentSession.currentRoll?.action !== "push";
+        const baneIncrease = calculateBaneIncrease(
+          currentSession.currentRoll,
+          nextState.currentRoll,
+          isFirstPush,
+        );
+        onBaneIncrement(baneIncrease);
+      } else {
+        nextState = transitionWithRoll(currentSession, resolvedRoll, {
+          rolledAt,
+        });
+      }
 
-    setCurrentRoll(nextState.currentRoll);
-    setPreviousRoll(nextState.previousRoll);
-    if (nextState.currentRoll) {
-      const entry = createHistoryEntry(nextState.currentRoll, resolution.key, rolledAt);
-      setRecentResults((current) => [entry, ...current].slice(0, MAX_PREVIOUS_RESULTS + 1));
-    }
-    setRollRequest(null);
-  }, [onBaneIncrement, rollRequestRef, currentRollRef, previousRollRef]);
+      setCurrentRoll(nextState.currentRoll);
+      setPreviousRoll(nextState.previousRoll);
+      if (nextState.currentRoll) {
+        const entry = createHistoryEntry(
+          nextState.currentRoll,
+          resolution.key,
+          rolledAt,
+        );
+        setRecentResults((current) =>
+          [entry, ...current].slice(0, MAX_PREVIOUS_RESULTS + 1),
+        );
+      }
+      setRollRequest(null);
+    },
+    [onBaneIncrement, rollRequestRef, currentRollRef, previousRollRef],
+  );
 
   useEffect(() => {
     if (recentResults.length <= 1 && isHistoryOpen) {

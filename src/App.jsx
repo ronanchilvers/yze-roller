@@ -11,18 +11,11 @@ const MAX_PREVIOUS_RESULTS = 10;
 const DiceTray3D = lazy(() => import("./components/DiceTray3D"));
 
 function App() {
-  const {
-    attributeDice,
-    skillDice,
-    onAttributeChange,
-    onSkillChange,
-  } = usePoolSelection();
+  const { attributeDice, skillDice, onAttributeChange, onSkillChange } =
+    usePoolSelection();
 
-  const {
-    normalizedStrainPoints,
-    onResetStrain,
-    applyBaneIncrement,
-  } = useStrainTracker();
+  const { normalizedStrainPoints, onResetStrain, applyBaneIncrement } =
+    useStrainTracker();
 
   const {
     currentRoll,
@@ -46,9 +39,12 @@ function App() {
   const previousResults = recentResults.slice(1, MAX_PREVIOUS_RESULTS + 1);
   const hasPreviousResults = previousResults.length > 0;
   const pushableDiceCount = Number(currentRoll?.pushableDiceIds?.length ?? 0);
-  const canClearDice = isRolling || activeDice.length > 0 || recentResults.length > 0;
+  const canClearDice =
+    isRolling || activeDice.length > 0 || recentResults.length > 0;
   const hasRolled = Boolean(currentRoll);
-  const primaryActionLabel = hasRolled ? `Push ${pushableDiceCount} Dice` : "Roll Dice";
+  const primaryActionLabel = hasRolled
+    ? `Push ${pushableDiceCount} Dice`
+    : "Roll Dice";
   const isPrimaryActionDisabled = isRolling || (hasRolled && !canPush);
 
   const formatRollSummary = (roll) => {
@@ -60,8 +56,12 @@ function App() {
   };
 
   const trayLead = isRolling
-    ? (rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice...")
-    : (currentRoll ? formatRollSummary(currentRoll) : "Roll the dice to see results.");
+    ? rollRequest?.action === "push"
+      ? "Pushing selected dice..."
+      : "Rolling dice..."
+    : currentRoll
+      ? formatRollSummary(currentRoll)
+      : "Roll the dice to see results.";
 
   const onPrimaryAction = () => {
     if (hasRolled) {
@@ -98,12 +98,16 @@ function App() {
         </header>
 
         <div className="content-grid">
-          <section className="panel controls-panel" aria-labelledby="dice-pool-label">
+          <section
+            className="panel controls-panel"
+            aria-labelledby="dice-pool-label"
+          >
             <div className="panel-header">
               <h2 id="dice-pool-label">Dice Pool</h2>
             </div>
             <p className="panel-copy">
-              Choose Attribute and Skill dice. Strain dice are added automatically from Strain Points.
+              Choose Attribute and Skill dice. Strain dice are added
+              automatically from Strain Points.
             </p>
 
             <div className="control-grid">
@@ -142,7 +146,9 @@ function App() {
                 disabled={isPrimaryActionDisabled}
               >
                 {isRolling
-                  ? (rollRequest?.action === "push" ? "Pushing..." : "Rolling...")
+                  ? rollRequest?.action === "push"
+                    ? "Pushing..."
+                    : "Rolling..."
                   : primaryActionLabel}
               </button>
             </div>
@@ -158,7 +164,11 @@ function App() {
                       type="button"
                       className="history-toggle"
                       onClick={() => setIsHistoryOpen((open) => !open)}
-                      aria-label={isHistoryOpen ? "Hide previous results" : "Show previous results"}
+                      aria-label={
+                        isHistoryOpen
+                          ? "Hide previous results"
+                          : "Show previous results"
+                      }
                       aria-expanded={isHistoryOpen}
                       aria-controls="previous-results-list"
                     >
@@ -186,7 +196,9 @@ function App() {
               ) : null}
             </div>
             <div className="tray-stage" aria-label="3D dice tray">
-              <Suspense fallback={<div className="tray-loading">Loading 3D tray…</div>}>
+              <Suspense
+                fallback={<div className="tray-loading">Loading 3D tray…</div>}
+              >
                 <DiceTray3D
                   dice={activeDice}
                   rollRequest={rollRequest}

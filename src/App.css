@@ -19,8 +19,7 @@
   min-width: 450px;
   min-height: 100dvh;
   padding: clamp(0.9rem, 1.8vw, 1.5rem);
-  background:
-    radial-gradient(circle at 15% 20%, #fffdf0 0%, transparent 38%),
+  background: radial-gradient(circle at 15% 20%, #fffdf0 0%, transparent 38%),
     radial-gradient(circle at 85% 88%, #e3efe7 0%, transparent 42%),
     linear-gradient(140deg, var(--surface-100), var(--surface-200));
   color: var(--ink-900);

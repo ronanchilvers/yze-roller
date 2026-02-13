@@ -58,8 +58,13 @@ export const topFaceFromQuaternion = (quaternion) => {
  * @returns {CANNON.Quaternion} Quaternion that orients the die correctly
  */
 export const quaternionForFaceValue = (faceValue) => {
-  const faceNormal = FACE_NORMALS.find((face) => face.value === faceValue)?.normal ?? FACE_NORMALS[0].normal;
-  const baseQuaternion = new THREE.Quaternion().setFromUnitVectors(faceNormal, WORLD_UP);
+  const faceNormal =
+    FACE_NORMALS.find((face) => face.value === faceValue)?.normal ??
+    FACE_NORMALS[0].normal;
+  const baseQuaternion = new THREE.Quaternion().setFromUnitVectors(
+    faceNormal,
+    WORLD_UP,
+  );
 
   return new CANNON.Quaternion(
     baseQuaternion.x,

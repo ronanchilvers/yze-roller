@@ -1,4 +1,9 @@
-import { ATTRIBUTE_DICE_OPTS, SKILL_DICE_OPTS, normalizeDiceCount, sanitizePoolCounts } from "./dice.js";
+import {
+  ATTRIBUTE_DICE_OPTS,
+  SKILL_DICE_OPTS,
+  normalizeDiceCount,
+  sanitizePoolCounts,
+} from "./dice.js";
 
 export const POOL_STORAGE_KEY = "yze:dice-pool-selection:v1";
 export const DEFAULT_POOL_SELECTION = Object.freeze({
@@ -12,7 +17,10 @@ const MAX_STORAGE_VALUE_SIZE = 1024;
 
 const sanitizeSelection = (selection, fallback = DEFAULT_POOL_SELECTION) => {
   const source = selection && typeof selection === "object" ? selection : {};
-  const fallbackSource = fallback && typeof fallback === "object" ? fallback : DEFAULT_POOL_SELECTION;
+  const fallbackSource =
+    fallback && typeof fallback === "object"
+      ? fallback
+      : DEFAULT_POOL_SELECTION;
 
   return {
     attributeDice: normalizeDiceCount(source.attributeDice, {
@@ -44,7 +52,10 @@ export const getBrowserStorage = () => {
   }
 };
 
-export const loadPoolSelection = (storageLike, fallback = DEFAULT_POOL_SELECTION) => {
+export const loadPoolSelection = (
+  storageLike,
+  fallback = DEFAULT_POOL_SELECTION,
+) => {
   const safeFallback = sanitizeSelection(null, fallback);
 
   if (!storageLike || typeof storageLike.getItem !== "function") {
@@ -62,7 +73,7 @@ export const loadPoolSelection = (storageLike, fallback = DEFAULT_POOL_SELECTION
     // Prevents excessive memory allocation from malicious/corrupted entries
     if (rawValue.length > MAX_STORAGE_VALUE_SIZE) {
       console.warn(
-        `Pool selection data exceeds size limit (${rawValue.length} > ${MAX_STORAGE_VALUE_SIZE} bytes). Using fallback.`
+        `Pool selection data exceeds size limit (${rawValue.length} > ${MAX_STORAGE_VALUE_SIZE} bytes). Using fallback.`,
       );
       return safeFallback;
     }

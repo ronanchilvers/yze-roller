@@ -18,22 +18,10 @@ import {
 import { createSequenceRng } from "./test-helpers.js";
 
 test("normalizeDiceCount enforces bounds and handles malformed input", () => {
-  assert.equal(
-    normalizeDiceCount("9", { min: 1, max: 20, fallback: 1 }),
-    9,
-  );
-  assert.equal(
-    normalizeDiceCount("-5", { min: 1, max: 20, fallback: 1 }),
-    1,
-  );
-  assert.equal(
-    normalizeDiceCount("abc", { min: 0, max: 20, fallback: 0 }),
-    0,
-  );
-  assert.equal(
-    normalizeDiceCount(999, { min: 0, max: 20, fallback: 0 }),
-    20,
-  );
+  assert.equal(normalizeDiceCount("9", { min: 1, max: 20, fallback: 1 }), 9);
+  assert.equal(normalizeDiceCount("-5", { min: 1, max: 20, fallback: 1 }), 1);
+  assert.equal(normalizeDiceCount("abc", { min: 0, max: 20, fallback: 0 }), 0);
+  assert.equal(normalizeDiceCount(999, { min: 0, max: 20, fallback: 0 }), 20);
 });
 
 test("sanitizePoolCounts guards invalid structures with safe defaults", () => {
@@ -143,7 +131,10 @@ test("buildDicePool creates expected number of typed dice", () => {
   });
 
   assert.equal(pool.length, 6);
-  assert.equal(pool.filter((die) => die.type === DICE_TYPE.ATTRIBUTE).length, 2);
+  assert.equal(
+    pool.filter((die) => die.type === DICE_TYPE.ATTRIBUTE).length,
+    2,
+  );
   assert.equal(pool.filter((die) => die.type === DICE_TYPE.SKILL).length, 1);
   assert.equal(pool.filter((die) => die.type === DICE_TYPE.STRAIN).length, 3);
 });
@@ -173,7 +164,11 @@ test("summarizeRoll reports outcomes and push eligibility", () => {
     { id: "t-1", type: DICE_TYPE.STRAIN, face: 1 },
   ]);
 
-  assert.deepEqual(summary.outcomes, { successes: 1, banes: 1, hasStrain: true });
+  assert.deepEqual(summary.outcomes, {
+    successes: 1,
+    banes: 1,
+    hasStrain: true,
+  });
   assert.deepEqual(summary.pushableDiceIds, ["a-2"]);
   assert.equal(summary.canPush, true);
 });
@@ -189,7 +184,11 @@ test("rollPool creates, rolls, and summarizes deterministic outcomes", () => {
     rng,
   );
 
-  assert.deepEqual(rolled.outcomes, { successes: 1, banes: 1, hasStrain: false });
+  assert.deepEqual(rolled.outcomes, {
+    successes: 1,
+    banes: 1,
+    hasStrain: false,
+  });
   assert.deepEqual(rolled.pushableDiceIds, ["strain-1"]);
   assert.equal(rolled.canPush, true);
 });
@@ -204,7 +203,11 @@ test("pushPool rerolls only pushable dice and preserves locked results", () => {
     createSequenceRng([0]), // reroll s-1 -> 1
   );
 
-  assert.deepEqual(pushed.outcomes, { successes: 1, banes: 2, hasStrain: true });
+  assert.deepEqual(pushed.outcomes, {
+    successes: 1,
+    banes: 2,
+    hasStrain: true,
+  });
   assert.equal(pushed.canPush, false);
   assert.deepEqual(
     pushed.dice.map((die) => [die.id, die.face]),

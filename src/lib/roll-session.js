@@ -71,7 +71,8 @@ export const isValidResolution = (resolution) => {
 };
 
 const normalizeSession = (sessionState) => {
-  const source = sessionState && typeof sessionState === "object" ? sessionState : {};
+  const source =
+    sessionState && typeof sessionState === "object" ? sessionState : {};
 
   return {
     currentRoll: source.currentRoll ?? null,
@@ -80,12 +81,18 @@ const normalizeSession = (sessionState) => {
 };
 
 export const createRollSnapshot = (rollResult, options = {}) => {
-  if (!rollResult || typeof rollResult !== "object" || !Array.isArray(rollResult.dice)) {
+  if (
+    !rollResult ||
+    typeof rollResult !== "object" ||
+    !Array.isArray(rollResult.dice)
+  ) {
     return null;
   }
 
   const summary = summarizeRoll(rollResult.dice);
-  const rolledAt = Number.isFinite(options.rolledAt) ? options.rolledAt : Date.now();
+  const rolledAt = Number.isFinite(options.rolledAt)
+    ? options.rolledAt
+    : Date.now();
   const action = options.action === "push" ? "push" : "roll";
 
   return {
@@ -115,7 +122,10 @@ export const transitionWithRoll = (sessionState, rollResult, options = {}) => {
 export const transitionWithPush = (sessionState, pushResult, options = {}) => {
   const normalizedSession = normalizeSession(sessionState);
 
-  if (!normalizedSession.currentRoll || !normalizedSession.currentRoll.canPush) {
+  if (
+    !normalizedSession.currentRoll ||
+    !normalizedSession.currentRoll.canPush
+  ) {
     return normalizedSession;
   }
 

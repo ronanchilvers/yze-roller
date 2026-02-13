@@ -14,13 +14,25 @@ export const EMPTY_OUTCOME = Object.freeze({
 });
 
 /** Normalization options for attribute dice (min 1, max MAX_DICE, fallback 1). */
-export const ATTRIBUTE_DICE_OPTS = Object.freeze({ min: 1, max: MAX_DICE, fallback: 1 });
+export const ATTRIBUTE_DICE_OPTS = Object.freeze({
+  min: 1,
+  max: MAX_DICE,
+  fallback: 1,
+});
 
 /** Normalization options for skill dice (min 0, max MAX_DICE, fallback 0). */
-export const SKILL_DICE_OPTS = Object.freeze({ min: 0, max: MAX_DICE, fallback: 0 });
+export const SKILL_DICE_OPTS = Object.freeze({
+  min: 0,
+  max: MAX_DICE,
+  fallback: 0,
+});
 
 /** Normalization options for strain dice (min 0, max MAX_STRAIN_DICE, fallback 0). */
-export const STRAIN_DICE_OPTS = Object.freeze({ min: 0, max: MAX_STRAIN_DICE, fallback: 0 });
+export const STRAIN_DICE_OPTS = Object.freeze({
+  min: 0,
+  max: MAX_STRAIN_DICE,
+  fallback: 0,
+});
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -50,7 +62,10 @@ export const sanitizePoolCounts = (counts) => {
   const source = counts && typeof counts === "object" ? counts : {};
 
   return {
-    attributeDice: normalizeDiceCount(source.attributeDice, ATTRIBUTE_DICE_OPTS),
+    attributeDice: normalizeDiceCount(
+      source.attributeDice,
+      ATTRIBUTE_DICE_OPTS,
+    ),
     skillDice: normalizeDiceCount(source.skillDice, SKILL_DICE_OPTS),
     strainDice: normalizeDiceCount(source.strainDice, STRAIN_DICE_OPTS),
   };
@@ -99,7 +114,11 @@ export const buildDicePool = (counts) => {
   const pool = [];
 
   for (let index = 0; index < normalized.attributeDice; index += 1) {
-    pool.push({ id: `attribute-${index + 1}`, type: DICE_TYPE.ATTRIBUTE, face: null });
+    pool.push({
+      id: `attribute-${index + 1}`,
+      type: DICE_TYPE.ATTRIBUTE,
+      face: null,
+    });
   }
 
   for (let index = 0; index < normalized.skillDice; index += 1) {
@@ -107,7 +126,11 @@ export const buildDicePool = (counts) => {
   }
 
   for (let index = 0; index < normalized.strainDice; index += 1) {
-    pool.push({ id: `strain-${index + 1}`, type: DICE_TYPE.STRAIN, face: null });
+    pool.push({
+      id: `strain-${index + 1}`,
+      type: DICE_TYPE.STRAIN,
+      face: null,
+    });
   }
 
   return pool;
@@ -251,7 +274,9 @@ export const rollPool = (counts, randomSource = cryptoRandom) => {
  */
 export const pushPool = (dicePool, randomSource = cryptoRandom) => {
   const initialRoll = summarizeRoll(dicePool);
-  const pushCandidates = initialRoll.dice.filter((die) => isPushableFace(die.face));
+  const pushCandidates = initialRoll.dice.filter((die) =>
+    isPushableFace(die.face),
+  );
   const pushedCandidates = pushDice(pushCandidates, randomSource);
   const merged = aggregateDiceById(initialRoll.dice, pushedCandidates);
   return summarizeRoll(merged);

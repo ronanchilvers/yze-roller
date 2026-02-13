@@ -32,9 +32,16 @@ export const calculateBounds = (camera, size) => {
   let visibleHalfDepth = 3.1;
 
   if (camera?.isOrthographicCamera) {
-    const zoom = Number.isFinite(camera.zoom) && camera.zoom > 0 ? camera.zoom : 1;
-    visibleHalfWidth = Math.max(MIN_HALF_WIDTH, (camera.right - camera.left) / (2 * zoom));
-    visibleHalfDepth = Math.max(MIN_HALF_DEPTH, (camera.top - camera.bottom) / (2 * zoom));
+    const zoom =
+      Number.isFinite(camera.zoom) && camera.zoom > 0 ? camera.zoom : 1;
+    visibleHalfWidth = Math.max(
+      MIN_HALF_WIDTH,
+      (camera.right - camera.left) / (2 * zoom),
+    );
+    visibleHalfDepth = Math.max(
+      MIN_HALF_DEPTH,
+      (camera.top - camera.bottom) / (2 * zoom),
+    );
   } else if (camera?.isPerspectiveCamera && size.height) {
     const distance = Math.abs(camera.position.y);
     const verticalFov = THREE.MathUtils.degToRad(camera.fov);
@@ -49,7 +56,13 @@ export const calculateBounds = (camera, size) => {
   return {
     visibleHalfWidth,
     visibleHalfDepth,
-    innerHalfWidth: Math.max(ABSOLUTE_MIN_INNER_HALF_WIDTH, visibleHalfWidth - innerMargin),
-    innerHalfDepth: Math.max(ABSOLUTE_MIN_INNER_HALF_DEPTH, visibleHalfDepth - innerMargin),
+    innerHalfWidth: Math.max(
+      ABSOLUTE_MIN_INNER_HALF_WIDTH,
+      visibleHalfWidth - innerMargin,
+    ),
+    innerHalfDepth: Math.max(
+      ABSOLUTE_MIN_INNER_HALF_DEPTH,
+      visibleHalfDepth - innerMargin,
+    ),
   };
 };

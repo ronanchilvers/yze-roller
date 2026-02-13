@@ -8,10 +8,17 @@ export const normalizeStrainPoints = (value) => {
   });
 };
 
-export const incrementStrainPointsByBanes = (currentStrainPoints, rollSummary) => {
+export const incrementStrainPointsByBanes = (
+  currentStrainPoints,
+  rollSummary,
+) => {
   const current = normalizeStrainPoints(currentStrainPoints);
-  const source = rollSummary && typeof rollSummary === "object" ? rollSummary : {};
-  const outcomes = source.outcomes && typeof source.outcomes === "object" ? source.outcomes : {};
+  const source =
+    rollSummary && typeof rollSummary === "object" ? rollSummary : {};
+  const outcomes =
+    source.outcomes && typeof source.outcomes === "object"
+      ? source.outcomes
+      : {};
   const banes = normalizeDiceCount(outcomes.banes, {
     min: 0,
     max: MAX_STRAIN_DICE,

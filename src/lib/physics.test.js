@@ -17,7 +17,9 @@ const createMockBounds = (halfWidth = 4.0, halfDepth = 3.0) => ({
 const createDynamicBody = (x = 0, y = 0.5, z = 0) => {
   const body = new CANNON.Body({
     mass: 1,
-    shape: new CANNON.Box(new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)),
+    shape: new CANNON.Box(
+      new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2),
+    ),
   });
   body.position.set(x, y, z);
   return body;
@@ -93,7 +95,11 @@ test("clampBodyInside does not bounce when allowBounce is false", () => {
   clampBodyInside(body, bounds, false);
 
   assert.equal(body.position.x, xLimit);
-  assert.equal(body.velocity.x, 5, "Velocity should be unchanged when bounce is disabled");
+  assert.equal(
+    body.velocity.x,
+    5,
+    "Velocity should be unchanged when bounce is disabled",
+  );
 });
 
 test("clampBodyInside clamps Y position when allowBounce is false", () => {
@@ -153,8 +159,16 @@ test("clampBodyInside uses minimum limit of 0.8 for very small bounds", () => {
 
   clampBodyInside(body, tinyBounds, false);
 
-  assert.equal(body.position.x, 0.8, "Should clamp to minimum 0.8 when bounds are tiny");
-  assert.equal(body.position.z, 0.8, "Should clamp to minimum 0.8 when bounds are tiny");
+  assert.equal(
+    body.position.x,
+    0.8,
+    "Should clamp to minimum 0.8 when bounds are tiny",
+  );
+  assert.equal(
+    body.position.z,
+    0.8,
+    "Should clamp to minimum 0.8 when bounds are tiny",
+  );
 });
 
 test("createStaticBox returns a static body at the given position", () => {
@@ -174,7 +188,10 @@ test("createStaticBox body has a box shape", () => {
   const body = createStaticBox(halfExtents, { x: 0, y: 0, z: 0 });
 
   assert.equal(body.shapes.length, 1);
-  assert.ok(body.shapes[0] instanceof CANNON.Box, "Shape should be a CANNON.Box");
+  assert.ok(
+    body.shapes[0] instanceof CANNON.Box,
+    "Shape should be a CANNON.Box",
+  );
 });
 
 test("freezeBodyInPlace stops all motion and makes body kinematic", () => {
