@@ -6,7 +6,7 @@ import { DICE_TYPE } from "../lib/dice.js";
 import { getDieColor } from "../lib/dice-visuals.js";
 
 const DIE_SIZE = 0.68;
-const DIE_CHAMFER = 0.016;
+const DIE_CHAMFER = 0.004;
 const FLOOR_THICKNESS = 0.24;
 const WALL_THICKNESS = 0.24;
 const WALL_HEIGHT = 3.2;
@@ -35,7 +35,7 @@ const randomBetween = (min, max) => {
 
 const createChamferedDieGeometry = (size, chamfer, segments = 6) => {
   const half = size * 0.5;
-  const safeChamfer = THREE.MathUtils.clamp(chamfer, 0.01, half * 0.24);
+  const safeChamfer = THREE.MathUtils.clamp(chamfer, 0.001, half * 0.24);
   const inner = half - safeChamfer;
   const geometry = new THREE.BoxGeometry(size, size, size, segments, segments, segments).toNonIndexed();
   const position = geometry.attributes.position;
