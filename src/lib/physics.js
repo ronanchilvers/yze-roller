@@ -1,4 +1,4 @@
-import * as CANNON from "cannon-es";
+import { Body, Box, Vec3 } from "cannon-es";
 import { cryptoRandom } from "./secure-random.js";
 
 // Physics constants
@@ -56,10 +56,10 @@ export const randomBetween = (min, max, randomSource = cryptoRandom) => {
  * @returns {CANNON.Body} Static physics body
  */
 export const createStaticBox = (halfExtents, position) => {
-  const body = new CANNON.Body({
+  const body = new Body({
     mass: 0,
-    type: CANNON.Body.STATIC,
-    shape: new CANNON.Box(halfExtents),
+    type: Body.STATIC,
+    shape: new Box(halfExtents),
   });
   body.position.set(position.x, position.y, position.z);
   return body;
@@ -72,7 +72,7 @@ export const createStaticBox = (halfExtents, position) => {
  * @param {CANNON.Body} body - The physics body to freeze
  */
 export const freezeBodyInPlace = (body) => {
-  body.type = CANNON.Body.KINEMATIC;
+  body.type = Body.KINEMATIC;
   body.mass = 0;
   body.updateMassProperties();
   body.velocity.set(0, 0, 0);
@@ -164,7 +164,7 @@ export const spawnBodyInViewport = (body, bounds) => {
  * @param {boolean} isPushReroll - Whether this is a push (true) or initial roll (false)
  */
 export const launchRollingBody = (body, bounds, isPushReroll) => {
-  body.type = CANNON.Body.DYNAMIC;
+  body.type = Body.DYNAMIC;
   body.mass = 1;
   body.updateMassProperties();
 
@@ -214,7 +214,7 @@ export const launchRollingBody = (body, bounds, isPushReroll) => {
  * @param {CANNON.Body} body - The die body to nudge
  */
 export const nudgeEdgeLeaningDie = (body) => {
-  const impulse = new CANNON.Vec3(
+  const impulse = new Vec3(
     randomBetween(-EDGE_NUDGE_STRENGTH, EDGE_NUDGE_STRENGTH),
     randomBetween(EDGE_NUDGE_MIN_VERTICAL, EDGE_NUDGE_MAX_VERTICAL),
     randomBetween(-EDGE_NUDGE_STRENGTH, EDGE_NUDGE_STRENGTH),

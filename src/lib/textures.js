@@ -1,4 +1,11 @@
-import * as THREE from "three";
+import {
+  CanvasTexture,
+  Color,
+  MathUtils,
+  MeshPhongMaterial,
+  RepeatWrapping,
+  SRGBColorSpace,
+} from "three";
 import { getDieColor } from "./dice-visuals.js";
 import { cryptoRandom } from "./secure-random.js";
 
@@ -35,13 +42,13 @@ export const createFeltTexture = (feltPlaneScale = 3) => {
 
   for (let index = 0; index < pixels.length; index += 4) {
     const grain = (cryptoRandom() - 0.5) * 42;
-    pixels[index] = THREE.MathUtils.clamp(pixels[index] + grain * 0.45, 0, 255);
-    pixels[index + 1] = THREE.MathUtils.clamp(
+    pixels[index] = MathUtils.clamp(pixels[index] + grain * 0.45, 0, 255);
+    pixels[index + 1] = MathUtils.clamp(
       pixels[index + 1] + grain * 0.7,
       0,
       255,
     );
-    pixels[index + 2] = THREE.MathUtils.clamp(
+    pixels[index + 2] = MathUtils.clamp(
       pixels[index + 2] + grain * 0.35,
       0,
       255,
@@ -50,10 +57,10 @@ export const createFeltTexture = (feltPlaneScale = 3) => {
 
   context.putImageData(imageData, 0, 0);
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
   texture.repeat.set(2.8 * feltPlaneScale, 2.8 * feltPlaneScale);
   texture.anisotropy = 8;
   texture.needsUpdate = true;
@@ -86,7 +93,7 @@ export const createFaceTexture = (faceValue, dieColor) => {
     return null;
   }
 
-  const base = new THREE.Color(dieColor);
+  const base = new Color(dieColor);
   context.fillStyle = base.getStyle();
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.fillStyle = "#ffffff";
@@ -95,8 +102,8 @@ export const createFaceTexture = (faceValue, dieColor) => {
   context.textBaseline = "middle";
   context.fillText(String(faceValue), canvas.width / 2, canvas.height / 2);
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
   texture.anisotropy = 8;
   texture.needsUpdate = true;
 
@@ -120,7 +127,7 @@ export const createMaterialSet = (dieType) => {
   return FACE_ORDER_BY_SIDE.map((faceValue) => {
     const texture = createFaceTexture(faceValue, dieColor);
 
-    return new THREE.MeshPhongMaterial({
+    return new MeshPhongMaterial({
       map: texture,
       color: "#ffffff",
       shininess: 25,

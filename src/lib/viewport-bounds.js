@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import { MathUtils } from "three";
 
 // Die physical size
 const DIE_SIZE = 0.68;
@@ -44,7 +44,7 @@ export const calculateBounds = (camera, size) => {
     );
   } else if (camera?.isPerspectiveCamera && size.height) {
     const distance = Math.abs(camera.position.y);
-    const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+    const verticalFov = MathUtils.degToRad(camera.fov);
     const visibleDepth = 2 * Math.tan(verticalFov * 0.5) * distance;
     const visibleWidth = visibleDepth * (size.width / size.height);
     visibleHalfWidth = Math.max(MIN_HALF_WIDTH, visibleWidth * 0.48);

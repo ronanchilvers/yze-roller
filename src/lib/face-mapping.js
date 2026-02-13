@@ -1,23 +1,23 @@
-import * as THREE from "three";
-import * as CANNON from "cannon-es";
+import { Quaternion, Vector3 } from "three";
+import { Quaternion as CannonQuaternion } from "cannon-es";
 
 /**
  * Maps die face normals to their numeric values (1-6).
  * Each face normal points outward from the die center when that face is "up".
  */
 export const FACE_NORMALS = [
-  { value: 1, normal: new THREE.Vector3(0, 1, 0) },
-  { value: 2, normal: new THREE.Vector3(1, 0, 0) },
-  { value: 3, normal: new THREE.Vector3(0, 0, 1) },
-  { value: 4, normal: new THREE.Vector3(0, 0, -1) },
-  { value: 5, normal: new THREE.Vector3(-1, 0, 0) },
-  { value: 6, normal: new THREE.Vector3(0, -1, 0) },
+  { value: 1, normal: new Vector3(0, 1, 0) },
+  { value: 2, normal: new Vector3(1, 0, 0) },
+  { value: 3, normal: new Vector3(0, 0, 1) },
+  { value: 4, normal: new Vector3(0, 0, -1) },
+  { value: 5, normal: new Vector3(-1, 0, 0) },
+  { value: 6, normal: new Vector3(0, -1, 0) },
 ];
 
 /**
  * World "up" direction (positive Y axis).
  */
-const WORLD_UP = new THREE.Vector3(0, 1, 0);
+const WORLD_UP = new Vector3(0, 1, 0);
 
 /**
  * Determines which die face is pointing upward based on the die's rotation.
@@ -27,7 +27,7 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
  * @returns {{ faceValue: number, alignment: number }} The top face (1-6) and alignment score
  */
 export const topFaceFromQuaternion = (quaternion) => {
-  const threeQuat = new THREE.Quaternion(
+  const threeQuat = new Quaternion(
     quaternion.x,
     quaternion.y,
     quaternion.z,
@@ -61,12 +61,12 @@ export const quaternionForFaceValue = (faceValue) => {
   const faceNormal =
     FACE_NORMALS.find((face) => face.value === faceValue)?.normal ??
     FACE_NORMALS[0].normal;
-  const baseQuaternion = new THREE.Quaternion().setFromUnitVectors(
+  const baseQuaternion = new Quaternion().setFromUnitVectors(
     faceNormal,
     WORLD_UP,
   );
 
-  return new CANNON.Quaternion(
+  return new CannonQuaternion(
     baseQuaternion.x,
     baseQuaternion.y,
     baseQuaternion.z,

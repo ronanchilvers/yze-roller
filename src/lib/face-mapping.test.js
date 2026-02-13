@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import * as CANNON from "cannon-es";
+import { Quaternion, Vec3 } from "cannon-es";
 import {
   FACE_NORMALS,
   topFaceFromQuaternion,
@@ -23,7 +23,7 @@ test("FACE_NORMALS each have a unit-length normal vector", () => {
 });
 
 test("topFaceFromQuaternion returns face 1 for identity quaternion", () => {
-  const identity = new CANNON.Quaternion(0, 0, 0, 1);
+  const identity = new Quaternion(0, 0, 0, 1);
   const result = topFaceFromQuaternion(identity);
 
   assert.equal(result.faceValue, 1);
@@ -52,8 +52,8 @@ test("quaternionForFaceValue produces quaternion that resolves back to the same 
 
 test("topFaceFromQuaternion returns correct face for 90-degree rotations", () => {
   // Rotate 90 degrees around the Z axis: face 2 (right/+X) should point up
-  const quat90z = new CANNON.Quaternion();
-  quat90z.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 2);
+  const quat90z = new Quaternion();
+  quat90z.setFromAxisAngle(new Vec3(0, 0, 1), Math.PI / 2);
   const resultZ = topFaceFromQuaternion(quat90z);
   assert.equal(
     resultZ.faceValue,
@@ -62,8 +62,8 @@ test("topFaceFromQuaternion returns correct face for 90-degree rotations", () =>
   );
 
   // Rotate 90 degrees around the X axis: face 3 (front/+Z) should point up
-  const quat90x = new CANNON.Quaternion();
-  quat90x.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+  const quat90x = new Quaternion();
+  quat90x.setFromAxisAngle(new Vec3(1, 0, 0), -Math.PI / 2);
   const resultX = topFaceFromQuaternion(quat90x);
   assert.equal(
     resultX.faceValue,
@@ -86,8 +86,8 @@ test("topFaceFromQuaternion returns alignment near 1.0 for axis-aligned orientat
 
 test("topFaceFromQuaternion returns low alignment for tilted orientations", () => {
   // Rotate 45 degrees around the Z axis — die is leaning on an edge
-  const quat45 = new CANNON.Quaternion();
-  quat45.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 4);
+  const quat45 = new Quaternion();
+  quat45.setFromAxisAngle(new Vec3(0, 0, 1), Math.PI / 4);
   const result = topFaceFromQuaternion(quat45);
 
   // Alignment should be approximately cos(45°) ≈ 0.707
@@ -112,13 +112,10 @@ test("quaternionForFaceValue falls back to face 1 normal for invalid input", () 
   );
 });
 
-test("quaternionForFaceValue returns a CANNON.Quaternion instance", () => {
+test("quaternionForFaceValue returns a Quaternion instance", () => {
   const quat = quaternionForFaceValue(3);
 
-  assert.ok(
-    quat instanceof CANNON.Quaternion,
-    "Should return a CANNON.Quaternion",
-  );
+  assert.ok(quat instanceof Quaternion, "Should return a Quaternion");
   assert.equal(typeof quat.x, "number");
   assert.equal(typeof quat.y, "number");
   assert.equal(typeof quat.z, "number");

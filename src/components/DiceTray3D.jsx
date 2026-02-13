@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import PropTypes from "prop-types";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import * as CANNON from "cannon-es";
-import * as THREE from "three";
+import { Body, Box, SAPBroadphase, Vec3, World } from "cannon-es";
+import { MathUtils, VSMShadowMap } from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { DICE_TYPE, getDieId } from "../lib/dice.js";
 import {
@@ -34,7 +34,7 @@ const WALL_THICKNESS = 0.24;
 const WALL_HEIGHT = 3.2;
 const CAMERA_DISTANCE = 16;
 const CAMERA_TILT_DEGREES = 15;
-const CAMERA_TILT_RADIANS = THREE.MathUtils.degToRad(CAMERA_TILT_DEGREES);
+const CAMERA_TILT_RADIANS = MathUtils.degToRad(CAMERA_TILT_DEGREES);
 const CAMERA_Y = CAMERA_DISTANCE * Math.cos(CAMERA_TILT_RADIANS);
 const CAMERA_Z = CAMERA_DISTANCE * Math.sin(CAMERA_TILT_RADIANS);
 const FELT_PLANE_SCALE = 3;
@@ -60,7 +60,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const settleFramesRef = useRef(0);
   const lastRequestKeyRef = useRef(null);
   const dieShapeRef = useRef(
-    new CANNON.Box(new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)),
+    new Box(new Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)),
   );
   const dieGeometry = useMemo(
     () =>
@@ -96,11 +96,11 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   }, [camera]);
 
   useEffect(() => {
-    const world = new CANNON.World({
-      gravity: new CANNON.Vec3(0, -30, 0),
+    const world = new World({
+      gravity: new Vec3(0, -30, 0),
       allowSleep: true,
     });
-    world.broadphase = new CANNON.SAPBroadphase(world);
+    world.broadphase = new SAPBroadphase(world);
     world.solver.iterations = 8;
     world.defaultContactMaterial.friction = 0.35;
     world.defaultContactMaterial.restitution = 0.18;
@@ -142,7 +142,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     staticBodiesRef.current = [];
 
     const floor = createStaticBox(
-      new CANNON.Vec3(
+      new Vec3(
         bounds.innerHalfWidth + WALL_THICKNESS,
         FLOOR_THICKNESS,
         bounds.innerHalfDepth + WALL_THICKNESS,
@@ -150,7 +150,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       { x: 0, y: -FLOOR_THICKNESS, z: 0 },
     );
     const leftWall = createStaticBox(
-      new CANNON.Vec3(
+      new Vec3(
         WALL_THICKNESS / 2,
         WALL_HEIGHT / 2,
         bounds.innerHalfDepth + WALL_THICKNESS,
@@ -162,7 +162,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       },
     );
     const rightWall = createStaticBox(
-      new CANNON.Vec3(
+      new Vec3(
         WALL_THICKNESS / 2,
         WALL_HEIGHT / 2,
         bounds.innerHalfDepth + WALL_THICKNESS,
@@ -174,7 +174,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       },
     );
     const topWall = createStaticBox(
-      new CANNON.Vec3(
+      new Vec3(
         bounds.innerHalfWidth + WALL_THICKNESS,
         WALL_HEIGHT / 2,
         WALL_THICKNESS / 2,
@@ -186,7 +186,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       },
     );
     const bottomWall = createStaticBox(
-      new CANNON.Vec3(
+      new Vec3(
         bounds.innerHalfWidth + WALL_THICKNESS,
         WALL_HEIGHT / 2,
         WALL_THICKNESS / 2,
@@ -231,7 +231,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       let bodyState = bodiesRef.current.get(id);
 
       if (!bodyState) {
-        const body = new CANNON.Body({ mass: 1, shape: dieShapeRef.current });
+        const body = new Body({ mass: 1, shape: dieShapeRef.current });
         body.linearDamping = 0.12;
         body.angularDamping = 0.16;
         body.allowSleep = true;
@@ -250,7 +250,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       bodyState.type = die?.type ?? DICE_TYPE.ATTRIBUTE;
 
-      if (!rollRequest && bodyState.body.type !== CANNON.Body.DYNAMIC) {
+      if (!rollRequest && bodyState.body.type !== Body.DYNAMIC) {
         clampBodyInside(bodyState.body, boundsRef.current, false);
       }
     });
@@ -364,7 +364,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     }
 
     for (const [id, bodyState] of bodiesRef.current) {
-      if (bodyState.body.type === CANNON.Body.DYNAMIC) {
+      if (bodyState.body.type === Body.DYNAMIC) {
         clampBodyInside(bodyState.body, boundsRef.current, true);
       }
 
@@ -561,7 +561,7 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
         near: 0.1,
         far: 70,
       }}
-      shadows={{ type: THREE.VSMShadowMap }}
+      shadows={{ type: VSMShadowMap }}
       dpr={[1, 1.7]}
     >
       <color attach="background" args={["#1f6d45"]} />

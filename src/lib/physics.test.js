@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import * as CANNON from "cannon-es";
+import { Body, Box, Vec3 } from "cannon-es";
 import {
   DIE_SIZE,
   clampBodyInside,
@@ -15,11 +15,9 @@ const createMockBounds = (halfWidth = 4.0, halfDepth = 3.0) => ({
 });
 
 const createDynamicBody = (x = 0, y = 0.5, z = 0) => {
-  const body = new CANNON.Body({
+  const body = new Body({
     mass: 1,
-    shape: new CANNON.Box(
-      new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2),
-    ),
+    shape: new Box(new Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)),
   });
   body.position.set(x, y, z);
   return body;
@@ -172,11 +170,11 @@ test("clampBodyInside uses minimum limit of 0.8 for very small bounds", () => {
 });
 
 test("createStaticBox returns a static body at the given position", () => {
-  const halfExtents = new CANNON.Vec3(2, 1, 3);
+  const halfExtents = new Vec3(2, 1, 3);
   const position = { x: 1, y: 2, z: 3 };
   const body = createStaticBox(halfExtents, position);
 
-  assert.equal(body.type, CANNON.Body.STATIC);
+  assert.equal(body.type, Body.STATIC);
   assert.equal(body.mass, 0);
   assert.equal(body.position.x, 1);
   assert.equal(body.position.y, 2);
@@ -184,14 +182,11 @@ test("createStaticBox returns a static body at the given position", () => {
 });
 
 test("createStaticBox body has a box shape", () => {
-  const halfExtents = new CANNON.Vec3(2, 1, 3);
+  const halfExtents = new Vec3(2, 1, 3);
   const body = createStaticBox(halfExtents, { x: 0, y: 0, z: 0 });
 
   assert.equal(body.shapes.length, 1);
-  assert.ok(
-    body.shapes[0] instanceof CANNON.Box,
-    "Shape should be a CANNON.Box",
-  );
+  assert.ok(body.shapes[0] instanceof Box, "Shape should be a Box");
 });
 
 test("freezeBodyInPlace stops all motion and makes body kinematic", () => {
@@ -201,7 +196,7 @@ test("freezeBodyInPlace stops all motion and makes body kinematic", () => {
 
   freezeBodyInPlace(body);
 
-  assert.equal(body.type, CANNON.Body.KINEMATIC);
+  assert.equal(body.type, Body.KINEMATIC);
   assert.equal(body.mass, 0);
   assert.equal(body.velocity.x, 0);
   assert.equal(body.velocity.y, 0);
