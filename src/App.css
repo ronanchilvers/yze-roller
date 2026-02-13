@@ -132,13 +132,13 @@ h2 {
 }
 
 .panel-reset-button {
-  border: 1px solid var(--line);
-  border-radius: 0.55rem;
-  padding: 0.42rem 0.62rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.95rem;
   font: inherit;
-  font-size: 0.86rem;
-  color: var(--ink-700);
-  background: #f7f1e6;
+  font-weight: 700;
+  color: #fffaf5;
+  background: linear-gradient(160deg, var(--accent), var(--accent-strong));
   cursor: pointer;
 }
 
