@@ -11,6 +11,7 @@
 }
 
 .app-shell {
+  min-width: 450px;
   min-height: 100dvh;
   padding: clamp(0.9rem, 1.8vw, 1.5rem);
   background:
@@ -168,7 +169,7 @@ h2 {
 }
 
 .pool-action-button {
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 0.7rem;
   padding: 0.55rem 0.95rem;
   font: inherit;
@@ -326,17 +327,12 @@ h2 {
     width: 100%;
   }
 
-  .control-grid,
-  .panel-header {
-    grid-template-columns: 1fr;
+  .control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .panel-header {
-    display: grid;
-  }
-
-  .panel-reset-button {
-    justify-self: start;
+  .pool-action-button {
+    grid-column: 1 / -1;
   }
 
   .tray-panel {
