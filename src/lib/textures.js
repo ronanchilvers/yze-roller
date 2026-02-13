@@ -49,11 +49,10 @@ export const createFeltTexture = (feltPlaneScale = 3) => {
   texture.repeat.set(2.8 * feltPlaneScale, 2.8 * feltPlaneScale);
   texture.anisotropy = 8;
   texture.needsUpdate = true;
-  
-  // Null out references to allow GC to reclaim the canvas and context
-  // The texture retains its own copy of the image data
-  canvas.width = 0;
-  canvas.height = 0;
+
+  // NOTE: Do not null out canvas dimensions here. THREE.CanvasTexture
+  // references the canvas element and needs it intact until the texture
+  // is uploaded to the GPU. Cleanup happens via disposeMaterialSet().
   
   return texture;
 };
@@ -92,11 +91,10 @@ export const createFaceTexture = (faceValue, dieColor) => {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;
   texture.needsUpdate = true;
-  
-  // Null out references to allow GC to reclaim the canvas and context
-  // The texture retains its own copy of the image data
-  canvas.width = 0;
-  canvas.height = 0;
+
+  // NOTE: Do not null out canvas dimensions here. THREE.CanvasTexture
+  // references the canvas element and needs it intact until the texture
+  // is uploaded to the GPU. Cleanup happens via disposeMaterialSet().
   
   return texture;
 };
