@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react"
 import "./App.css";
 import { MAX_DICE, buildDicePool, normalizeDiceCount } from "./lib/dice";
 import {
+  DEFAULT_POOL_SELECTION,
   getBrowserStorage,
   loadPoolSelection,
   savePoolSelection,
@@ -79,8 +80,8 @@ function App() {
   };
 
   const onResetDice = () => {
-    setAttributeDice(MIN_ATTRIBUTE_DICE);
-    setSkillDice(MIN_SKILL_DICE);
+    setAttributeDice(DEFAULT_POOL_SELECTION.attributeDice);
+    setSkillDice(DEFAULT_POOL_SELECTION.skillDice);
     setCurrentRoll(null);
     setPreviousRoll(null);
     setRecentResults([]);

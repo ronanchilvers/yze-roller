@@ -2,7 +2,7 @@ import { MAX_DICE, normalizeDiceCount, sanitizePoolCounts } from "./dice.js";
 
 export const POOL_STORAGE_KEY = "yze:dice-pool-selection:v1";
 export const DEFAULT_POOL_SELECTION = Object.freeze({
-  attributeDice: 2,
+  attributeDice: 3,
   skillDice: 1,
 });
 
