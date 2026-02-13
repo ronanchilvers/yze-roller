@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import { DICE_TYPE } from "../lib/dice.js";
+import { DICE_TYPE, getDieId } from "../lib/dice.js";
 import {
   FACE_ORDER_BY_SIDE,
   createFeltTexture,
@@ -173,7 +173,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     const nextIds = new Set();
 
     diceList.forEach((die, index) => {
-      const id = String(die?.id ?? `die-${index + 1}`);
+      const id = getDieId(die, index);
       nextIds.add(id);
       let bodyState = bodiesRef.current.get(id);
 
@@ -236,11 +236,11 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     const rerollSet = new Set(
       Array.isArray(rollRequest.rerollIds) && rollRequest.rerollIds.length > 0
         ? rollRequest.rerollIds.map((id) => String(id))
-        : diceList.map((die, index) => String(die?.id ?? `die-${index + 1}`)),
+        : diceList.map((die, index) => getDieId(die, index)),
     );
 
     diceList.forEach((die, index) => {
-      const id = String(die?.id ?? `die-${index + 1}`);
+      const id = getDieId(die, index);
       const bodyState = bodiesRef.current.get(id);
 
       if (!bodyState) {
@@ -261,7 +261,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
         action: rollRequest.action,
         rolledAt: Number.isFinite(rollRequest.startedAt) ? rollRequest.startedAt : Date.now(),
         dice: diceList.map((die, index) => ({
-          id: String(die?.id ?? `die-${index + 1}`),
+          id: getDieId(die, index),
           type: die?.type ?? DICE_TYPE.ATTRIBUTE,
           face: Number.isInteger(die?.face) ? die.face : 1,
           wasPushed: false,
@@ -273,7 +273,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     pendingSimulationRef.current = {
       key: rollRequest.key,
       action: rollRequest.action,
-      order: diceList.map((die, index) => String(die?.id ?? `die-${index + 1}`)),
+      order: diceList.map((die, index) => getDieId(die, index)),
       rerollSet,
       startedAt: performance.now(),
       rolledAt: Number.isFinite(rollRequest.startedAt) ? rollRequest.startedAt : Date.now(),
@@ -452,7 +452,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       </mesh>
 
       {diceList.map((die, index) => {
-        const id = String(die?.id ?? `die-${index + 1}`);
+        const id = getDieId(die, index);
         const materialSet = materialSets[die?.type] ?? materialSets[DICE_TYPE.ATTRIBUTE];
 
         return (

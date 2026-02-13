@@ -57,6 +57,17 @@ export const sanitizePoolCounts = (counts) => {
   };
 };
 
+/**
+ * Generates a stable ID for a die, using its existing ID or creating one from the index.
+ *
+ * @param {object} die - The die object (may have an id property)
+ * @param {number} index - The die's position in the array (0-based)
+ * @returns {string} A stable string ID for the die
+ */
+export const getDieId = (die, index) => {
+  return String(die?.id ?? `die-${index + 1}`);
+};
+
 const normalizeDieType = (value) => {
   if (value === DICE_TYPE.SKILL || value === DICE_TYPE.STRAIN) {
     return value;
@@ -70,7 +81,7 @@ const normalizeDie = (die, index) => {
   const face = Number(source.face);
 
   return {
-    id: source.id ? String(source.id) : `die-${index + 1}`,
+    id: getDieId(source, index),
     type: normalizeDieType(source.type),
     face: Number.isInteger(face) ? face : null,
   };

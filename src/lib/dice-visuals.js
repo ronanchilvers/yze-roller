@@ -1,4 +1,4 @@
-import { DICE_TYPE } from "./dice.js";
+import { DICE_TYPE, getDieId } from "./dice.js";
 
 export const DIE_COLOR = Object.freeze({
   [DICE_TYPE.ATTRIBUTE]: "#55aa5f",
@@ -11,13 +11,13 @@ export const selectAnimatedDiceIds = (roll) => {
   const dice = Array.isArray(source.dice) ? source.dice : [];
 
   if (source.action === "roll") {
-    return dice.map((die, index) => String(die?.id ?? `die-${index + 1}`));
+    return dice.map((die, index) => getDieId(die, index));
   }
 
   if (source.action === "push") {
     return dice
       .filter((die) => Boolean(die?.wasPushed))
-      .map((die, index) => String(die?.id ?? `die-${index + 1}`));
+      .map((die, index) => getDieId(die, index));
   }
 
   return [];
