@@ -14,10 +14,9 @@ const WALL_THICKNESS = 0.24;
 const WALL_HEIGHT = 3.2;
 const MIN_SETTLE_MS = 720;
 const MAX_SETTLE_MS = 4200;
-const SETTLE_LINEAR_SPEED = 0.08;
-const SETTLE_ANGULAR_SPEED = 0.2;
-const SETTLE_FACE_ALIGNMENT = 0.9;
-const SETTLE_REST_Y = DIE_SIZE * 0.5 + 0.03;
+const SETTLE_LINEAR_SPEED = 0.12;
+const SETTLE_ANGULAR_SPEED = 0.18;
+const SETTLE_FRAMES = 18;
 
 const FACE_ORDER_BY_SIDE = [2, 5, 1, 6, 3, 4];
 const FACE_NORMALS = [
@@ -205,11 +204,11 @@ const clampBodyInside = (body, bounds, allowBounce = true) => {
     }
   }
 
-  if (body.position.y < minY) {
+  if (!allowBounce && body.position.y < minY) {
     body.position.y = minY;
 
     if (body.velocity.y < 0) {
-      body.velocity.y = allowBounce ? body.velocity.y * -0.02 : 0;
+      body.velocity.y = 0;
     }
   }
 };
@@ -268,6 +267,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const pendingSimulationRef = useRef(null);
   const onRollResolvedRef = useRef(onRollResolved);
   const stepAccumulatorRef = useRef(0);
+  const settleFramesRef = useRef(0);
   const lastRequestKeyRef = useRef(null);
   const dieShapeRef = useRef(new CANNON.Box(new CANNON.Vec3(DIE_SIZE / 2, DIE_SIZE / 2, DIE_SIZE / 2)));
   const dieGeometry = useMemo(
@@ -300,8 +300,10 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       gravity: new CANNON.Vec3(0, -30, 0),
       allowSleep: true,
     });
-    world.defaultContactMaterial.friction = 0.52;
-    world.defaultContactMaterial.restitution = 0.2;
+    world.broadphase = new CANNON.SAPBroadphase(world);
+    world.solver.iterations = 8;
+    world.defaultContactMaterial.friction = 0.35;
+    world.defaultContactMaterial.restitution = 0.18;
     worldRef.current = world;
 
     return () => {
@@ -387,8 +389,11 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       if (!bodyState) {
         const body = new CANNON.Body({ mass: 1, shape: dieShapeRef.current });
-        body.linearDamping = 0.42;
-        body.angularDamping = 0.56;
+        body.linearDamping = 0.12;
+        body.angularDamping = 0.16;
+        body.allowSleep = true;
+        body.sleepSpeedLimit = 0.08;
+        body.sleepTimeLimit = 0.2;
         body.ccdSpeedThreshold = 0.1;
         body.ccdIterations = 8;
         spawnBodyInViewport(body, boundsRef.current);
@@ -484,6 +489,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       rolledAt: Number.isFinite(rollRequest.startedAt) ? rollRequest.startedAt : Date.now(),
       reported: false,
     };
+    settleFramesRef.current = 0;
   }, [rollRequest]);
 
   useFrame((_, deltaSeconds) => {
@@ -532,7 +538,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     }
 
     const elapsed = performance.now() - pending.startedAt;
-    let allSettled = elapsed >= MIN_SETTLE_MS;
+    let isMoving = false;
 
     for (const id of pending.rerollSet) {
       const bodyState = bodiesRef.current.get(id);
@@ -541,21 +547,25 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
         continue;
       }
 
-      const linearSpeed = bodyState.body.velocity.length();
-      const angularSpeed = bodyState.body.angularVelocity.length();
-      const { alignment } = topFaceFromQuaternion(bodyState.body.quaternion);
-      const isNearFloor = bodyState.body.position.y <= SETTLE_REST_Y;
+      const linearSpeedSq = bodyState.body.velocity.lengthSquared();
+      const angularSpeedSq = bodyState.body.angularVelocity.lengthSquared();
 
       if (
-        linearSpeed > SETTLE_LINEAR_SPEED ||
-        angularSpeed > SETTLE_ANGULAR_SPEED ||
-        alignment < SETTLE_FACE_ALIGNMENT ||
-        !isNearFloor
+        linearSpeedSq > SETTLE_LINEAR_SPEED * SETTLE_LINEAR_SPEED ||
+        angularSpeedSq > SETTLE_ANGULAR_SPEED * SETTLE_ANGULAR_SPEED
       ) {
-        allSettled = false;
+        isMoving = true;
         break;
       }
     }
+
+    if (isMoving) {
+      settleFramesRef.current = 0;
+    } else {
+      settleFramesRef.current += 1;
+    }
+
+    let allSettled = elapsed >= MIN_SETTLE_MS && settleFramesRef.current >= SETTLE_FRAMES;
 
     if (elapsed >= MAX_SETTLE_MS) {
       allSettled = true;
