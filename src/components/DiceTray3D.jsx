@@ -24,6 +24,9 @@ const SETTLE_LINEAR_SPEED = 0.12;
 const SETTLE_ANGULAR_SPEED = 0.18;
 const SETTLE_FRAMES = 18;
 const SETTLE_FACE_ALIGNMENT = 0.9;
+const EDGE_NUDGE_COOLDOWN_MS = 140;
+const EDGE_NUDGE_MAX_ATTEMPTS = 10;
+const EDGE_NUDGE_STRENGTH = 0.018;
 
 const FACE_ORDER_BY_SIDE = [2, 5, 1, 6, 3, 4];
 const FACE_NORMALS = [
@@ -300,6 +303,22 @@ const launchRollingBody = (body, bounds, isPushReroll) => {
   body.wakeUp();
 };
 
+const nudgeEdgeLeaningDie = (body) => {
+  const impulse = new CANNON.Vec3(
+    randomBetween(-EDGE_NUDGE_STRENGTH, EDGE_NUDGE_STRENGTH),
+    randomBetween(0.004, 0.016),
+    randomBetween(-EDGE_NUDGE_STRENGTH, EDGE_NUDGE_STRENGTH),
+  );
+
+  body.applyImpulse(impulse, body.position);
+  body.angularVelocity.set(
+    body.angularVelocity.x + randomBetween(-0.35, 0.35),
+    body.angularVelocity.y + randomBetween(-0.2, 0.2),
+    body.angularVelocity.z + randomBetween(-0.35, 0.35),
+  );
+  body.wakeUp();
+};
+
 const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const { camera, size } = useThree();
   const worldRef = useRef(null);
@@ -532,6 +551,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       rerollSet,
       startedAt: performance.now(),
       rolledAt: Number.isFinite(rollRequest.startedAt) ? rollRequest.startedAt : Date.now(),
+      lastNudgeAt: 0,
+      nudgeAttempts: 0,
       reported: false,
     };
     settleFramesRef.current = 0;
@@ -585,6 +606,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     const elapsed = performance.now() - pending.startedAt;
     let isMoving = false;
     let hasEdgeLeaningDie = false;
+    const edgeLeaningBodies = [];
 
     for (const id of pending.rerollSet) {
       const bodyState = bodiesRef.current.get(id);
@@ -607,6 +629,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       if (alignment < SETTLE_FACE_ALIGNMENT) {
         hasEdgeLeaningDie = true;
+        edgeLeaningBodies.push(bodyState.body);
       }
     }
 
@@ -620,7 +643,23 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       && settleFramesRef.current >= SETTLE_FRAMES
       && !hasEdgeLeaningDie;
 
-    if (elapsed >= MAX_SETTLE_MS) {
+    if (
+      hasEdgeLeaningDie
+      && !isMoving
+      && pending.nudgeAttempts < EDGE_NUDGE_MAX_ATTEMPTS
+      && elapsed >= MIN_SETTLE_MS
+      && performance.now() - pending.lastNudgeAt >= EDGE_NUDGE_COOLDOWN_MS
+    ) {
+      for (const body of edgeLeaningBodies) {
+        nudgeEdgeLeaningDie(body);
+      }
+      pending.lastNudgeAt = performance.now();
+      pending.nudgeAttempts += 1;
+      settleFramesRef.current = 0;
+      allSettled = false;
+    } else if (elapsed >= MAX_SETTLE_MS && hasEdgeLeaningDie && pending.nudgeAttempts >= EDGE_NUDGE_MAX_ATTEMPTS) {
+      allSettled = true;
+    } else if (elapsed >= MAX_SETTLE_MS && !hasEdgeLeaningDie) {
       allSettled = true;
     }
 
@@ -634,11 +673,6 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       const faceValue = resolvedFace?.faceValue ?? 1;
 
       if (bodyState) {
-        // Edge-leaning dice can sometimes sleep in an unstable orientation.
-        // On timeout, clamp to the nearest face so resolved state is valid.
-        if (resolvedFace && resolvedFace.alignment < SETTLE_FACE_ALIGNMENT) {
-          bodyState.body.quaternion.copy(quaternionForFaceValue(faceValue));
-        }
         clampBodyInside(bodyState.body, boundsRef.current, false);
         freezeBodyInPlace(bodyState.body);
       }
