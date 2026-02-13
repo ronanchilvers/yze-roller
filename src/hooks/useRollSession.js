@@ -128,8 +128,6 @@ export const useRollSession = ({
   const onClearDice = () => {
     setCurrentRoll(null);
     setPreviousRoll(null);
-    setRecentResults([]);
-    setIsHistoryOpen(false);
     setRollRequest(null);
   };
 
