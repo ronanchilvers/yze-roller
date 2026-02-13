@@ -19,7 +19,17 @@ import {
 
 const MIN_ATTRIBUTE_DICE = 1;
 const MIN_SKILL_DICE = 0;
+const MAX_PREVIOUS_RESULTS = 10;
 const DiceTray3D = lazy(() => import("./components/DiceTray3D"));
+
+const formatRollSummary = (roll) => {
+  if (!roll) {
+    return "No results yet";
+  }
+
+  const withStrain = roll.outcomes.hasStrain ? " (with Strain)" : "";
+  return `${roll.outcomes.successes} successes, ${roll.outcomes.banes} banes${withStrain}`;
+};
 
 function App() {
   const [storage] = useState(() => getBrowserStorage());
@@ -33,6 +43,8 @@ function App() {
   const [strainPoints, setStrainPoints] = useState(0);
   const [currentRoll, setCurrentRoll] = useState(null);
   const [previousRoll, setPreviousRoll] = useState(null);
+  const [recentResults, setRecentResults] = useState([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [rollRequest, setRollRequest] = useState(null);
   const rollRequestRef = useRef(null);
   const requestCounterRef = useRef(0);
@@ -129,15 +141,6 @@ function App() {
     });
   };
 
-  const renderRollSummary = (roll) => {
-    if (!roll) {
-      return "No results yet";
-    }
-
-    const withStrain = roll.outcomes.hasStrain ? " (with Strain)" : "";
-    return `${roll.outcomes.successes} successes, ${roll.outcomes.banes} banes${withStrain}`;
-  };
-
   const onRollResolved = useCallback((resolution) => {
     const activeRequest = rollRequestRef.current;
 
@@ -173,12 +176,27 @@ function App() {
 
     setCurrentRoll(nextState.currentRoll);
     setPreviousRoll(nextState.previousRoll);
+    if (nextState.currentRoll) {
+      const entry = {
+        id: `${resolution.key}-${rolledAt}`,
+        summary: formatRollSummary(nextState.currentRoll),
+      };
+      setRecentResults((current) => [entry, ...current].slice(0, MAX_PREVIOUS_RESULTS + 1));
+    }
     setRollRequest(null);
   }, []);
+
+  useEffect(() => {
+    if (recentResults.length <= 1 && isHistoryOpen) {
+      setIsHistoryOpen(false);
+    }
+  }, [recentResults, isHistoryOpen]);
 
   const canPush = canPushCurrentRoll({ currentRoll, previousRoll })
     && !isRolling;
   const activeDice = rollRequest?.dice ?? currentRoll?.dice ?? [];
+  const previousResults = recentResults.slice(1, MAX_PREVIOUS_RESULTS + 1);
+  const hasPreviousResults = previousResults.length > 0;
 
   return (
     <main className="app-shell">
@@ -264,14 +282,39 @@ function App() {
                   {rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice..."}
                 </p>
               ) : currentRoll ? (
-                <div className="tray-results-row">
-                  <p className="tray-lead">{renderRollSummary(currentRoll)}</p>
-                  <p className="tray-pushable">
-                    {canPush
-                      ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
-                      : "No dice can be pushed."}
-                  </p>
-                </div>
+                <>
+                  <div className="tray-results-row">
+                    <div className="tray-summary-wrap">
+                      <p className="tray-lead">{formatRollSummary(currentRoll)}</p>
+                      {hasPreviousResults ? (
+                        <button
+                          type="button"
+                          className="history-toggle"
+                          onClick={() => setIsHistoryOpen((open) => !open)}
+                          aria-label={isHistoryOpen ? "Hide previous results" : "Show previous results"}
+                          aria-expanded={isHistoryOpen}
+                          aria-controls="previous-results-list"
+                        >
+                          {isHistoryOpen ? "▴" : "▾"}
+                        </button>
+                      ) : null}
+                    </div>
+                    <p className="tray-pushable">
+                      {canPush
+                        ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
+                        : "No dice can be pushed."}
+                    </p>
+                  </div>
+                  {hasPreviousResults && isHistoryOpen ? (
+                    <div className="history-dropdown" id="previous-results-list">
+                      <ul className="history-list">
+                        {previousResults.map((entry) => (
+                          <li key={entry.id}>{entry.summary}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </>
               ) : (
                 <p className="tray-lead">Roll the dice to see results.</p>
               )}
@@ -285,7 +328,6 @@ function App() {
                 />
               </Suspense>
             </div>
-            {previousRoll ? <p className="previous-roll">Previous: {renderRollSummary(previousRoll)}</p> : null}
           </section>
         </div>
       </section>
