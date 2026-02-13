@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { MAX_DICE, buildDicePool, normalizeDiceCount } from "./lib/dice";
 import {
@@ -52,10 +52,6 @@ function App() {
   const previousRollRef = useRef(null);
 
   const normalizedStrainPoints = normalizeStrainPoints(strainPoints);
-  const totalDice = useMemo(
-    () => attributeDice + skillDice + normalizedStrainPoints,
-    [attributeDice, skillDice, normalizedStrainPoints],
-  );
   const isRolling = Boolean(rollRequest);
 
   const onAttributeChange = (event) => {
@@ -80,6 +76,16 @@ function App() {
 
   const onResetStrain = () => {
     setStrainPoints(0);
+  };
+
+  const onResetDice = () => {
+    setAttributeDice(MIN_ATTRIBUTE_DICE);
+    setSkillDice(MIN_SKILL_DICE);
+    setCurrentRoll(null);
+    setPreviousRoll(null);
+    setRecentResults([]);
+    setIsHistoryOpen(false);
+    setRollRequest(null);
   };
 
   useEffect(() => {
@@ -197,6 +203,18 @@ function App() {
   const activeDice = rollRequest?.dice ?? currentRoll?.dice ?? [];
   const previousResults = recentResults.slice(1, MAX_PREVIOUS_RESULTS + 1);
   const hasPreviousResults = previousResults.length > 0;
+  const pushableDiceCount = Number(currentRoll?.pushableDiceIds?.length ?? 0);
+  const hasRolled = Boolean(currentRoll);
+  const primaryActionLabel = hasRolled ? `Push ${pushableDiceCount} Dice` : "Roll Dice";
+  const isPrimaryActionDisabled = isRolling || (hasRolled && !canPush);
+  const onPrimaryAction = () => {
+    if (hasRolled) {
+      onPush();
+      return;
+    }
+
+    onRoll();
+  };
 
   return (
     <main className="app-shell">
@@ -225,7 +243,16 @@ function App() {
 
         <div className="content-grid">
           <section className="panel controls-panel" aria-labelledby="dice-pool-label">
-            <h2 id="dice-pool-label">Dice Pool</h2>
+            <div className="panel-header">
+              <h2 id="dice-pool-label">Dice Pool</h2>
+              <button
+                type="button"
+                className="panel-reset-button"
+                onClick={onResetDice}
+              >
+                Reset Dice
+              </button>
+            </div>
             <p className="panel-copy">
               Choose Attribute and Skill dice. Strain dice are added automatically from Strain Points.
             </p>
@@ -259,18 +286,15 @@ function App() {
                 />
               </label>
 
-              <div className="pool-summary" aria-live="polite">
-                <p>Total Dice This Roll</p>
-                <strong>{totalDice}</strong>
-              </div>
-            </div>
-
-            <div className="actions">
-              <button type="button" onClick={onRoll} disabled={isRolling}>
-                {isRolling && rollRequest?.action === "roll" ? "Rolling..." : "Roll Dice"}
-              </button>
-              <button type="button" onClick={onPush} disabled={!canPush}>
-                {isRolling && rollRequest?.action === "push" ? "Pushing..." : "Push (After Roll)"}
+              <button
+                type="button"
+                className="pool-action-button"
+                onClick={onPrimaryAction}
+                disabled={isPrimaryActionDisabled}
+              >
+                {isRolling
+                  ? (rollRequest?.action === "push" ? "Pushing..." : "Rolling...")
+                  : primaryActionLabel}
               </button>
             </div>
           </section>

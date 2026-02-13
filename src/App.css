@@ -123,6 +123,24 @@ h2 {
   padding: clamp(0.85rem, 1.5vw, 1.05rem);
 }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel-reset-button {
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  padding: 0.42rem 0.62rem;
+  font: inherit;
+  font-size: 0.86rem;
+  color: var(--ink-700);
+  background: #f7f1e6;
+  cursor: pointer;
+}
+
 .control-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -149,48 +167,26 @@ h2 {
   background: #fffffd;
 }
 
-.pool-summary {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  height: 100%;
-  padding: 0.7rem 0.8rem;
-  border-radius: 0.7rem;
-  background: #f2efe6;
-}
-
-.pool-summary p {
-  margin: 0;
-}
-
-.pool-summary strong {
-  font-size: 1.45rem;
-}
-
-.actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.7rem;
-  margin-top: 0.95rem;
-}
-
-.actions button {
+.pool-action-button {
   border: 0;
   border-radius: 0.7rem;
-  padding: 0.7rem 0.95rem;
+  padding: 0.8rem 0.95rem;
   font: inherit;
   font-weight: 700;
   color: #fffaf5;
   background: linear-gradient(160deg, var(--accent), var(--accent-strong));
   cursor: pointer;
+  min-height: 2.75rem;
 }
 
-.actions button:disabled {
+.pool-action-button:disabled,
+.panel-reset-button:disabled {
   cursor: not-allowed;
   opacity: 0.58;
 }
 
-.actions button:focus-visible,
+.pool-action-button:focus-visible,
+.panel-reset-button:focus-visible,
 .number-field input:focus-visible,
 .strain-reset-button:focus-visible {
   outline: 2px solid #1d6f68;
@@ -332,8 +328,16 @@ h2 {
   }
 
   .control-grid,
-  .actions {
+  .panel-header {
     grid-template-columns: 1fr;
+  }
+
+  .panel-header {
+    display: grid;
+  }
+
+  .panel-reset-button {
+    justify-self: start;
   }
 
   .tray-panel {
