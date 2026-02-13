@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { getDieColor } from "./dice-visuals.js";
+import { cryptoRandom } from "./secure-random.js";
 
 // Face order matches the geometry's side indexing
 export const FACE_ORDER_BY_SIDE = [2, 5, 1, 6, 3, 4];
@@ -7,6 +8,10 @@ export const FACE_ORDER_BY_SIDE = [2, 5, 1, 6, 3, 4];
 /**
  * Creates a procedural felt texture for the dice tray floor.
  * Generates a noisy green felt appearance using canvas pixel manipulation.
+ *
+ * NOTE: Uses cryptoRandom for texture grain consistency, though this is
+ * cosmetic randomness (not fairness-critical). The visual noise does not
+ * affect dice roll outcomes.
  *
  * @param {number} feltPlaneScale - Scale factor for texture repeat
  * @returns {THREE.CanvasTexture|null} The generated texture, or null if canvas unavailable
@@ -29,7 +34,7 @@ export const createFeltTexture = (feltPlaneScale = 3) => {
   const pixels = imageData.data;
 
   for (let index = 0; index < pixels.length; index += 4) {
-    const grain = (Math.random() - 0.5) * 42;
+    const grain = (cryptoRandom() - 0.5) * 42;
     pixels[index] = THREE.MathUtils.clamp(pixels[index] + grain * 0.45, 0, 255);
     pixels[index + 1] = THREE.MathUtils.clamp(pixels[index + 1] + grain * 0.7, 0, 255);
     pixels[index + 2] = THREE.MathUtils.clamp(pixels[index + 2] + grain * 0.35, 0, 255);

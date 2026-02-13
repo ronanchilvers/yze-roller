@@ -1,3 +1,5 @@
+import { cryptoRandom } from "./secure-random.js";
+
 export const MAX_DICE = 20;
 export const MAX_STRAIN_DICE = 999;
 export const DICE_TYPE = Object.freeze({
@@ -130,7 +132,7 @@ export const isPushableFace = (faceValue) => {
   return Number.isInteger(face) && face > 1 && face < 6;
 };
 
-export const rollD6 = (randomSource = Math.random) => {
+export const rollD6 = (randomSource = cryptoRandom) => {
   if (typeof randomSource !== "function") {
     return 1;
   }
@@ -145,7 +147,7 @@ export const rollD6 = (randomSource = Math.random) => {
   return Math.floor(normalized * 6) + 1;
 };
 
-export const rollDice = (dicePool, randomSource = Math.random) => {
+export const rollDice = (dicePool, randomSource = cryptoRandom) => {
   return normalizeDicePool(dicePool).map((die) => ({
     ...die,
     face: rollD6(randomSource),
@@ -159,7 +161,7 @@ export const getPushableDiceIds = (dicePool) => {
     .map((die) => die.id);
 };
 
-export const pushDice = (dicePool, randomSource = Math.random) => {
+export const pushDice = (dicePool, randomSource = cryptoRandom) => {
   return normalizeDicePool(dicePool).map((die) => {
     if (!isPushableFace(die.face)) {
       return { ...die, wasPushed: false };
@@ -228,10 +230,10 @@ export const summarizeRoll = (dicePool) => {
  * for non-visual / integration testing (e.g. strain accumulation tests).
  *
  * @param {{ attributeDice?: number, skillDice?: number, strainDice?: number }} counts
- * @param {() => number} [randomSource=Math.random]
+ * @param {() => number} [randomSource=cryptoRandom]
  * @returns {{ dice: object[], outcomes: object, pushableDiceIds: string[], canPush: boolean }}
  */
-export const rollPool = (counts, randomSource = Math.random) => {
+export const rollPool = (counts, randomSource = cryptoRandom) => {
   const pool = buildDicePool(counts);
   const rolledDice = rollDice(pool, randomSource);
   return summarizeRoll(rolledDice);
@@ -244,10 +246,10 @@ export const rollPool = (counts, randomSource = Math.random) => {
  * for integration tests that need deterministic push outcomes.
  *
  * @param {object[]} dicePool - Array of dice objects with face values
- * @param {() => number} [randomSource=Math.random]
+ * @param {() => number} [randomSource=cryptoRandom]
  * @returns {{ dice: object[], outcomes: object, pushableDiceIds: string[], canPush: boolean }}
  */
-export const pushPool = (dicePool, randomSource = Math.random) => {
+export const pushPool = (dicePool, randomSource = cryptoRandom) => {
   const initialRoll = summarizeRoll(dicePool);
   const pushCandidates = initialRoll.dice.filter((die) => isPushableFace(die.face));
   const pushedCandidates = pushDice(pushCandidates, randomSource);

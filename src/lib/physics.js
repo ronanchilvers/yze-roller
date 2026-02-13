@@ -1,4 +1,5 @@
 import * as CANNON from "cannon-es";
+import { cryptoRandom } from "./secure-random.js";
 
 // Physics constants
 export const DIE_SIZE = 0.68;
@@ -40,10 +41,11 @@ const EDGE_NUDGE_ANGULAR_RANGE_Y = 0.2;
  *
  * @param {number} min - Minimum value
  * @param {number} max - Maximum value
+ * @param {() => number} [randomSource=cryptoRandom] - Random number generator (cosmetic use)
  * @returns {number} Random value in range [min, max]
  */
-export const randomBetween = (min, max) => {
-  return min + Math.random() * (max - min);
+export const randomBetween = (min, max, randomSource = cryptoRandom) => {
+  return min + randomSource() * (max - min);
 };
 
 /**
