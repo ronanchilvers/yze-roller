@@ -1,0 +1,77 @@
+name: Deploy to GitHub Pages
+
+# This workflow builds the Vite app and deploys the `dist/` output to GitHub Pages.
+# It runs on pushes to `main`, and can also be triggered manually from the Actions tab.
+#
+# Prerequisites:
+# - In your repository settings, set Pages -> Build and deployment to "GitHub Actions".
+# - Ensure the default branch is `main` (or update the branch below).
+
+on:
+  # Deploy on push to main
+  push:
+    branches:
+      - main
+
+  # Allow manual deploys
+  workflow_dispatch:
+
+# Required for GitHub Pages deployment via Actions
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Ensure only one deployment runs at a time to avoid race conditions
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout repository content so the workflow can build it
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Set up Node.js; cache npm dependencies for faster builds
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # Install dependencies based on lockfile for reproducible builds
+      - name: Install dependencies
+        run: npm ci
+
+      # Build the production bundle (outputs to `dist/` by default for Vite)
+      - name: Build
+        run: npm run build
+
+      # Configure GitHub Pages (sets environment variables and provides metadata)
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      # Upload the build output as an artifact for the deploy job
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      # The `github-pages` environment is automatically created by GitHub
+      name: github-pages
+      # Expose the deployed URL in the Actions UI
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Deploy the uploaded artifact to GitHub Pages
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

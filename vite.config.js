@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const isAnalyze = mode === "analyze";
 
   return {
+    base: "/yze-roller/",
     plugins: [
       react(),
       ...(isAnalyze
