@@ -2,7 +2,7 @@
 
 Targeted tasks to align the project with modern frontend standards, improve developer experience, and ensure long-term maintainability.
 
-> **Updated** after completion of the Code Quality plan. Module references, scope, and priorities reflect the decomposed codebase structure (9 lib modules, 4 hooks, 1 component, 77 tests).
+> **Updated** after completion of the Code Quality and Security plans. Module references, scope, and priorities reflect the decomposed codebase structure (10 lib modules, 4 hooks, 1 component, 84 tests).
 
 ---
 
@@ -10,12 +10,13 @@ Targeted tasks to align the project with modern frontend standards, improve deve
 
 | Area | Files | Notes |
 |---|---|---|
-| Lib modules | `dice.js`, `dice-visuals.js`, `face-mapping.js`, `physics.js`, `textures.js`, `viewport-bounds.js`, `roll-session.js`, `strain-points.js`, `pool-persistence.js` | Most have JSDoc on exports |
+| Lib modules | `dice.js`, `dice-visuals.js`, `face-mapping.js`, `physics.js`, `textures.js`, `viewport-bounds.js`, `roll-session.js`, `strain-points.js`, `pool-persistence.js`, `secure-random.js` | Most have JSDoc on exports |
 | Hooks | `useRollSession.js`, `usePoolSelection.js`, `useStrainTracker.js`, `useLatestRef.js` | JSDoc on hook signatures |
 | Components | `DiceTray3D.jsx` (~495 lines), `App.jsx` (~204 lines) | No prop validation |
-| Tests | 9 test files, 77 tests (`node:test` + `node:assert/strict`) | Shared helper in `test-helpers.js` |
+| Tests | 9 test files, 84 tests (`node:test` + `node:assert/strict`) | Shared helper in `test-helpers.js` |
 | Styling | `App.css` (sectioned with comments), `index.css` (reset) | Single flat CSS file |
-| Config | `vite.config.js` (minimal), `package.json` (explicit Vite paths) | No linter, formatter, or CI |
+| Config | `vite.config.js` (minimal), `package.json` (explicit Vite paths, pinned prod deps) | No linter, formatter, or CI |
+| Security | `docs/security.md`, CSP in `index.html` | Threat model documented, crypto RNG for dice |
 | Imports | `.js` extensions used consistently (ESM-correct) | `import * as THREE` / `import * as CANNON` in 4 files |
 
 ---
@@ -49,14 +50,14 @@ WebGL failures (unsupported hardware, context loss, driver bugs) will crash the 
 
 `run-tests.mjs` shells out to `node --test`, bypassing Vite's module resolution and making it impossible to test anything that imports browser APIs or JSX.
 
-Current test scope (9 files, 77 tests):
-- `dice.test.js` (14 tests)
+Current test scope (9 files, 84 tests):
+- `dice.test.js` (15 tests) — includes prototype pollution test
 - `dice-visuals.test.js` (1 test)
 - `face-mapping.test.js` (11 tests)
 - `physics.test.js` (18 tests)
 - `viewport-bounds.test.js` (15 tests)
-- `pool-persistence.test.js` (4 tests)
-- `roll-session.test.js` (5 tests)
+- `pool-persistence.test.js` (6 tests) — includes size guard and allowlist tests
+- `roll-session.test.js` (9 tests) — includes validation tests for `isValidRollRequest`/`isValidResolution`
 - `strain-points.test.js` (9 tests)
 - `test-helpers.js` (shared utility, 0 tests of its own)
 
@@ -68,7 +69,7 @@ Migration steps:
 - [ ] Update `test-helpers.js` imports if the API changes
 - [ ] Replace the `"test"` script in `package.json` with `vitest run`
 - [ ] Remove `src/run-tests.mjs`
-- [ ] Verify all 77 existing tests pass under Vitest before merging
+- [ ] Verify all 84 existing tests pass under Vitest before merging
 - [ ] Unlocks future testing of `DiceTray3D.jsx` and hooks with jsdom + `@testing-library/react`
 
 ---
@@ -92,11 +93,12 @@ The current scripts use explicit `node ./node_modules/vite/bin/vite.js` paths in
 
 Component props are completely unvalidated. This makes refactoring risky and debugging harder.
 
-**Existing mitigation:** Most lib modules now have JSDoc on their exports, and the hooks have typed `@returns` annotations. But the component boundary (props passed to `DiceTray3D`) is still untyped.
+**Existing mitigation:** Most lib modules now have JSDoc on their exports, and the hooks have typed `@returns` annotations. The component boundary now has runtime validation via `isValidRollRequest()` and `isValidResolution()` (added in security hardening), but static type checking is still absent.
 
-- [ ] **Option A (minimal):** Add `PropTypes` to `DiceTray3D` for the key props (`dice`, `rollRequest`, `onRollResolved`) — these are the only component-level props in the app
+- [ ] **Option A (minimal):** Add `PropTypes` to `DiceTray3D` for the key props (`dice`, `rollRequest`, `onRollResolved`) — these are the only component-level props in the app. Note: runtime validation already exists via `isValidRollRequest()` in `roll-session.js`
 - [ ] **Option B (recommended):** Adopt TypeScript incrementally:
   - Rename lib modules to `.ts` first (pure logic, no JSX): `dice.ts`, `roll-session.ts`, `strain-points.ts`, `pool-persistence.ts`, `dice-visuals.ts`
+  - Add `secure-random.ts` (simple module, good starting point)
   - Then hooks to `.ts`: `useLatestRef.ts`, `useStrainTracker.ts`, `usePoolSelection.ts`, `useRollSession.ts`
   - Then components to `.tsx`: `DiceTray3D.tsx`, `App.tsx`
   - Add a `tsconfig.json` with `allowJs: true` and `strict: false` to avoid a big-bang migration
@@ -176,6 +178,7 @@ The project has a minimal `README.md` with only run commands. There is no archit
   - `DiceTray3D.jsx` internal helpers and the `DicePhysicsScene` component
   - Hook parameters in `usePoolSelection.js` (already has `@returns` but no `@param` detail)
 - [ ] Add a brief description of the Year Zero Engine dice mechanics for contributors unfamiliar with the system
+- [ ] Reference `docs/security.md` for threat model and trust boundary documentation (already complete)
 
 ---
 
@@ -205,9 +208,10 @@ If the app is deployed publicly, basic web standards apply. The current `index.h
 |---|---|---|
 | Linting / formatting | None | ESLint + Prettier, enforced in CI |
 | Error handling | No error boundary | Graceful WebGL failure recovery |
-| Test runner | Custom `node --test` shim (77 tests) | Vitest with jsdom environment (unlocks component/hook tests) |
-| Type safety | JSDoc on most lib exports | PropTypes minimum, TypeScript stretch goal |
+| Test runner | Custom `node --test` shim (84 tests) | Vitest with jsdom environment (unlocks component/hook tests) |
+| Type safety | JSDoc on most lib exports, runtime validation at boundaries | PropTypes minimum, TypeScript stretch goal |
 | CI | None | GitHub Actions: lint → test → build |
 | Bundle size | 951 KB DiceTray3D chunk, `import *` in 4+ files | Measured baseline, chunked vendor code, named imports |
-| Documentation | JSDoc on lib modules, no architecture doc | Architecture doc, remaining JSDoc, game-mechanic primer |
+| Documentation | JSDoc on lib modules, security doc complete | Architecture doc, remaining JSDoc, game-mechanic primer |
 | Import style | ✅ Consistent `.js` extensions | ESLint rule to enforce |
+| Security | ✅ CSP, crypto RNG, input validation, pinned deps | Maintained via `docs/security.md` checklist |
