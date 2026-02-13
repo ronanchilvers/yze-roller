@@ -253,7 +253,7 @@ function App() {
             </p>
 
             <div className="control-grid">
-              <label className="number-field" htmlFor="attributeDice">
+              <label className="number-field number-field--attribute" htmlFor="attributeDice">
                 <span>Attribute Dice</span>
                 <input
                   id="attributeDice"
@@ -267,7 +267,7 @@ function App() {
                 />
               </label>
 
-              <label className="number-field" htmlFor="skillDice">
+              <label className="number-field number-field--skill" htmlFor="skillDice">
                 <span>Skill Dice</span>
                 <input
                   id="skillDice"
