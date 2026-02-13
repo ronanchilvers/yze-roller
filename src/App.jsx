@@ -4,6 +4,7 @@ import { MAX_DICE } from "./lib/dice";
 import { usePoolSelection } from "./hooks/usePoolSelection";
 import { useStrainTracker } from "./hooks/useStrainTracker";
 import { useRollSession } from "./hooks/useRollSession";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const MIN_ATTRIBUTE_DICE = 1;
 const MIN_SKILL_DICE = 0;
@@ -196,15 +197,19 @@ function App() {
               ) : null}
             </div>
             <div className="tray-stage" aria-label="3D dice tray">
-              <Suspense
-                fallback={<div className="tray-loading">Loading 3D tray…</div>}
-              >
-                <DiceTray3D
-                  dice={activeDice}
-                  rollRequest={rollRequest}
-                  onRollResolved={onRollResolved}
-                />
-              </Suspense>
+              <ErrorBoundary>
+                <Suspense
+                  fallback={
+                    <div className="tray-loading">Loading 3D tray…</div>
+                  }
+                >
+                  <DiceTray3D
+                    dice={activeDice}
+                    rollRequest={rollRequest}
+                    onRollResolved={onRollResolved}
+                  />
+                </Suspense>
+              </ErrorBoundary>
             </div>
           </section>
         </div>
