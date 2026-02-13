@@ -34,6 +34,42 @@ const randomBetween = (min, max) => {
   return min + Math.random() * (max - min);
 };
 
+const createFeltTexture = () => {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return null;
+  }
+
+  context.fillStyle = "#1f6d45";
+  context.fillRect(0, 0, size, size);
+
+  const imageData = context.getImageData(0, 0, size, size);
+  const pixels = imageData.data;
+
+  for (let index = 0; index < pixels.length; index += 4) {
+    const grain = (Math.random() - 0.5) * 42;
+    pixels[index] = THREE.MathUtils.clamp(pixels[index] + grain * 0.45, 0, 255);
+    pixels[index + 1] = THREE.MathUtils.clamp(pixels[index + 1] + grain * 0.7, 0, 255);
+    pixels[index + 2] = THREE.MathUtils.clamp(pixels[index + 2] + grain * 0.35, 0, 255);
+  }
+
+  context.putImageData(imageData, 0, 0);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2.8, 2.8);
+  texture.anisotropy = 8;
+  texture.needsUpdate = true;
+  return texture;
+};
+
 const createFaceTexture = (faceValue, dieColor) => {
   const canvas = document.createElement("canvas");
   canvas.width = 256;
@@ -274,6 +310,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     () => new RoundedBoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, CHAMFER_SEGMENTS, CHAMFER_RADIUS),
     [],
   );
+  const feltTexture = useMemo(() => createFeltTexture(), []);
 
   const materialSets = useMemo(
     () => ({
@@ -317,13 +354,14 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
         disposeMaterialSet(materialSet);
       }
       dieGeometry.dispose();
+      feltTexture?.dispose();
       bodiesRef.current.clear();
       groupRefs.current.clear();
       staticBodiesRef.current = [];
       worldRef.current = null;
       pendingSimulationRef.current = null;
     };
-  }, [materialSets, dieGeometry]);
+  }, [materialSets, dieGeometry, feltTexture]);
 
   useEffect(() => {
     const world = worldRef.current;
@@ -619,7 +657,12 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[boundsRef.current.visibleHalfWidth * 2, boundsRef.current.visibleHalfDepth * 2]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.94} metalness={0.02} />
+        <meshStandardMaterial
+          color="#ffffff"
+          map={feltTexture}
+          roughness={0.98}
+          metalness={0}
+        />
       </mesh>
 
       {diceList.map((die, index) => {
@@ -653,7 +696,7 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
       shadows={{ type: THREE.VSMShadowMap }}
       dpr={[1, 1.7]}
     >
-      <color attach="background" args={["#ffffff"]} />
+      <color attach="background" args={["#1f6d45"]} />
       <DicePhysicsScene
         dice={dice}
         rollRequest={rollRequest}
