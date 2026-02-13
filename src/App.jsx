@@ -235,15 +235,17 @@ function App() {
                 <div
                   className="history-dropdown"
                   id="previous-results-list"
+                  role="dialog"
+                  aria-modal="false"
                   tabIndex={-1}
                   ref={historyPanelRef}
-                  onKeyDown={handleHistoryKeyDown}
                 >
                   <div className="history-actions">
                     <button
                       type="button"
                       className="history-close"
                       onClick={handleHistoryClose}
+                      onKeyDown={handleHistoryKeyDown}
                       ref={closeButtonRef}
                     >
                       Close

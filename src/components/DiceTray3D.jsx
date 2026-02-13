@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unknown-property */
 import { useEffect, useMemo, useRef } from "react";
 import PropTypes from "prop-types";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -6,7 +7,6 @@ import { MathUtils, VSMShadowMap } from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { DICE_TYPE, getDieId } from "../lib/dice.js";
 import {
-  FACE_ORDER_BY_SIDE,
   createFeltTexture,
   createMaterialSet,
   disposeMaterialSet,
@@ -113,12 +113,15 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     world.defaultContactMaterial.friction = 0.35;
     world.defaultContactMaterial.restitution = 0.18;
     worldRef.current = world;
+    const bodies = bodiesRef.current;
+    const groups = groupRefs.current;
+    const staticBodies = staticBodiesRef.current;
 
     return () => {
-      for (const bodyState of bodiesRef.current.values()) {
+      for (const bodyState of bodies.values()) {
         world.removeBody(bodyState.body);
       }
-      for (const body of staticBodiesRef.current) {
+      for (const body of staticBodies) {
         world.removeBody(body);
       }
       for (const materialSet of Object.values(materialSets)) {
@@ -126,8 +129,8 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       }
       dieGeometry.dispose();
       feltTexture?.dispose();
-      bodiesRef.current.clear();
-      groupRefs.current.clear();
+      bodies.clear();
+      groups.clear();
       staticBodiesRef.current = [];
       worldRef.current = null;
       pendingSimulationRef.current = null;
@@ -220,7 +223,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     for (const bodyState of bodiesRef.current.values()) {
       clampBodyInside(bodyState.body, bounds, false);
     }
-  }, [camera, size.width, size.height]);
+  }, [camera, size]);
 
   useEffect(() => {
     const world = worldRef.current;
@@ -559,6 +562,34 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   );
 };
 
+DicePhysicsScene.propTypes = {
+  dice: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      type: PropTypes.string,
+      face: PropTypes.number,
+      wasPushed: PropTypes.bool,
+    }),
+  ),
+  rollRequest: PropTypes.shape({
+    key: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    action: PropTypes.oneOf(["roll", "push"]),
+    dice: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        type: PropTypes.string,
+        face: PropTypes.number,
+        wasPushed: PropTypes.bool,
+      }),
+    ),
+    rerollIds: PropTypes.arrayOf(
+      PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    ),
+    startedAt: PropTypes.number,
+  }),
+  onRollResolved: PropTypes.func.isRequired,
+};
+
 /**
  * Renders the 3D dice tray and forwards roll lifecycle callbacks.
  *
@@ -593,7 +624,7 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
 DiceTray3D.propTypes = {
   dice: PropTypes.arrayOf(
     PropTypes.shape({
-      id: PropTypes.string,
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       type: PropTypes.string,
       face: PropTypes.number,
       wasPushed: PropTypes.bool,
@@ -604,13 +635,15 @@ DiceTray3D.propTypes = {
     action: PropTypes.oneOf(["roll", "push"]),
     dice: PropTypes.arrayOf(
       PropTypes.shape({
-        id: PropTypes.string,
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         type: PropTypes.string,
         face: PropTypes.number,
         wasPushed: PropTypes.bool,
       }),
     ),
-    rerollIds: PropTypes.arrayOf(PropTypes.string),
+    rerollIds: PropTypes.arrayOf(
+      PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    ),
     startedAt: PropTypes.number,
   }),
   onRollResolved: PropTypes.func.isRequired,
