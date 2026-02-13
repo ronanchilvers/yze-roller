@@ -11,7 +11,7 @@ on:
   # Deploy on push to main
   push:
     branches:
-      - main
+      - master
 
   # Allow manual deploys
   workflow_dispatch:
