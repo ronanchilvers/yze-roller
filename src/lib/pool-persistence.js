@@ -6,6 +6,10 @@ export const DEFAULT_POOL_SELECTION = Object.freeze({
   skillDice: 1,
 });
 
+// Maximum safe size for localStorage values (1 KB threshold)
+// Protects against excessive memory allocation from malicious/corrupted entries
+const MAX_STORAGE_VALUE_SIZE = 1024;
+
 const sanitizeSelection = (selection, fallback = DEFAULT_POOL_SELECTION) => {
   const source = selection && typeof selection === "object" ? selection : {};
   const fallbackSource = fallback && typeof fallback === "object" ? fallback : DEFAULT_POOL_SELECTION;
@@ -54,8 +58,25 @@ export const loadPoolSelection = (storageLike, fallback = DEFAULT_POOL_SELECTION
       return safeFallback;
     }
 
+    // Size guard: reject oversized values before parsing
+    // Prevents excessive memory allocation from malicious/corrupted entries
+    if (rawValue.length > MAX_STORAGE_VALUE_SIZE) {
+      console.warn(
+        `Pool selection data exceeds size limit (${rawValue.length} > ${MAX_STORAGE_VALUE_SIZE} bytes). Using fallback.`
+      );
+      return safeFallback;
+    }
+
     const parsed = JSON.parse(rawValue);
-    const sanitized = sanitizePoolCounts(parsed);
+
+    // Explicit allowlist: only accept known fields, discard everything else
+    // This prevents prototype pollution and unexpected nested structures
+    const allowlisted = {
+      attributeDice: parsed?.attributeDice,
+      skillDice: parsed?.skillDice,
+    };
+
+    const sanitized = sanitizePoolCounts(allowlisted);
 
     return sanitizeSelection(
       {
