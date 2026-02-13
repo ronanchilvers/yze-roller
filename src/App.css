@@ -227,6 +227,8 @@ h2 {
 }
 
 .tray-results {
+  position: relative;
+  z-index: 3;
   margin-top: 0;
   border: 1px solid #b9cbb9;
   border-radius: 0.75rem;
@@ -288,11 +290,16 @@ h2 {
 }
 
 .history-dropdown {
-  margin-top: 0.55rem;
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  width: min(100%, 30rem);
   border: 1px solid #c6d5c6;
   border-radius: 0.6rem;
   background: #f8fcf8;
   padding: 0.45rem 0.55rem;
+  box-shadow: 0 8px 20px rgba(28, 43, 28, 0.16);
+  z-index: 6;
 }
 
 .history-list {
