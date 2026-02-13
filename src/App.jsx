@@ -2,7 +2,6 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react"
 import "./App.css";
 import { MAX_DICE, buildDicePool, normalizeDiceCount } from "./lib/dice";
 import {
-  DEFAULT_POOL_SELECTION,
   getBrowserStorage,
   loadPoolSelection,
   savePoolSelection,
@@ -79,9 +78,7 @@ function App() {
     setStrainPoints(0);
   };
 
-  const onResetDice = () => {
-    setAttributeDice(DEFAULT_POOL_SELECTION.attributeDice);
-    setSkillDice(DEFAULT_POOL_SELECTION.skillDice);
+  const onClearDice = () => {
     setCurrentRoll(null);
     setPreviousRoll(null);
     setRecentResults([]);
@@ -205,9 +202,18 @@ function App() {
   const previousResults = recentResults.slice(1, MAX_PREVIOUS_RESULTS + 1);
   const hasPreviousResults = previousResults.length > 0;
   const pushableDiceCount = Number(currentRoll?.pushableDiceIds?.length ?? 0);
+  const canClearDice = isRolling || activeDice.length > 0 || recentResults.length > 0;
   const hasRolled = Boolean(currentRoll);
   const primaryActionLabel = hasRolled ? `Push ${pushableDiceCount} Dice` : "Roll Dice";
   const isPrimaryActionDisabled = isRolling || (hasRolled && !canPush);
+  const trayLead = isRolling
+    ? (rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice...")
+    : (currentRoll ? formatRollSummary(currentRoll) : "Roll the dice to see results.");
+  const pushableSummary = currentRoll
+    ? (canPush
+      ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
+      : "No dice can be pushed.")
+    : "0 dice can be pushed.";
   const onPrimaryAction = () => {
     if (hasRolled) {
       onPush();
@@ -246,13 +252,6 @@ function App() {
           <section className="panel controls-panel" aria-labelledby="dice-pool-label">
             <div className="panel-header">
               <h2 id="dice-pool-label">Dice Pool</h2>
-              <button
-                type="button"
-                className="panel-reset-button"
-                onClick={onResetDice}
-              >
-                Reset Dice
-              </button>
             </div>
             <p className="panel-copy">
               Choose Attribute and Skill dice. Strain dice are added automatically from Strain Points.
@@ -302,47 +301,41 @@ function App() {
 
           <section className="panel tray-panel" aria-label="Dice tray">
             <div className="tray-results" role="status" aria-live="polite">
-              {isRolling ? (
-                <p className="tray-lead">
-                  {rollRequest?.action === "push" ? "Pushing selected dice..." : "Rolling dice..."}
-                </p>
-              ) : currentRoll ? (
-                <>
-                  <div className="tray-results-row">
-                    <div className="tray-summary-wrap">
-                      <p className="tray-lead">{formatRollSummary(currentRoll)}</p>
-                      {hasPreviousResults ? (
-                        <button
-                          type="button"
-                          className="history-toggle"
-                          onClick={() => setIsHistoryOpen((open) => !open)}
-                          aria-label={isHistoryOpen ? "Hide previous results" : "Show previous results"}
-                          aria-expanded={isHistoryOpen}
-                          aria-controls="previous-results-list"
-                        >
-                          {isHistoryOpen ? "▴" : "▾"}
-                        </button>
-                      ) : null}
-                    </div>
-                    <p className="tray-pushable">
-                      {canPush
-                        ? `${currentRoll.pushableDiceIds.length} dice can be pushed.`
-                        : "No dice can be pushed."}
-                    </p>
-                  </div>
-                  {hasPreviousResults && isHistoryOpen ? (
-                    <div className="history-dropdown" id="previous-results-list">
-                      <ul className="history-list">
-                        {previousResults.map((entry) => (
-                          <li key={entry.id}>{entry.summary}</li>
-                        ))}
-                      </ul>
-                    </div>
+              <div className="tray-results-row">
+                <div className="tray-summary-wrap">
+                  <p className="tray-lead">{trayLead}</p>
+                  {!isRolling && currentRoll && hasPreviousResults ? (
+                    <button
+                      type="button"
+                      className="history-toggle"
+                      onClick={() => setIsHistoryOpen((open) => !open)}
+                      aria-label={isHistoryOpen ? "Hide previous results" : "Show previous results"}
+                      aria-expanded={isHistoryOpen}
+                      aria-controls="previous-results-list"
+                    >
+                      {isHistoryOpen ? "▴" : "▾"}
+                    </button>
                   ) : null}
-                </>
-              ) : (
-                <p className="tray-lead">Roll the dice to see results.</p>
-              )}
+                </div>
+                <p className="tray-pushable">{pushableSummary}</p>
+                <button
+                  type="button"
+                  className="panel-reset-button tray-clear-button"
+                  onClick={onClearDice}
+                  disabled={!canClearDice}
+                >
+                  Clear Dice
+                </button>
+              </div>
+              {hasPreviousResults && isHistoryOpen ? (
+                <div className="history-dropdown" id="previous-results-list">
+                  <ul className="history-list">
+                    {previousResults.map((entry) => (
+                      <li key={entry.id}>{entry.summary}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
             <div className="tray-stage" aria-label="3D dice tray">
               <Suspense fallback={<div className="tray-loading">Loading 3D tray…</div>}>
