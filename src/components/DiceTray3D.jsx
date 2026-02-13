@@ -4,9 +4,27 @@ import * as CANNON from "cannon-es";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { DICE_TYPE } from "../lib/dice.js";
-import { getDieColor } from "../lib/dice-visuals.js";
+import {
+  FACE_ORDER_BY_SIDE,
+  createFeltTexture,
+  createMaterialSet,
+  disposeMaterialSet,
+} from "../lib/textures.js";
+import {
+  DIE_SIZE,
+  createStaticBox,
+  freezeBodyInPlace,
+  clampBodyInside,
+  spawnBodyInViewport,
+  launchRollingBody,
+  nudgeEdgeLeaningDie,
+} from "../lib/physics.js";
+import {
+  topFaceFromQuaternion,
+  quaternionForFaceValue,
+} from "../lib/face-mapping.js";
+import { calculateBounds } from "../lib/viewport-bounds.js";
 
-const DIE_SIZE = 0.68;
 const CHAMFER_SEGMENTS = 3;
 const CHAMFER_RADIUS = DIE_SIZE * 0.08;
 const FLOOR_THICKNESS = 0.24;
@@ -26,298 +44,6 @@ const SETTLE_FRAMES = 18;
 const SETTLE_FACE_ALIGNMENT = 0.9;
 const EDGE_NUDGE_COOLDOWN_MS = 140;
 const EDGE_NUDGE_MAX_ATTEMPTS = 10;
-const EDGE_NUDGE_STRENGTH = 0.018;
-
-const FACE_ORDER_BY_SIDE = [2, 5, 1, 6, 3, 4];
-const FACE_NORMALS = [
-  { value: 1, normal: new THREE.Vector3(0, 1, 0) },
-  { value: 2, normal: new THREE.Vector3(1, 0, 0) },
-  { value: 3, normal: new THREE.Vector3(0, 0, 1) },
-  { value: 4, normal: new THREE.Vector3(0, 0, -1) },
-  { value: 5, normal: new THREE.Vector3(-1, 0, 0) },
-  { value: 6, normal: new THREE.Vector3(0, -1, 0) },
-];
-
-const WORLD_UP = new THREE.Vector3(0, 1, 0);
-
-const randomBetween = (min, max) => {
-  return min + Math.random() * (max - min);
-};
-
-const createFeltTexture = () => {
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    return null;
-  }
-
-  context.fillStyle = "#1f6d45";
-  context.fillRect(0, 0, size, size);
-
-  const imageData = context.getImageData(0, 0, size, size);
-  const pixels = imageData.data;
-
-  for (let index = 0; index < pixels.length; index += 4) {
-    const grain = (Math.random() - 0.5) * 42;
-    pixels[index] = THREE.MathUtils.clamp(pixels[index] + grain * 0.45, 0, 255);
-    pixels[index + 1] = THREE.MathUtils.clamp(pixels[index + 1] + grain * 0.7, 0, 255);
-    pixels[index + 2] = THREE.MathUtils.clamp(pixels[index + 2] + grain * 0.35, 0, 255);
-  }
-
-  context.putImageData(imageData, 0, 0);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(2.8 * FELT_PLANE_SCALE, 2.8 * FELT_PLANE_SCALE);
-  texture.anisotropy = 8;
-  texture.needsUpdate = true;
-  return texture;
-};
-
-const createFaceTexture = (faceValue, dieColor) => {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    return null;
-  }
-
-  const base = new THREE.Color(dieColor);
-  context.fillStyle = base.getStyle();
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#ffffff";
-  context.font = "700 122px Avenir Next, Trebuchet MS, sans-serif";
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.fillText(String(faceValue), canvas.width / 2, canvas.height / 2);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 8;
-  texture.needsUpdate = true;
-  return texture;
-};
-
-const createMaterialSet = (dieType) => {
-  const dieColor = getDieColor(dieType);
-
-  return FACE_ORDER_BY_SIDE.map((faceValue) => {
-    const texture = createFaceTexture(faceValue, dieColor);
-
-    return new THREE.MeshPhongMaterial({
-      map: texture,
-      color: "#ffffff",
-      shininess: 25,
-      specular: 0xf0f3ff,
-    });
-  });
-};
-
-const disposeMaterialSet = (materialSet) => {
-  for (const material of materialSet) {
-    if (material.map) {
-      material.map.dispose();
-    }
-
-    material.dispose();
-  }
-};
-
-const topFaceFromQuaternion = (quaternion) => {
-  const threeQuat = new THREE.Quaternion(
-    quaternion.x,
-    quaternion.y,
-    quaternion.z,
-    quaternion.w,
-  );
-
-  let bestFace = 1;
-  let bestDot = -Infinity;
-
-  for (const candidate of FACE_NORMALS) {
-    const worldNormal = candidate.normal.clone().applyQuaternion(threeQuat);
-    const dot = worldNormal.dot(WORLD_UP);
-
-    if (dot > bestDot) {
-      bestDot = dot;
-      bestFace = candidate.value;
-    }
-  }
-
-  return { faceValue: bestFace, alignment: bestDot };
-};
-
-const quaternionForFaceValue = (faceValue) => {
-  const faceNormal = FACE_NORMALS.find((face) => face.value === faceValue)?.normal ?? FACE_NORMALS[0].normal;
-  const baseQuaternion = new THREE.Quaternion().setFromUnitVectors(faceNormal, WORLD_UP);
-
-  return new CANNON.Quaternion(
-    baseQuaternion.x,
-    baseQuaternion.y,
-    baseQuaternion.z,
-    baseQuaternion.w,
-  );
-};
-
-const calculateBounds = (camera, size) => {
-  let visibleHalfWidth = 4.6;
-  let visibleHalfDepth = 3.1;
-
-  if (camera?.isOrthographicCamera) {
-    const zoom = Number.isFinite(camera.zoom) && camera.zoom > 0 ? camera.zoom : 1;
-    visibleHalfWidth = Math.max(2.8, (camera.right - camera.left) / (2 * zoom));
-    visibleHalfDepth = Math.max(2.2, (camera.top - camera.bottom) / (2 * zoom));
-  } else if (camera?.isPerspectiveCamera && size.height) {
-    const distance = Math.abs(camera.position.y);
-    const verticalFov = THREE.MathUtils.degToRad(camera.fov);
-    const visibleDepth = 2 * Math.tan(verticalFov * 0.5) * distance;
-    const visibleWidth = visibleDepth * (size.width / size.height);
-    visibleHalfWidth = Math.max(2.8, visibleWidth * 0.48);
-    visibleHalfDepth = Math.max(2.2, visibleDepth * 0.48);
-  }
-
-  const innerMargin = DIE_SIZE * 0.74 + WALL_THICKNESS;
-
-  return {
-    visibleHalfWidth,
-    visibleHalfDepth,
-    innerHalfWidth: Math.max(1.4, visibleHalfWidth - innerMargin),
-    innerHalfDepth: Math.max(1.2, visibleHalfDepth - innerMargin),
-  };
-};
-
-const createStaticBox = (halfExtents, position) => {
-  const body = new CANNON.Body({
-    mass: 0,
-    type: CANNON.Body.STATIC,
-    shape: new CANNON.Box(halfExtents),
-  });
-  body.position.set(position.x, position.y, position.z);
-  return body;
-};
-
-const freezeBodyInPlace = (body) => {
-  body.type = CANNON.Body.KINEMATIC;
-  body.mass = 0;
-  body.updateMassProperties();
-  body.velocity.set(0, 0, 0);
-  body.angularVelocity.set(0, 0, 0);
-  body.sleep();
-};
-
-const clampBodyInside = (body, bounds, allowBounce = true) => {
-  const xLimit = Math.max(0.8, bounds.innerHalfWidth - DIE_SIZE * 0.5);
-  const zLimit = Math.max(0.8, bounds.innerHalfDepth - DIE_SIZE * 0.5);
-  const minY = DIE_SIZE * 0.5;
-
-  if (body.position.x > xLimit) {
-    body.position.x = xLimit;
-
-    if (allowBounce && body.velocity.x > 0) {
-      body.velocity.x *= -0.35;
-    }
-  }
-
-  if (body.position.x < -xLimit) {
-    body.position.x = -xLimit;
-
-    if (allowBounce && body.velocity.x < 0) {
-      body.velocity.x *= -0.35;
-    }
-  }
-
-  if (body.position.z > zLimit) {
-    body.position.z = zLimit;
-
-    if (allowBounce && body.velocity.z > 0) {
-      body.velocity.z *= -0.35;
-    }
-  }
-
-  if (body.position.z < -zLimit) {
-    body.position.z = -zLimit;
-
-    if (allowBounce && body.velocity.z < 0) {
-      body.velocity.z *= -0.35;
-    }
-  }
-
-  if (!allowBounce && body.position.y < minY) {
-    body.position.y = minY;
-
-    if (body.velocity.y < 0) {
-      body.velocity.y = 0;
-    }
-  }
-};
-
-const spawnBodyInViewport = (body, bounds) => {
-  body.position.set(
-    randomBetween(-bounds.innerHalfWidth * 0.44, bounds.innerHalfWidth * 0.44),
-    DIE_SIZE * 0.5,
-    randomBetween(-bounds.innerHalfDepth * 0.44, bounds.innerHalfDepth * 0.44),
-  );
-};
-
-const launchRollingBody = (body, bounds, isPushReroll) => {
-  body.type = CANNON.Body.DYNAMIC;
-  body.mass = 1;
-  body.updateMassProperties();
-
-  const xSpread = bounds.innerHalfWidth * (isPushReroll ? 0.32 : 0.58);
-  const zSpread = bounds.innerHalfDepth * (isPushReroll ? 0.32 : 0.58);
-
-  if (isPushReroll) {
-    body.position.set(
-      body.position.x + randomBetween(-0.32, 0.32),
-      Math.max(body.position.y + 1.8, 3.2),
-      body.position.z + randomBetween(-0.32, 0.32),
-    );
-  } else {
-    body.position.set(
-      randomBetween(-xSpread, xSpread),
-      randomBetween(9.2, 13.8),
-      randomBetween(-zSpread, zSpread),
-    );
-  }
-
-  body.velocity.set(
-    randomBetween(-6.4, 6.4),
-    randomBetween(4.2, 7.9),
-    randomBetween(-6.4, 6.4),
-  );
-  body.angularVelocity.set(
-    randomBetween(-26, 26),
-    randomBetween(-26, 26),
-    randomBetween(-26, 26),
-  );
-
-  body.wakeUp();
-};
-
-const nudgeEdgeLeaningDie = (body) => {
-  const impulse = new CANNON.Vec3(
-    randomBetween(-EDGE_NUDGE_STRENGTH, EDGE_NUDGE_STRENGTH),
-    randomBetween(0.004, 0.016),
-    randomBetween(-EDGE_NUDGE_STRENGTH, EDGE_NUDGE_STRENGTH),
-  );
-
-  body.applyImpulse(impulse, body.position);
-  body.angularVelocity.set(
-    body.angularVelocity.x + randomBetween(-0.35, 0.35),
-    body.angularVelocity.y + randomBetween(-0.2, 0.2),
-    body.angularVelocity.z + randomBetween(-0.35, 0.35),
-  );
-  body.wakeUp();
-};
 
 const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const { camera, size } = useThree();
@@ -336,7 +62,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
     () => new RoundedBoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, CHAMFER_SEGMENTS, CHAMFER_RADIUS),
     [],
   );
-  const feltTexture = useMemo(() => createFeltTexture(), []);
+  const feltTexture = useMemo(() => createFeltTexture(FELT_PLANE_SCALE), []);
 
   const materialSets = useMemo(
     () => ({
