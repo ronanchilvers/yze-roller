@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { buildDicePool } from "../lib/dice.js";
 import {
   canPushCurrentRoll,
+  isValidResolution,
   transitionWithPush,
   transitionWithRoll,
 } from "../lib/roll-session.js";
@@ -134,7 +135,13 @@ export const useRollSession = ({
   const onRollResolved = useCallback((resolution) => {
     const activeRequest = rollRequestRef.current;
 
-    if (!activeRequest || !resolution || resolution.key !== activeRequest.key) {
+    // Validate resolution shape at component boundary
+    if (!isValidResolution(resolution)) {
+      console.warn("Invalid resolution payload received:", resolution);
+      return;
+    }
+
+    if (!activeRequest || resolution.key !== activeRequest.key) {
       return;
     }
 

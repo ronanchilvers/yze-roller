@@ -23,6 +23,7 @@ import {
   topFaceFromQuaternion,
   quaternionForFaceValue,
 } from "../lib/face-mapping.js";
+import { isValidRollRequest } from "../lib/roll-session.js";
 import { calculateBounds } from "../lib/viewport-bounds.js";
 
 const CHAMFER_SEGMENTS = 3;
@@ -220,7 +221,11 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   }, [dice, rollRequest]);
 
   useEffect(() => {
-    if (!rollRequest || !Array.isArray(rollRequest.dice) || rollRequest.key == null) {
+    // Validate rollRequest shape at component boundary
+    if (!isValidRollRequest(rollRequest)) {
+      if (rollRequest) {
+        console.warn("Invalid rollRequest received in DiceTray3D:", rollRequest);
+      }
       return;
     }
 
