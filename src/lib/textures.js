@@ -49,12 +49,21 @@ export const createFeltTexture = (feltPlaneScale = 3) => {
   texture.repeat.set(2.8 * feltPlaneScale, 2.8 * feltPlaneScale);
   texture.anisotropy = 8;
   texture.needsUpdate = true;
+  
+  // Null out references to allow GC to reclaim the canvas and context
+  // The texture retains its own copy of the image data
+  canvas.width = 0;
+  canvas.height = 0;
+  
   return texture;
 };
 
 /**
  * Creates a texture for a single die face with the given face value.
  * Renders white text on a colored background using a canvas.
+ *
+ * The canvas element is created outside React's lifecycle and should be
+ * cleaned up via disposeMaterialSet() when the material is no longer needed.
  *
  * @param {number} faceValue - The numeric value (1-6) to render
  * @param {string} dieColor - The hex color for the die background
@@ -83,6 +92,12 @@ export const createFaceTexture = (faceValue, dieColor) => {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;
   texture.needsUpdate = true;
+  
+  // Null out references to allow GC to reclaim the canvas and context
+  // The texture retains its own copy of the image data
+  canvas.width = 0;
+  canvas.height = 0;
+  
   return texture;
 };
 
@@ -111,6 +126,10 @@ export const createMaterialSet = (dieType) => {
 /**
  * Disposes of all textures and materials in a material set.
  * Ensures proper cleanup to prevent memory leaks.
+ *
+ * This function is called from DiceTray3D.jsx's cleanup effect to ensure
+ * all canvas-generated textures and materials are properly released when
+ * the component unmounts or materials are recreated.
  *
  * @param {THREE.MeshPhongMaterial[]} materialSet - Array of materials to dispose
  */
