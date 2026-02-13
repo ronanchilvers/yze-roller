@@ -13,10 +13,11 @@ const FLOOR_THICKNESS = 0.24;
 const WALL_THICKNESS = 0.24;
 const WALL_HEIGHT = 3.2;
 const CAMERA_DISTANCE = 16;
-const CAMERA_TILT_DEGREES = 5;
+const CAMERA_TILT_DEGREES = 15;
 const CAMERA_TILT_RADIANS = THREE.MathUtils.degToRad(CAMERA_TILT_DEGREES);
 const CAMERA_Y = CAMERA_DISTANCE * Math.cos(CAMERA_TILT_RADIANS);
 const CAMERA_Z = CAMERA_DISTANCE * Math.sin(CAMERA_TILT_RADIANS);
+const FELT_PLANE_SCALE = 3;
 const MIN_SETTLE_MS = 720;
 const MAX_SETTLE_MS = 4200;
 const SETTLE_LINEAR_SPEED = 0.12;
@@ -69,7 +70,7 @@ const createFeltTexture = () => {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(2.8, 2.8);
+  texture.repeat.set(2.8 * FELT_PLANE_SCALE, 2.8 * FELT_PLANE_SCALE);
   texture.anisotropy = 8;
   texture.needsUpdate = true;
   return texture;
@@ -661,7 +662,12 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       <directionalLight position={[-3, 5, -2]} intensity={0.3} />
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[boundsRef.current.visibleHalfWidth * 2, boundsRef.current.visibleHalfDepth * 2]} />
+        <planeGeometry
+          args={[
+            boundsRef.current.visibleHalfWidth * 2 * FELT_PLANE_SCALE,
+            boundsRef.current.visibleHalfDepth * 2 * FELT_PLANE_SCALE,
+          ]}
+        />
         <meshStandardMaterial
           color="#ffffff"
           map={feltTexture}
