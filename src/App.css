@@ -170,13 +170,12 @@ h2 {
 .pool-action-button {
   border: 0;
   border-radius: 0.7rem;
-  padding: 0.8rem 0.95rem;
+  padding: 0.55rem 0.95rem;
   font: inherit;
   font-weight: 700;
   color: #fffaf5;
   background: linear-gradient(160deg, var(--accent), var(--accent-strong));
   cursor: pointer;
-  min-height: 2.75rem;
 }
 
 .pool-action-button:disabled,
