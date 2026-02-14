@@ -1,22 +1,41 @@
-import { Suspense, lazy, useEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import "./App.css";
-import { MAX_DICE } from "./lib/dice.js";
 import { usePoolSelection } from "./hooks/usePoolSelection.js";
 import { useStrainTracker } from "./hooks/useStrainTracker.js";
 import { useRollSession } from "./hooks/useRollSession.js";
+import { useCharacterImport } from "./hooks/useCharacterImport.js";
+import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
-const MIN_ATTRIBUTE_DICE = 1;
-const MIN_SKILL_DICE = 0;
 const MAX_PREVIOUS_RESULTS = 10;
 const DiceTray3D = lazy(() => import("./components/DiceTray3D.jsx"));
 
 function App() {
-  const { attributeDice, skillDice, onAttributeChange, onSkillChange } =
-    usePoolSelection();
+  const {
+    attributeDice,
+    skillDice,
+    setAttributeDice,
+    setSkillDice,
+    onAttributeChange,
+    onSkillChange,
+  } = usePoolSelection();
 
   const { normalizedStrainPoints, onResetStrain, applyBaneIncrement } =
     useStrainTracker();
+
+  const characterImport = useCharacterImport();
+  const {
+    importFromFile,
+    reset: resetImport,
+    setSelectedAttribute,
+    setSelectedSkill,
+  } = characterImport;
+
+  const [overrideCounts, setOverrideCounts] = useState(null);
+  const [pendingRollCounts, setPendingRollCounts] = useState(null);
+
+  const effectiveAttributeDice = overrideCounts?.attributeDice ?? attributeDice;
+  const effectiveSkillDice = overrideCounts?.skillDice ?? skillDice;
 
   const {
     currentRoll,
@@ -31,8 +50,8 @@ function App() {
     onClearDice,
     onRollResolved,
   } = useRollSession({
-    attributeDice,
-    skillDice,
+    attributeDice: effectiveAttributeDice,
+    skillDice: effectiveSkillDice,
     normalizedStrainPoints,
     onBaneIncrement: applyBaneIncrement,
   });
@@ -74,6 +93,25 @@ function App() {
 
     onRoll();
   };
+
+  const handleRollWithCounts = (counts) => {
+    if (!counts) {
+      return;
+    }
+
+    setOverrideCounts(counts);
+    setPendingRollCounts(counts);
+  };
+
+  useEffect(() => {
+    if (!pendingRollCounts || isRolling) {
+      return;
+    }
+
+    onRoll();
+    setPendingRollCounts(null);
+    setOverrideCounts(null);
+  }, [pendingRollCounts, isRolling, onRoll]);
 
   useEffect(() => {
     if (!isHistoryOpen) {
@@ -122,61 +160,25 @@ function App() {
         </header>
 
         <div className="content-grid">
-          <section
-            className="panel controls-panel"
-            aria-labelledby="dice-pool-label"
-          >
-            <div className="panel-header">
-              <h2 id="dice-pool-label">Dice Pool</h2>
-            </div>
-            <p className="panel-copy">
-              Choose Attribute and Skill dice. Strain dice are added
-              automatically from Strain Points.
-            </p>
-
-            <div className="control-grid">
-              <label className="number-field" htmlFor="attributeDice">
-                <span>Attribute Dice</span>
-                <input
-                  id="attributeDice"
-                  name="attributeDice"
-                  type="number"
-                  min={MIN_ATTRIBUTE_DICE}
-                  max={MAX_DICE}
-                  inputMode="numeric"
-                  value={attributeDice}
-                  onChange={onAttributeChange}
-                />
-              </label>
-
-              <label className="number-field" htmlFor="skillDice">
-                <span>Skill Dice</span>
-                <input
-                  id="skillDice"
-                  name="skillDice"
-                  type="number"
-                  min={MIN_SKILL_DICE}
-                  max={MAX_DICE}
-                  inputMode="numeric"
-                  value={skillDice}
-                  onChange={onSkillChange}
-                />
-              </label>
-
-              <button
-                type="button"
-                className="pool-action-button"
-                onClick={onPrimaryAction}
-                disabled={isPrimaryActionDisabled}
-              >
-                {isRolling
-                  ? rollRequest?.action === "push"
-                    ? "Pushing..."
-                    : "Rolling..."
-                  : primaryActionLabel}
-              </button>
-            </div>
-          </section>
+          <DicePoolPanel
+            attributeDice={attributeDice}
+            skillDice={skillDice}
+            onAttributeChange={onAttributeChange}
+            onSkillChange={onSkillChange}
+            onPrimaryAction={onPrimaryAction}
+            primaryActionLabel={primaryActionLabel}
+            isPrimaryActionDisabled={isPrimaryActionDisabled}
+            isRolling={isRolling}
+            setAttributeDice={setAttributeDice}
+            setSkillDice={setSkillDice}
+            onRoll={onRoll}
+            onRollWithCounts={handleRollWithCounts}
+            importState={characterImport}
+            onImportFile={importFromFile}
+            onResetImport={resetImport}
+            onSelectAttribute={setSelectedAttribute}
+            onSelectSkill={setSelectedSkill}
+          />
 
           <section
             className="panel tray-panel"

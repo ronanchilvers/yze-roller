@@ -222,6 +222,118 @@ h2 {
   outline-offset: 2px;
 }
 
+/* ── Dice pool tabs & import panel ─────────────────────────────────── */
+
+.pool-tabs {
+  display: inline-flex;
+  gap: 0.4rem;
+  margin: 0.2rem 0 0.9rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: var(--surface-200);
+}
+
+.pool-tab {
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  padding: 0.35rem 0.8rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink-700);
+  background: transparent;
+  cursor: pointer;
+}
+
+.pool-tab.is-active {
+  color: var(--ink-900);
+  background: #ffffff;
+  border-color: var(--line);
+  box-shadow: 0 3px 8px rgba(22, 32, 28, 0.12);
+}
+
+.pool-tab:focus-visible {
+  outline: 2px solid #1d6f68;
+  outline-offset: 2px;
+}
+
+.import-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.import-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.file-field,
+.select-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.file-field span,
+.select-field span {
+  font-weight: 600;
+}
+
+.file-field input,
+.select-field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.6rem;
+  font: inherit;
+  color: var(--ink-900);
+  background: #fffffd;
+}
+
+.import-status p {
+  margin: 0 0 0.2rem;
+  color: var(--ink-700);
+}
+
+.import-errors,
+.import-warnings {
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: #fff5f1;
+}
+
+.import-warnings {
+  background: #fffbe8;
+}
+
+.import-errors p,
+.import-warnings p {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.import-errors ul,
+.import-warnings ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--ink-700);
+}
+
+.import-selectors {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.import-attribute-hint {
+  margin: 0;
+  color: var(--ink-700);
+  font-size: 0.95rem;
+}
+
 /* ── Dice tray ─────────────────────────────────────────────────────── */
 
 .tray-panel {
