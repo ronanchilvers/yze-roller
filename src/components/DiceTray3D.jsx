@@ -525,12 +525,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
             boundsRef.current.visibleHalfDepth * 2 * FELT_PLANE_SCALE,
           ]}
         />
-        <meshStandardMaterial
-          color="#ffffff"
-          map={feltTexture}
-          roughness={0.98}
-          metalness={0}
-        />
+        <shadowMaterial transparent opacity={0.25} />
       </mesh>
 
       {diceList.map((die, index) => {
@@ -610,8 +605,9 @@ function DiceTray3D({ dice, rollRequest, onRollResolved }) {
       }}
       shadows={{ type: VSMShadowMap }}
       dpr={[1, 1.7]}
+      gl={{ alpha: true }}
     >
-      <color attach="background" args={["#1f6d45"]} />
+
       <DicePhysicsScene
         dice={dice}
         rollRequest={rollRequest}

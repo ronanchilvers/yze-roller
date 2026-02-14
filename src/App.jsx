@@ -125,6 +125,24 @@ function App() {
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
+      <div className="dice-stage-fullscreen" aria-hidden="true">
+        <ErrorBoundary>
+          <Suspense
+            fallback={
+              <div className="tray-loading">
+                <span className="tray-spinner" aria-hidden="true" />
+                Loading 3D tray…
+              </div>
+            }
+          >
+            <DiceTray3D
+              dice={activeDice}
+              rollRequest={rollRequest}
+              onRollResolved={onRollResolved}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      </div>
       <section
         id="main-content"
         className="dice-layout"
@@ -173,11 +191,7 @@ function App() {
             onSelectSkill={setSelectedSkill}
           />
 
-          <section
-            className="panel tray-panel"
-            aria-label="Dice tray"
-            aria-busy={isRolling}
-          >
+          <section className="tray-panel" aria-label="Dice tray" aria-busy={isRolling}>
             <div className="tray-results" role="status" aria-live="polite">
               <div className="tray-results-row">
                 <div className="tray-summary-wrap">
@@ -237,32 +251,7 @@ function App() {
                 </div>
               ) : null}
             </div>
-            <div className="tray-stage" aria-label="3D dice tray">
-              {!isRolling && activeDice.length === 0 ? (
-                <div className="tray-empty" role="note">
-                  <p className="tray-empty-title">Ready to roll</p>
-                  <p className="tray-empty-copy">
-                    Choose your dice and press “Roll Dice” to start.
-                  </p>
-                </div>
-              ) : null}
-              <ErrorBoundary>
-                <Suspense
-                  fallback={
-                    <div className="tray-loading">
-                      <span className="tray-spinner" aria-hidden="true" />
-                      Loading 3D tray…
-                    </div>
-                  }
-                >
-                  <DiceTray3D
-                    dice={activeDice}
-                    rollRequest={rollRequest}
-                    onRollResolved={onRollResolved}
-                  />
-                </Suspense>
-              </ErrorBoundary>
-            </div>
+
           </section>
         </div>
       </section>

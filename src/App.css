@@ -26,6 +26,8 @@
 }
 
 .dice-layout {
+  position: relative;
+  z-index: 1;
   max-width: 1040px;
   margin: 0 auto;
 }
@@ -431,33 +433,29 @@ h2 {
   font-weight: 700;
 }
 
-/* ── Dice tray ─────────────────────────────────────────────────────── */
+/* ── Dice stage (full-page) ───────────────────────────────────────── */
 
-.tray-panel {
-  display: grid;
-  grid-template-rows: auto minmax(260px, 1fr) auto;
-  min-height: clamp(360px, 58dvh, 680px);
-}
-
-.tray-stage {
-  position: relative;
-  margin-top: 0.8rem;
-  border: 1px solid #d9d9d9;
-  border-radius: 0.8rem;
-  overflow: hidden;
-  min-height: clamp(240px, 42dvh, 520px);
-  background: #ffffff;
+.dice-stage-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none !important;
 }
 
 /*
  * react-three/fiber's <Canvas> sets explicit pixel dimensions via inline
  * styles on the <canvas> element.  !important is required here to override
- * those inline values so the canvas fills its container responsively.
+ * those inline values so the canvas fills the viewport.
  */
-.tray-stage canvas {
+.dice-stage-fullscreen canvas {
   width: 100% !important;
   height: 100% !important;
   display: block;
+  pointer-events: none !important;
+}
+
+.dice-stage-fullscreen * {
+  pointer-events: none !important;
 }
 
 .tray-loading {
@@ -487,32 +485,7 @@ h2 {
   }
 }
 
-.tray-empty {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 1.2rem;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.92),
-    rgba(255, 255, 255, 0.78)
-  );
-  color: var(--ink-900);
-}
 
-.tray-empty-title {
-  margin: 0 0 0.35rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.tray-empty-copy {
-  margin: 0;
-  color: var(--ink-700);
-  max-width: 22rem;
-}
 
 /* ── Tray results & history ────────────────────────────────────────── */
 
@@ -547,6 +520,7 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .tray-summary-wrap {
@@ -659,16 +633,55 @@ h2 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .tray-panel {
-    min-height: clamp(320px, 52dvh, 560px);
-    grid-template-rows: auto minmax(220px, 1fr) auto;
-  }
-
   .tray-results {
     width: 100%;
   }
 
   .tray-results-row {
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .tray-summary-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .tray-action-buttons {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tray-clear-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 550px) {
+  .import-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .import-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .import-summary-section {
+    grid-column: auto;
+  }
+
+  .import-summary-section:nth-child(3) {
+    margin-top: -1.5rem;
+  }
+
+  .import-summary-section:nth-child(3) .import-summary-title {
+    display: none;
+  }
+
+  .import-clear-button {
+    width: 100%;
+    align-self: stretch;
   }
 }
