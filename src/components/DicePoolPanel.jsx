@@ -73,9 +73,47 @@ const DicePoolPanel = ({
   const skillColumnOne = skillOptions.slice(0, skillColumnSplit);
   const skillColumnTwo = skillOptions.slice(skillColumnSplit);
 
-  const selectedSkillAttributeLabel = selectedSkill
-    ? character?.skillAttributes?.[selectedSkill] ?? null
-    : null;
+
+
+  const getSkillAttributeKey = (skill) =>
+    buildAttributeKeyFromLabel(character?.skillAttributes?.[skill]);
+
+  const handleSummaryRoll = ({ attributeKey, skillKey = null }) => {
+    if (!character || !attributeKey) {
+      return;
+    }
+
+    onSelectAttribute?.(attributeKey);
+    onSelectSkill?.(skillKey);
+
+    const attributeValue = character.attributes?.[attributeKey] ?? 0;
+    const skillValue = skillKey ? character.skills?.[skillKey] ?? 0 : 0;
+
+    if (typeof onRollWithCounts === "function") {
+      onRollWithCounts({
+        attributeDice: attributeValue,
+        skillDice: skillValue,
+      });
+      return;
+    }
+
+    if (typeof setAttributeDice === "function") {
+      setAttributeDice(attributeValue);
+    }
+
+    if (typeof setSkillDice === "function") {
+      setSkillDice(skillValue);
+    }
+
+    if (typeof onRoll === "function") {
+      onRoll();
+      return;
+    }
+
+    if (primaryActionLabel === "Roll Dice" && typeof onPrimaryAction === "function") {
+      onPrimaryAction();
+    }
+  };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -116,14 +154,9 @@ const DicePoolPanel = ({
     onSelectAttribute?.(derivedKey);
   };
 
-  const isPushMode = primaryActionLabel !== "Roll Dice";
+
 
   const handleImportRoll = () => {
-    if (isPushMode) {
-      onPrimaryAction?.();
-      return;
-    }
-
     if (!character || !selectedAttribute) {
       return;
     }
@@ -162,18 +195,13 @@ const DicePoolPanel = ({
     status === "loading" ||
     isRolling ||
     !isImportReady ||
-    (!isPushMode && !selectedAttribute) ||
-    (isPushMode && isPrimaryActionDisabled);
+    !selectedAttribute;
   const importButtonLabel =
     status === "loading"
       ? "Importing..."
       : isRolling
-        ? isPushMode
-          ? "Pushing..."
-          : "Rolling..."
-        : isPushMode
-          ? primaryActionLabel
-          : "Roll Dice";
+        ? "Rolling..."
+        : "Roll Dice";
 
   return (
     <section className="panel controls-panel" aria-labelledby="dice-pool-label">
@@ -242,7 +270,7 @@ const DicePoolPanel = ({
             onClick={onPrimaryAction}
             disabled={isPrimaryActionDisabled}
           >
-            {isRolling ? (isPushMode ? "Pushing..." : "Rolling...") : primaryActionLabel}
+            {isRolling ? "Rolling..." : primaryActionLabel}
           </button>
         </div>
       ) : (
@@ -344,12 +372,29 @@ const DicePoolPanel = ({
                   <p className="import-summary-title">Attributes</p>
                   {attributeOptions.length > 0 ? (
                     <ul className="import-summary-content">
-                      {attributeOptions.map((attributeKey) => (
-                        <li key={attributeKey} className="import-summary-item">
-                          {buildAttributeLabel(attributeKey)}:{" "}
-                          {character?.attributes?.[attributeKey] ?? 0}
-                        </li>
-                      ))}
+                      {attributeOptions.map((attributeKey) => {
+                        const attributeValue =
+                          character?.attributes?.[attributeKey] ?? 0;
+                        return (
+                          <li key={attributeKey}>
+                            <span>{buildAttributeLabel(attributeKey)}</span>{" "}
+                            <button
+                              type="button"
+                              className="import-summary-item"
+                              onClick={() =>
+                                handleSummaryRoll({
+                                  attributeKey,
+                                  skillKey: null,
+                                })
+                              }
+                              disabled={isRolling || status === "loading"}
+                              aria-label={`Roll ${buildAttributeLabel(attributeKey)} dice`}
+                            >
+                              {attributeValue}
+                            </button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   ) : (
                     <p className="import-summary-empty">
@@ -361,11 +406,36 @@ const DicePoolPanel = ({
                   <p className="import-summary-title">Skills</p>
                   {skillOptions.length > 0 ? (
                     <ul className="import-summary-content">
-                      {skillColumnOne.map((skill) => (
-                        <li key={skill} className="import-summary-item">
-                          {skill}: {character?.skills?.[skill] ?? 0}
-                        </li>
-                      ))}
+                      {skillColumnOne.map((skill) => {
+                        const attributeKey = getSkillAttributeKey(skill);
+                        const skillValue = character?.skills?.[skill] ?? 0;
+                        const attributeLabel =
+                          character?.skillAttributes?.[skill] ?? null;
+                        const isDisabled =
+                          isRolling || status === "loading" || !attributeKey;
+                        const labelSuffix = attributeLabel
+                          ? ` (${attributeLabel})`
+                          : "";
+                        return (
+                          <li key={skill}>
+                            <span>{skill}</span>{" "}
+                            <button
+                              type="button"
+                              className="import-summary-item"
+                              onClick={() =>
+                                handleSummaryRoll({
+                                  attributeKey,
+                                  skillKey: skill,
+                                })
+                              }
+                              disabled={isDisabled}
+                              aria-label={`Roll ${skill}${labelSuffix} dice`}
+                            >
+                              {skillValue}
+                            </button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   ) : (
                     <p className="import-summary-empty">No skills available.</p>
@@ -377,11 +447,36 @@ const DicePoolPanel = ({
                   </p>
                   {skillOptions.length > 0 ? (
                     <ul className="import-summary-content">
-                      {skillColumnTwo.map((skill) => (
-                        <li key={skill} className="import-summary-item">
-                          {skill}: {character?.skills?.[skill] ?? 0}
-                        </li>
-                      ))}
+                      {skillColumnTwo.map((skill) => {
+                        const attributeKey = getSkillAttributeKey(skill);
+                        const skillValue = character?.skills?.[skill] ?? 0;
+                        const attributeLabel =
+                          character?.skillAttributes?.[skill] ?? null;
+                        const isDisabled =
+                          isRolling || status === "loading" || !attributeKey;
+                        const labelSuffix = attributeLabel
+                          ? ` (${attributeLabel})`
+                          : "";
+                        return (
+                          <li key={skill}>
+                            <span>{skill}</span>{" "}
+                            <button
+                              type="button"
+                              className="import-summary-item"
+                              onClick={() =>
+                                handleSummaryRoll({
+                                  attributeKey,
+                                  skillKey: skill,
+                                })
+                              }
+                              disabled={isDisabled}
+                              aria-label={`Roll ${skill}${labelSuffix} dice`}
+                            >
+                              {skillValue}
+                            </button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   ) : null}
                 </div>
@@ -402,11 +497,7 @@ const DicePoolPanel = ({
 
 
 
-          {selectedSkillAttributeLabel ? (
-            <p className="import-attribute-hint">
-              Uses attribute: <strong>{selectedSkillAttributeLabel}</strong>
-            </p>
-          ) : null}
+
         </div>
       )}
     </section>

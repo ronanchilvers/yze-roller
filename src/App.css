@@ -305,15 +305,56 @@ h2 {
 .import-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: 2rem;
   align-items: start;
 }
 
-.import-summary-item {
+.import-summary-content li {
   display: flex;
-  gap: 0.4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background: #fff7e9;
   color: var(--ink-700);
-  font-weight: 400;
+}
+
+.import-summary-content li span {
+  color: var(--ink-700);
+  flex: 1;
+}
+
+.import-summary-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: #fffaf2;
+  color: var(--ink-900);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.import-summary-item:hover {
+  border-color: var(--accent-strong);
+  color: var(--ink-900);
+}
+
+.import-summary-item:focus-visible {
+  outline: 2px solid #1d6f68;
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+.import-summary-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: var(--line);
 }
 
 
@@ -565,6 +606,12 @@ h2 {
 .history-list li {
   font-size: 0.9rem;
   color: var(--ink-700);
+}
+
+.tray-action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .tray-clear-button {

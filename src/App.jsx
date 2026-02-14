@@ -62,10 +62,8 @@ function App() {
   const canClearDice =
     isRolling || activeDice.length > 0 || recentResults.length > 0;
   const hasRolled = Boolean(currentRoll);
-  const primaryActionLabel = hasRolled
-    ? `Push ${pushableDiceCount} Dice`
-    : "Roll Dice";
-  const isPrimaryActionDisabled = isRolling || (hasRolled && !canPush);
+  const primaryActionLabel = "Roll Dice";
+  const isPrimaryActionDisabled = isRolling;
 
   const formatRollSummary = (roll) => {
     if (!roll) {
@@ -86,11 +84,6 @@ function App() {
   const historyPanelRef = useRef(null);
 
   const onPrimaryAction = () => {
-    if (hasRolled) {
-      onPush();
-      return;
-    }
-
     onRoll();
   };
 
@@ -206,14 +199,24 @@ function App() {
                     </button>
                   ) : null}
                 </div>
-                <button
-                  type="button"
-                  className="panel-reset-button tray-clear-button"
-                  onClick={onClearDice}
-                  disabled={!canClearDice}
-                >
-                  Clear Dice
-                </button>
+                <div className="tray-action-buttons">
+                  <button
+                    type="button"
+                    className="pool-action-button tray-clear-button"
+                    onClick={onPush}
+                    disabled={isRolling || !hasRolled || !canPush}
+                  >
+                    Push {pushableDiceCount} Dice
+                  </button>
+                  <button
+                    type="button"
+                    className="pool-action-button tray-clear-button"
+                    onClick={onClearDice}
+                    disabled={!canClearDice}
+                  >
+                    Clear Dice
+                  </button>
+                </div>
               </div>
               {hasPreviousResults && isHistoryOpen ? (
                 <div
