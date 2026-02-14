@@ -47,8 +47,6 @@ const DicePoolPanel = ({
     character = null,
     errors = [],
     warnings = [],
-    selectedAttribute = null,
-    selectedSkill = null,
   } = importState ?? {};
 
   const attributeOptions = useMemo(() => {
@@ -129,79 +127,9 @@ const DicePoolPanel = ({
     onImportFile?.(file);
   };
 
-  const handleAttributeSelect = (event) => {
-    if (selectedSkill) {
-      return;
-    }
-    const value = event.target.value || null;
-    onSelectAttribute?.(value);
-    if (value) {
-      onSelectSkill?.(null);
-    }
-  };
 
-  const handleSkillSelect = (event) => {
-    const value = event.target.value || null;
-    onSelectSkill?.(value);
-
-    if (!value) {
-      return;
-    }
-
-    const derivedKey = buildAttributeKeyFromLabel(
-      character?.skillAttributes?.[value],
-    );
-    onSelectAttribute?.(derivedKey);
-  };
-
-
-
-  const handleImportRoll = () => {
-    if (!character || !selectedAttribute) {
-      return;
-    }
-
-    const attributeValue = character.attributes[selectedAttribute] ?? 0;
-    const skillValue = selectedSkill ? character.skills?.[selectedSkill] ?? 0 : 0;
-
-    if (typeof onRollWithCounts === "function") {
-      onRollWithCounts({
-        attributeDice: attributeValue,
-        skillDice: skillValue,
-      });
-      return;
-    }
-
-    if (typeof setAttributeDice === "function") {
-      setAttributeDice(attributeValue);
-    }
-
-    if (typeof setSkillDice === "function") {
-      setSkillDice(skillValue);
-    }
-
-    if (typeof onRoll === "function") {
-      onRoll();
-      return;
-    }
-
-    if (typeof onPrimaryAction === "function") {
-      onPrimaryAction();
-    }
-  };
 
   const isImportReady = status === "ready" && Boolean(character);
-  const importDisabled =
-    status === "loading" ||
-    isRolling ||
-    !isImportReady ||
-    !selectedAttribute;
-  const importButtonLabel =
-    status === "loading"
-      ? "Importing..."
-      : isRolling
-        ? "Rolling..."
-        : "Roll Dice";
 
   return (
     <section className="panel controls-panel" aria-labelledby="dice-pool-label">
@@ -276,69 +204,16 @@ const DicePoolPanel = ({
       ) : (
         <div className="import-panel" role="tabpanel">
           <div className="import-controls">
-            {!isImportReady ? (
-              <label className="file-field" htmlFor="characterImport">
-                <span>Character JSON</span>
-                <input
-                  id="characterImport"
-                  name="characterImport"
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={handleFileChange}
-                />
-              </label>
-            ) : (
-              <>
-                <label className="select-field" htmlFor="importAttribute">
-                  <span>Attribute</span>
-                  <select
-                    id="importAttribute"
-                    name="importAttribute"
-                    value={selectedAttribute ?? ""}
-                    onChange={handleAttributeSelect}
-                    disabled={Boolean(selectedSkill)}
-                  >
-                    <option value="" disabled>
-                      Choose an attribute
-                    </option>
-                    {attributeOptions.map((attributeKey) => (
-                      <option key={attributeKey} value={attributeKey}>
-                        {buildAttributeLabel(attributeKey)} - {character?.attributes?.[attributeKey] ?? 0}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="select-field" htmlFor="importSkill">
-                  <span>Skill</span>
-                  <select
-                    id="importSkill"
-                    name="importSkill"
-                    value={selectedSkill ?? ""}
-                    onChange={handleSkillSelect}
-                    disabled={!isImportReady}
-                  >
-                    <option value="">Choose a skill (optional)</option>
-                    {skillOptions.map((skill) => (
-                      <option key={skill} value={skill}>
-                        {skill} - {character?.skills?.[skill] ?? 0}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <button
-                  type="button"
-                  className="pool-action-button"
-                  onClick={handleImportRoll}
-                  disabled={importDisabled}
-                >
-                  {importButtonLabel}
-                </button>
-
-
-              </>
-            )}
+            <label className="file-field" htmlFor="characterImport">
+              <span>Character JSON</span>
+              <input
+                id="characterImport"
+                name="characterImport"
+                type="file"
+                accept=".json,application/json"
+                onChange={handleFileChange}
+              />
+            </label>
           </div>
 
 
@@ -348,9 +223,7 @@ const DicePoolPanel = ({
               {fileName ? null : <p>No character loaded yet.</p>}
               {status === "loading" ? <p>Loading character…</p> : null}
               {character ? (
-                <p>
-                  Character: <strong>{character.name}</strong>
-                </p>
+                <h3 className="import-character-name">{character.name}</h3>
               ) : null}
             </div>
             {isImportReady ? (

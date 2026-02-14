@@ -17,3 +17,9 @@
   - **Decision:** Display name format is `firstname "nickname" lastname`, with sensible fallbacks to available parts and a generic label if absent.
   - **Consequences:** User-facing name is consistent and readable even with incomplete data.
   - **Alternatives considered:** Use only `firstname lastname` (rejected because nickname was preferred).
+
+  - **2026-02-14 — Import UI quick-roll and simplified controls**
+    - **Context:** Import tab needed faster roll access and a cleaner layout.
+    - **Decision:** Replace attribute/skill dropdowns with clickable counts in the import summary for quick rolls, keep the JSON upload field always visible, and remove the import tab roll button. Split roll and push actions so “Roll Dice” always starts a new roll and “Push X Dice” is a separate action.
+    - **Consequences:** Import tab is simpler and quicker to use; roll behavior is explicit and avoids accidental pushes.
+    - **Alternatives considered:** Keep dropdown-based rolls and a shared roll/push button (rejected for clarity and speed).
