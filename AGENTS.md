@@ -28,6 +28,8 @@ Follow these guidelines if the project-memory skill is available:
 
 If you cannot find the project-memory skill, load `.agents/skills/project-memory/SKILL.md` and follow its instructions to emulate the memory workflow.
 
+**Permission:** Agents are explicitly allowed to load `.agents/skills/project-memory/SKILL.md` when needed and to follow its instructions.
+
 ## Your role
 - Build or modify UI features.
 - Keep the UI responsive and accessible.
