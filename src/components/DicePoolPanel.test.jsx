@@ -27,6 +27,14 @@ const getButtonByText = (container, text) =>
     (button) => button.textContent?.trim() === text,
   );
 
+const getSkillButton = (container, skillName) => {
+  const items = Array.from(
+    container.querySelectorAll(".import-summary-content li"),
+  );
+  const match = items.find((item) => item.textContent?.includes(skillName));
+  return match ? match.querySelector("button") : null;
+};
+
 const baseCharacter = {
   name: 'Bessie "Mope" Collins',
   attributes: {
@@ -54,6 +62,7 @@ const TestHarness = ({
   primaryActionLabel = "Roll Dice",
   onImportFile = vi.fn(),
   onResetImport = vi.fn(),
+  onRoll = vi.fn(),
 }) => {
   const [importState, setImportState] = useState({
     fileName: "Bessie-Collins.json",
@@ -78,7 +87,7 @@ const TestHarness = ({
       isRolling={false}
       setAttributeDice={vi.fn()}
       setSkillDice={vi.fn()}
-      onRoll={vi.fn()}
+      onRoll={onRoll}
       onRollWithCounts={onRollWithCounts}
       importState={importState}
       onImportFile={onImportFile}
@@ -138,19 +147,19 @@ test("switching to import tab shows JSON upload when no character is loaded", ()
   });
 
   expect(container.querySelector("#characterImport")).not.toBeNull();
-  expect(container.querySelector("#importAttribute")).toBeNull();
-  expect(container.querySelector("#importSkill")).toBeNull();
-  expect(getButtonByText(container, "Roll Dice")).toBeUndefined();
-  expect(getButtonByText(container, "Clear Import")).toBeUndefined();
+  expect(container.querySelector(".import-summary")).toBeNull();
+  expect(container.querySelector(".import-summary-item")).toBeNull();
+  expect(getButtonByText(container, "Clear Character")).toBeUndefined();
 
   unmount();
 });
 
 test("switching to import tab shows fields and actions for a loaded character", () => {
+  const onRollWithCounts = vi.fn();
   const { container, root, unmount } = createContainer();
 
   act(() => {
-    root.render(<TestHarness />);
+    root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
   const importTab = getButtonByText(container, "Import Character");
@@ -158,20 +167,20 @@ test("switching to import tab shows fields and actions for a loaded character", 
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
-  expect(container.querySelector("#characterImport")).toBeNull();
-  expect(container.querySelector("#importAttribute")).not.toBeNull();
-  expect(container.querySelector("#importSkill")).not.toBeNull();
-  expect(getButtonByText(container, "Roll Dice")).toBeDefined();
-  expect(getButtonByText(container, "Clear Import")).toBeDefined();
+  expect(container.querySelector("#characterImport")).not.toBeNull();
+  expect(container.querySelector(".import-summary")).not.toBeNull();
+  expect(container.querySelectorAll(".import-summary-item").length).toBeGreaterThan(0);
+  expect(getButtonByText(container, "Clear Character")).toBeDefined();
 
   unmount();
 });
 
 test("selecting a skill auto-selects the mapped attribute and locks attribute selection", () => {
+  const onRollWithCounts = vi.fn();
   const { container, root, unmount } = createContainer();
 
   act(() => {
-    root.render(<TestHarness />);
+    root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
   const importTab = getButtonByText(container, "Import Character");
@@ -179,16 +188,16 @@ test("selecting a skill auto-selects the mapped attribute and locks attribute se
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
-  const skillSelect = container.querySelector("#importSkill");
-  const attributeSelect = container.querySelector("#importAttribute");
+  const skillButton = getSkillButton(container, "Sneak");
 
   act(() => {
-    skillSelect.value = "Sneak";
-    skillSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    skillButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
-  expect(attributeSelect.value).toBe("agility");
-  expect(attributeSelect.disabled).toBe(true);
+  expect(onRollWithCounts).toHaveBeenCalledWith({
+    attributeDice: 2,
+    skillDice: 3,
+  });
 
   unmount();
 });
@@ -206,15 +215,9 @@ test("roll from import tab uses attribute and skill dice counts", () => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
-  const skillSelect = container.querySelector("#importSkill");
+  const skillButton = getSkillButton(container, "Streetwise");
   act(() => {
-    skillSelect.value = "Streetwise";
-    skillSelect.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-
-  const rollButton = getButtonByText(container, "Roll Dice");
-  act(() => {
-    rollButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    skillButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
   expect(onRollWithCounts).toHaveBeenCalledWith({
@@ -227,12 +230,14 @@ test("roll from import tab uses attribute and skill dice counts", () => {
 
 test("import roll defers to primary action when in push mode", () => {
   const onPrimaryAction = vi.fn();
+  const onRoll = vi.fn();
   const { container, root, unmount } = createContainer();
 
   act(() => {
     root.render(
       <TestHarness
         onPrimaryAction={onPrimaryAction}
+        onRoll={onRoll}
         primaryActionLabel="Push 2 Dice"
       />,
     );
@@ -243,12 +248,13 @@ test("import roll defers to primary action when in push mode", () => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
-  const rollButton = getButtonByText(container, "Push 2 Dice");
+  const skillButton = getSkillButton(container, "Sneak");
   act(() => {
-    rollButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    skillButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
-  expect(onPrimaryAction).toHaveBeenCalled();
+  expect(onRoll).toHaveBeenCalled();
+  expect(onPrimaryAction).not.toHaveBeenCalled();
 
   unmount();
 });

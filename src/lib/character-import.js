@@ -72,7 +72,7 @@ export const parseCharacterJson = (text) => {
 
   try {
     const data = JSON.parse(text);
-    if (!data || typeof data !== "object") {
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
       return { data: null, error: "JSON must be an object." };
     }
     return { data, error: null };
