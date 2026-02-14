@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { useState } from "react";
+import PropTypes from "prop-types";
 import { createRoot } from "react-dom/client";
 import { act } from "react-dom/test-utils";
 import { afterEach, test, expect, vi } from "vitest";
@@ -64,6 +65,15 @@ const TestHarness = ({
   onResetImport = vi.fn(),
   onRoll = vi.fn(),
 }) => {
+  TestHarness.propTypes = {
+    importStateOverrides: PropTypes.object,
+    onRollWithCounts: PropTypes.func,
+    onPrimaryAction: PropTypes.func,
+    primaryActionLabel: PropTypes.string,
+    onImportFile: PropTypes.func,
+    onResetImport: PropTypes.func,
+    onRoll: PropTypes.func,
+  };
   const [importState, setImportState] = useState({
     fileName: "Bessie-Collins.json",
     status: "ready",

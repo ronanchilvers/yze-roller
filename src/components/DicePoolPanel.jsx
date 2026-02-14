@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { REQUIRED_ATTRIBUTES } from "../lib/character-import.js";
 import { CANONICAL_SKILLS } from "../data/skill-mappings.js";
 
@@ -46,7 +47,6 @@ const DicePoolPanel = ({
     status = "idle",
     character = null,
     errors = [],
-    warnings = [],
   } = importState ?? {};
 
   const attributeOptions = useMemo(() => {
@@ -375,6 +375,31 @@ const DicePoolPanel = ({
       )}
     </section>
   );
+};
+
+DicePoolPanel.propTypes = {
+  attributeDice: PropTypes.number.isRequired,
+  skillDice: PropTypes.number.isRequired,
+  onAttributeChange: PropTypes.func.isRequired,
+  onSkillChange: PropTypes.func.isRequired,
+  onPrimaryAction: PropTypes.func.isRequired,
+  primaryActionLabel: PropTypes.string.isRequired,
+  isPrimaryActionDisabled: PropTypes.bool.isRequired,
+  isRolling: PropTypes.bool.isRequired,
+  setAttributeDice: PropTypes.func.isRequired,
+  setSkillDice: PropTypes.func.isRequired,
+  onRoll: PropTypes.func.isRequired,
+  onRollWithCounts: PropTypes.func.isRequired,
+  importState: PropTypes.shape({
+    fileName: PropTypes.string,
+    status: PropTypes.string,
+    character: PropTypes.object,
+    errors: PropTypes.arrayOf(PropTypes.string),
+  }),
+  onImportFile: PropTypes.func.isRequired,
+  onResetImport: PropTypes.func.isRequired,
+  onSelectAttribute: PropTypes.func.isRequired,
+  onSelectSkill: PropTypes.func.isRequired,
 };
 
 export default DicePoolPanel;
