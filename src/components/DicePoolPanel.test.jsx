@@ -117,7 +117,36 @@ test("renders manual tab by default", () => {
   unmount();
 });
 
-test("switching to import tab reveals import UI", () => {
+test("switching to import tab shows JSON upload when no character is loaded", () => {
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <TestHarness
+        importStateOverrides={{
+          status: "idle",
+          character: null,
+          fileName: "",
+        }}
+      />,
+    );
+  });
+
+  const importTab = getButtonByText(container, "Import Character");
+  act(() => {
+    importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(container.querySelector("#characterImport")).not.toBeNull();
+  expect(container.querySelector("#importAttribute")).toBeNull();
+  expect(container.querySelector("#importSkill")).toBeNull();
+  expect(getButtonByText(container, "Roll Dice")).toBeUndefined();
+  expect(getButtonByText(container, "Clear Import")).toBeUndefined();
+
+  unmount();
+});
+
+test("switching to import tab shows fields and actions for a loaded character", () => {
   const { container, root, unmount } = createContainer();
 
   act(() => {
@@ -129,9 +158,11 @@ test("switching to import tab reveals import UI", () => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
-  expect(container.querySelector("#characterImport")).not.toBeNull();
+  expect(container.querySelector("#characterImport")).toBeNull();
   expect(container.querySelector("#importAttribute")).not.toBeNull();
   expect(container.querySelector("#importSkill")).not.toBeNull();
+  expect(getButtonByText(container, "Roll Dice")).toBeDefined();
+  expect(getButtonByText(container, "Clear Import")).toBeDefined();
 
   unmount();
 });

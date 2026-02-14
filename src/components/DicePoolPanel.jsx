@@ -69,6 +69,10 @@ const DicePoolPanel = ({
     return CANONICAL_SKILLS.filter((skill) => skill in character.skills);
   }, [character]);
 
+  const skillColumnSplit = Math.ceil(skillOptions.length / 2);
+  const skillColumnOne = skillOptions.slice(0, skillColumnSplit);
+  const skillColumnTwo = skillOptions.slice(skillColumnSplit);
+
   const selectedSkillAttributeLabel = selectedSkill
     ? character?.skillAttributes?.[selectedSkill] ?? null
     : null;
@@ -244,41 +248,146 @@ const DicePoolPanel = ({
       ) : (
         <div className="import-panel" role="tabpanel">
           <div className="import-controls">
-            <label className="file-field" htmlFor="characterImport">
-              <span>Character JSON</span>
-              <input
-                id="characterImport"
-                name="characterImport"
-                type="file"
-                accept=".json,application/json"
-                onChange={handleFileChange}
-              />
-            </label>
-            <button
-              type="button"
-              className="panel-reset-button"
-              onClick={onResetImport}
-              disabled={status === "loading"}
-            >
-              Clear Import
-            </button>
+            {!isImportReady ? (
+              <label className="file-field" htmlFor="characterImport">
+                <span>Character JSON</span>
+                <input
+                  id="characterImport"
+                  name="characterImport"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleFileChange}
+                />
+              </label>
+            ) : (
+              <>
+                <label className="select-field" htmlFor="importAttribute">
+                  <span>Attribute</span>
+                  <select
+                    id="importAttribute"
+                    name="importAttribute"
+                    value={selectedAttribute ?? ""}
+                    onChange={handleAttributeSelect}
+                    disabled={Boolean(selectedSkill)}
+                  >
+                    <option value="" disabled>
+                      Choose an attribute
+                    </option>
+                    {attributeOptions.map((attributeKey) => (
+                      <option key={attributeKey} value={attributeKey}>
+                        {buildAttributeLabel(attributeKey)} - {character?.attributes?.[attributeKey] ?? 0}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="select-field" htmlFor="importSkill">
+                  <span>Skill</span>
+                  <select
+                    id="importSkill"
+                    name="importSkill"
+                    value={selectedSkill ?? ""}
+                    onChange={handleSkillSelect}
+                    disabled={!isImportReady}
+                  >
+                    <option value="">Choose a skill (optional)</option>
+                    {skillOptions.map((skill) => (
+                      <option key={skill} value={skill}>
+                        {skill} - {character?.skills?.[skill] ?? 0}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button
+                  type="button"
+                  className="pool-action-button"
+                  onClick={handleImportRoll}
+                  disabled={importDisabled}
+                >
+                  {importButtonLabel}
+                </button>
+
+
+              </>
+            )}
           </div>
 
-          <div className="import-status" role="status" aria-live="polite">
-            {fileName ? (
-              <p>
-                File: <strong>{fileName}</strong>
-              </p>
-            ) : (
-              <p>No character loaded yet.</p>
-            )}
-            {status === "loading" ? <p>Loading character…</p> : null}
-            {character ? (
-              <p>
-                Character: <strong>{character.name}</strong>
-              </p>
+
+
+          <div className="import-status-row">
+            <div className="import-status" role="status" aria-live="polite">
+              {fileName ? null : <p>No character loaded yet.</p>}
+              {status === "loading" ? <p>Loading character…</p> : null}
+              {character ? (
+                <p>
+                  Character: <strong>{character.name}</strong>
+                </p>
+              ) : null}
+            </div>
+            {isImportReady ? (
+              <button
+                type="button"
+                className="pool-action-button import-clear-button"
+                onClick={onResetImport}
+                disabled={status === "loading"}
+              >
+                Clear Character
+              </button>
             ) : null}
           </div>
+
+          {character ? (
+            <div className="import-summary">
+              <div className="import-summary-grid">
+                <div className="import-summary-section">
+                  <p className="import-summary-title">Attributes</p>
+                  {attributeOptions.length > 0 ? (
+                    <ul className="import-summary-content">
+                      {attributeOptions.map((attributeKey) => (
+                        <li key={attributeKey} className="import-summary-item">
+                          {buildAttributeLabel(attributeKey)}:{" "}
+                          {character?.attributes?.[attributeKey] ?? 0}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="import-summary-empty">
+                      No attributes available.
+                    </p>
+                  )}
+                </div>
+                <div className="import-summary-section">
+                  <p className="import-summary-title">Skills</p>
+                  {skillOptions.length > 0 ? (
+                    <ul className="import-summary-content">
+                      {skillColumnOne.map((skill) => (
+                        <li key={skill} className="import-summary-item">
+                          {skill}: {character?.skills?.[skill] ?? 0}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="import-summary-empty">No skills available.</p>
+                  )}
+                </div>
+                <div className="import-summary-section">
+                  <p className="import-summary-title" aria-hidden="true">
+                    &nbsp;
+                  </p>
+                  {skillOptions.length > 0 ? (
+                    <ul className="import-summary-content">
+                      {skillColumnTwo.map((skill) => (
+                        <li key={skill} className="import-summary-item">
+                          {skill}: {character?.skills?.[skill] ?? 0}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {errors.length > 0 ? (
             <div className="import-errors" role="alert">
@@ -291,71 +400,13 @@ const DicePoolPanel = ({
             </div>
           ) : null}
 
-          {warnings.length > 0 ? (
-            <div className="import-warnings" role="note">
-              <p>Warnings:</p>
-              <ul>
-                {warnings.map((message, index) => (
-                  <li key={`${message}-${index}`}>{message}</li>
-                ))}
-              </ul>
-            </div>
+
+
+          {selectedSkillAttributeLabel ? (
+            <p className="import-attribute-hint">
+              Uses attribute: <strong>{selectedSkillAttributeLabel}</strong>
+            </p>
           ) : null}
-
-          <div className="import-selectors">
-            <label className="select-field" htmlFor="importAttribute">
-              <span>Attribute</span>
-              <select
-                id="importAttribute"
-                name="importAttribute"
-                value={selectedAttribute ?? ""}
-                onChange={handleAttributeSelect}
-                disabled={!isImportReady || Boolean(selectedSkill)}
-              >
-                <option value="" disabled>
-                  Choose an attribute
-                </option>
-                {attributeOptions.map((attributeKey) => (
-                  <option key={attributeKey} value={attributeKey}>
-                    {buildAttributeLabel(attributeKey)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="select-field" htmlFor="importSkill">
-              <span>Skill</span>
-              <select
-                id="importSkill"
-                name="importSkill"
-                value={selectedSkill ?? ""}
-                onChange={handleSkillSelect}
-                disabled={!isImportReady}
-              >
-                <option value="">Choose a skill (optional)</option>
-                {skillOptions.map((skill) => (
-                  <option key={skill} value={skill}>
-                    {skill} ({character?.skills?.[skill] ?? 0})
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {selectedSkillAttributeLabel ? (
-              <p className="import-attribute-hint">
-                Uses attribute: <strong>{selectedSkillAttributeLabel}</strong>
-              </p>
-            ) : null}
-          </div>
-
-          <button
-            type="button"
-            className="pool-action-button"
-            onClick={handleImportRoll}
-            disabled={importDisabled}
-          >
-            {importButtonLabel}
-          </button>
         </div>
       )}
     </section>

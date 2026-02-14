@@ -263,12 +263,67 @@ h2 {
 }
 
 .import-controls {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(160px, 1fr) minmax(160px, 1fr);
   gap: 0.75rem;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: end;
 }
+
+.import-status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.import-clear-button {
+  margin-left: auto;
+  align-self: center;
+}
+
+.import-summary {
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: #fffdf8;
+}
+
+.import-summary-content {
+  display: grid;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.import-summary-title {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.import-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.import-summary-item {
+  display: flex;
+  gap: 0.4rem;
+  color: var(--ink-700);
+  font-weight: 400;
+}
+
+
+
+.import-summary-empty {
+  margin: 0;
+  color: var(--ink-700);
+}
+
+
 
 .file-field,
 .select-field {
@@ -533,6 +588,27 @@ h2 {
 
   .pool-action-button {
     grid-column: 1 / -1;
+  }
+
+  .import-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .import-controls .pool-action-button {
+    width: 100%;
+  }
+
+  .import-status-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .import-clear-button {
+    align-self: flex-end;
+  }
+
+  .import-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .tray-panel {
