@@ -510,7 +510,7 @@ h2 {
 }
 
 .tray-lead {
-  font-size: 1.05rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--ink-900);
 }
@@ -645,7 +645,11 @@ h2 {
 
   .tray-summary-wrap {
     width: 100%;
-    justify-content: space-between;
+    justify-content: center;
+  }
+
+  .tray-summary-wrap .tray-lead {
+    text-align: center;
   }
 
   .tray-action-buttons {
