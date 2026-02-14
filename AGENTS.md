@@ -26,6 +26,8 @@ Follow these guidelines if the project-memory skill is available:
 - When working on the project use the project-memory skill to recall relevant project context before making changes
 - Also when making concrete decisions about the codebase, write a brief memory (decision, rationale and pointers)
 
+If you cannot find the project-memory skill, load `.agents/skills/project-memory/SKILL.md` and follow its instructions to emulate the memory workflow.
+
 ## Your role
 - Build or modify UI features.
 - Keep the UI responsive and accessible.
