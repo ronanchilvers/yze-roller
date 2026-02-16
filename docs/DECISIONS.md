@@ -23,3 +23,9 @@
     - **Decision:** Replace attribute/skill dropdowns with clickable counts in the import summary for quick rolls, keep the JSON upload field always visible, and remove the import tab roll button. Split roll and push actions so “Roll Dice” always starts a new roll and “Push X Dice” is a separate action.
     - **Consequences:** Import tab is simpler and quicker to use; roll behavior is explicit and avoids accidental pushes.
     - **Alternatives considered:** Keep dropdown-based rolls and a shared roll/push button (rejected for clarity and speed).
+
+- **2026-02-16 — Dark mode includes system preference**
+  - **Context:** The app needed dark mode support without forcing users to manually switch when their OS theme changes.
+  - **Decision:** Implement a 3-way theme preference (`system`, `light`, `dark`) persisted in localStorage, with `system` as default and runtime resolution via `prefers-color-scheme`.
+  - **Consequences:** Theme follows OS automatically by default while still allowing user overrides; styles are maintained via CSS token overrides rooted at `:root[data-theme="..."]`.
+  - **Alternatives considered:** Manual light/dark toggle only (rejected because it ignores OS preference changes).

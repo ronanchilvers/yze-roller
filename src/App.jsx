@@ -4,6 +4,7 @@ import { usePoolSelection } from "./hooks/usePoolSelection.js";
 import { useStrainTracker } from "./hooks/useStrainTracker.js";
 import { useRollSession } from "./hooks/useRollSession.js";
 import { useCharacterImport } from "./hooks/useCharacterImport.js";
+import { useThemePreference } from "./hooks/useThemePreference.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
@@ -19,6 +20,8 @@ function App() {
     onAttributeChange,
     onSkillChange,
   } = usePoolSelection();
+  const { themePreference, resolvedTheme, setThemePreference } =
+    useThemePreference();
 
   const { normalizedStrainPoints, onResetStrain, applyBaneIncrement } =
     useStrainTracker();
@@ -97,6 +100,14 @@ function App() {
   };
 
   useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.documentElement.setAttribute("data-theme", resolvedTheme);
+  }, [resolvedTheme]);
+
+  useEffect(() => {
     if (!pendingRollCounts || isRolling) {
       return;
     }
@@ -153,21 +164,36 @@ function App() {
             <p className="eyebrow">Year Zero Engine</p>
             <h1>Dice Roller</h1>
           </div>
-          <output className="strain-pill" aria-label="Current strain points">
-            <div className="strain-pill-head">
-              <span>Strain Points</span>
-              <button
-                type="button"
-                className="strain-reset-button"
-                aria-label="Reset strain points"
-                onClick={onResetStrain}
-                disabled={normalizedStrainPoints === 0}
+          <div className="top-bar-actions">
+            <label className="theme-select" htmlFor="themePreference">
+              <span>Theme</span>
+              <select
+                id="themePreference"
+                name="themePreference"
+                value={themePreference}
+                onChange={(event) => setThemePreference(event.target.value)}
               >
-                ↺
-              </button>
-            </div>
-            <strong>{normalizedStrainPoints}</strong>
-          </output>
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </label>
+            <output className="strain-pill" aria-label="Current strain points">
+              <div className="strain-pill-head">
+                <span>Strain Points</span>
+                <button
+                  type="button"
+                  className="strain-reset-button"
+                  aria-label="Reset strain points"
+                  onClick={onResetStrain}
+                  disabled={normalizedStrainPoints === 0}
+                >
+                  ↺
+                </button>
+              </div>
+              <strong>{normalizedStrainPoints}</strong>
+            </output>
+          </div>
         </header>
 
         <div className="content-grid">
