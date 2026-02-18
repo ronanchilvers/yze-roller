@@ -38,12 +38,17 @@ const toInteger = (value) => {
   return parsed;
 };
 
-const toNonNegativeInteger = (value) => {
+const toSkillDiceCount = (value) => {
   const parsed = toInteger(value);
   if (parsed === null) {
     return null;
   }
-  return Math.max(0, parsed);
+
+  if (parsed < 0 || parsed > 10) {
+    return null;
+  }
+
+  return parsed;
 };
 
 const toPositiveInteger = (value) => {
@@ -157,7 +162,7 @@ export const parseCharacterImport = (
       continue;
     }
 
-    const parsed = toNonNegativeInteger(value);
+    const parsed = toSkillDiceCount(value);
     if (parsed === null) {
       warnings.push(`Invalid dice count for ${canonical}; using 0.`);
       skills[canonical] = 0;

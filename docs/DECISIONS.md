@@ -53,3 +53,9 @@
   - **Decision:** Remove the tray results panel from `App` and render `Push X Dice` plus `Clear Dice` controls in `DicePoolPanel` footer, side-by-side on desktop and stacked on mobile.
   - **Consequences:** Layout is simpler, controls stay in the primary panel regardless of tab, and redundant inline result/history UI is eliminated.
   - **Alternatives considered:** Keep tray panel only for controls (rejected to avoid a split interaction surface).
+
+- **2026-02-18 — Clamp imported skill dice to Year Zero limits**
+  - **Context:** Character import accepted canonical skill values above expected table limits, while invalid/malformed values were already reset to 0.
+  - **Decision:** Accept imported skill dice only when the value is an integer between 0 and 10 inclusive; otherwise reset that skill to 0 and keep import valid with a warning.
+  - **Consequences:** Imported skill pools now stay within expected game bounds and malformed/out-of-range inputs are handled safely without aborting import.
+  - **Alternatives considered:** Hard-fail import on out-of-range values (rejected to preserve forgiving import behavior).

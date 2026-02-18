@@ -115,6 +115,26 @@ test("parseCharacterImport warns on non-integer skill dice values", () => {
   assert.ok(result.warnings.some((warning) => warning.includes("Streetwise")));
 });
 
+test("parseCharacterImport sets skill dice below zero to 0", () => {
+  const payload = createValidCharacter();
+  payload.skill_sneak = "-1";
+
+  const result = parseCharacterImport(payload);
+  assert.equal(result.isValid, true);
+  assert.equal(result.character.skills.Sneak, 0);
+  assert.ok(result.warnings.some((warning) => warning.includes("Sneak")));
+});
+
+test("parseCharacterImport sets skill dice above 10 to 0", () => {
+  const payload = createValidCharacter();
+  payload.skill_hoodwink = "11";
+
+  const result = parseCharacterImport(payload);
+  assert.equal(result.isValid, true);
+  assert.equal(result.character.skills.Hoodwink, 0);
+  assert.ok(result.warnings.some((warning) => warning.includes("Hoodwink")));
+});
+
 test("parseCharacterImport respects canonical skills list", () => {
   const payload = createValidCharacter();
   payload.skill_fake = "3";

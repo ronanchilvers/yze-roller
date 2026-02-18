@@ -1,6 +1,7 @@
 # Project Memory
 
 - **Character import utilities** live in `src/lib/character-import.js` (parses JSON, validates required attribute dice, defaults missing skills to 0, builds display name).
+- **Imported skill dice bounds**: **What** skill dice values are only accepted in the inclusive range `0..10`; any imported skill below `0`, above `10`, or non-integer is normalized to `0` with a warning. **Where** `src/lib/character-import.js` (`toSkillDiceCount`, `parseCharacterImport`). **Evidence** tests `parseCharacterImport sets skill dice below zero to 0` and `parseCharacterImport sets skill dice above 10 to 0` in `src/lib/character-import.test.js`.
 - **Canonical skill mappings** live in `src/data/skill-mappings.js` (skill → attribute map used by import flow).
 - **Import UI tabs** are implemented in `src/components/DicePoolPanel.jsx` (manual vs import with file input, selectors, and roll/push handling).
 - **Import state hook** lives in `src/hooks/useCharacterImport.js` (file loading, validation state, selection state).
