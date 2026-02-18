@@ -152,6 +152,33 @@ test("emits one local roll toast for a newly resolved roll and skips duplicates"
   app.unmount();
 });
 
+test("dedupes repeated local event ids emitted from rerender", () => {
+  const app = createContainer();
+
+  mocks.rollSessionState = createRollSessionState({
+    currentRoll: {
+      action: "roll",
+      rolledAt: 1710000002000,
+      outcomes: {
+        successes: 4,
+        banes: 0,
+        hasStrain: false,
+      },
+      pushableDiceIds: [],
+      dice: [],
+    },
+    recentResults: [{ id: "repeat-local-id", summary: "4 successes, 0 banes" }],
+  });
+
+  app.render(<App />);
+  expect(mocks.diceResult).toHaveBeenCalledTimes(1);
+
+  app.render(<App />);
+  expect(mocks.diceResult).toHaveBeenCalledTimes(1);
+
+  app.unmount();
+});
+
 test("exposes remote roll ingestion seam and emits remote actor toast payload", () => {
   const app = createContainer();
 
@@ -181,6 +208,34 @@ test("exposes remote roll ingestion seam and emits remote actor toast payload", 
     total: "3",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });
+
+  act(() => {
+    ingestRemoteEvent({
+      eventId: "remote-event-1",
+      actorId: "Watcher",
+      action: "push",
+      successes: 3,
+      banes: 2,
+      hasStrain: true,
+      occurredAt: 1710000001111,
+    });
+  });
+
+  expect(mocks.diceResult).toHaveBeenCalledTimes(2);
+
+  act(() => {
+    ingestRemoteEvent({
+      eventId: "remote-event-1",
+      actorId: "Watcher",
+      action: "push",
+      successes: 3,
+      banes: 2,
+      hasStrain: true,
+      occurredAt: 1710000001111,
+    });
+  });
+
+  expect(mocks.diceResult).toHaveBeenCalledTimes(2);
 
   app.unmount();
 });

@@ -6,9 +6,14 @@ import { useRollSession } from "./hooks/useRollSession.js";
 import { useCharacterImport } from "./hooks/useCharacterImport.js";
 import { useThemePreference } from "./hooks/useThemePreference.js";
 import { useToast } from "./hooks/useToast.js";
-import { DEFAULT_DICE_RESULT_DURATION_MS } from "./components/toast/constants.js";
+import {
+  DEFAULT_DICE_RESULT_DURATION_MS,
+  MAX_PENDING_TOASTS,
+} from "./components/toast/constants.js";
 import {
   buildRollToastPayload,
+  getRollToastDedupKey,
+  ROLL_TOAST_DEDUPE_BUCKET_MS,
   normalizeRollToastEvent,
 } from "./lib/roll-toast-event.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
@@ -16,6 +21,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 const MAX_PREVIOUS_RESULTS = 10;
 export const REMOTE_ROLL_EVENT_BRIDGE_KEY = "__YEAR_ZERO_REMOTE_ROLL_EVENT__";
+const DEDUPE_TTL_MS = ROLL_TOAST_DEDUPE_BUCKET_MS * 2;
 const DiceTray3D = lazy(() => import("./components/DiceTray3D.jsx"));
 
 function App() {
@@ -93,11 +99,26 @@ function App() {
       : "Roll the dice to see results.";
 
   const historyPanelRef = useRef(null);
-  const latestLocalToastKeyRef = useRef(null);
+  const emittedToastKeysRef = useRef(new Map());
 
   const emitRollToastEvent = useCallback(
     (eventInput) => {
       const normalizedEvent = normalizeRollToastEvent(eventInput);
+      const dedupeKey = getRollToastDedupKey(normalizedEvent);
+      const now = Date.now();
+      const cutoff = now - DEDUPE_TTL_MS;
+      const emittedMap = emittedToastKeysRef.current;
+
+      for (const [key, emittedAt] of emittedMap.entries()) {
+        if (!Number.isFinite(emittedAt) || emittedAt < cutoff) {
+          emittedMap.delete(key);
+        }
+      }
+
+      if (emittedMap.has(dedupeKey)) {
+        return;
+      }
+
       const toastPayload = buildRollToastPayload(normalizedEvent);
 
       if (typeof toast.diceResult !== "function") {
@@ -111,6 +132,14 @@ function App() {
         total: toastPayload.total,
         duration: DEFAULT_DICE_RESULT_DURATION_MS,
       });
+      emittedMap.set(dedupeKey, now);
+      while (emittedMap.size > MAX_PENDING_TOASTS) {
+        const oldestKey = emittedMap.keys().next().value;
+        if (!oldestKey) {
+          break;
+        }
+        emittedMap.delete(oldestKey);
+      }
     },
     [toast],
   );
@@ -160,11 +189,12 @@ function App() {
       (Number.isFinite(currentRoll?.rolledAt)
         ? `local-${currentRoll.rolledAt}`
         : null);
-    if (!localToastKey || latestLocalToastKeyRef.current === localToastKey) {
+    if (!localToastKey) {
       return;
     }
 
     emitRollToastEvent({
+      eventId: localToastKey,
       source: "local",
       action: currentRoll?.action,
       successes: currentRoll?.outcomes?.successes,
@@ -172,7 +202,6 @@ function App() {
       hasStrain: currentRoll?.outcomes?.hasStrain,
       occurredAt: currentRoll?.rolledAt,
     });
-    latestLocalToastKeyRef.current = localToastKey;
   }, [currentRoll, emitRollToastEvent, recentResults]);
 
   useEffect(() => {
