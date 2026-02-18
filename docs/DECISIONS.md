@@ -29,3 +29,27 @@
   - **Decision:** Implement a 3-way theme preference (`system`, `light`, `dark`) persisted in localStorage, with `system` as default and runtime resolution via `prefers-color-scheme`.
   - **Consequences:** Theme follows OS automatically by default while still allowing user overrides; styles are maintained via CSS token overrides rooted at `:root[data-theme="..."]`.
   - **Alternatives considered:** Manual light/dark toggle only (rejected because it ignores OS preference changes).
+
+- **2026-02-18 — Toast mechanism strategy for roll results**
+  - **Context:** Roll outcomes are currently announced inline in `src/App.jsx` (`trayLead` / `tray-results`), and a reusable toast pattern already exists in `ronanchilvers/fate-cards` (`src/components/toast` + `useToast`).
+  - **Decision:** Adopt the Fate Cards toast architecture (provider, container, hook, timer cleanup, fallback API) and route Year Zero roll-result announcements through toasts while preserving push/clear controls and history tracking.
+  - **Consequences:** Result feedback becomes transient and reusable across future UI flows; integration requires careful dedupe to avoid repeated toasts per render and accessibility tuning to avoid duplicate live announcements.
+  - **Alternatives considered:** Keep inline-only result display (rejected for lower reuse and weaker cross-feature notification consistency).
+
+- **2026-02-18 — Source-agnostic roll-event ingestion for toasts**
+  - **Context:** Future multiplayer/API support may deliver roll results from remote players rather than local roll resolution only.
+  - **Decision:** Define a normalized roll-event adapter and route both local and remote events through one shared toast emission path with id/key dedupe.
+  - **Consequences:** Toast behavior remains consistent across event sources and is resilient to replayed/duplicate remote events; additional helper tests are required for malformed external payloads.
+  - **Alternatives considered:** Directly trigger toasts from each source path (rejected due to duplicated logic and higher drift risk).
+
+- **2026-02-18 — Roll toast defaults and queue policy**
+  - **Context:** Open implementation choices remained for toast display mode, duration, actor labeling, queue overflow handling, and confirm API scope.
+  - **Decision:** Use `diceResult` mode for roll outcomes, default duration `10000ms`, source-agnostic ingestion layer required now, remote label based on `actorId`, and pending queue policy of 20 items with oldest-first dropping. Defer confirm API usage for now.
+  - **Consequences:** Roll-result presentation is consistent and fixed for initial delivery; queue behavior under bursty remote events is deterministic; upstream systems still own how `actorId` is represented to users.
+  - **Alternatives considered:** `alert` mode for roll results, shorter duration defaults, and summarized/drop-newest overflow policies.
+
+- **2026-02-18 — Move push/clear controls into the main panel and remove tray results UI**
+  - **Context:** With toast-based roll feedback in place, the old tray results/history panel duplicated result messaging while still owning push/clear controls.
+  - **Decision:** Remove the tray results panel from `App` and render `Push X Dice` plus `Clear Dice` controls in `DicePoolPanel` footer, side-by-side on desktop and stacked on mobile.
+  - **Consequences:** Layout is simpler, controls stay in the primary panel regardless of tab, and redundant inline result/history UI is eliminated.
+  - **Alternatives considered:** Keep tray panel only for controls (rejected to avoid a split interaction surface).

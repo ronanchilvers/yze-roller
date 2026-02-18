@@ -39,6 +39,11 @@ const DicePoolPanel = ({
   onResetImport,
   onSelectAttribute,
   onSelectSkill,
+  onPush,
+  pushActionLabel,
+  isPushDisabled,
+  onClearDice,
+  isClearDisabled,
 }) => {
   const [activeTab, setActiveTab] = useState(TAB_MANUAL);
 
@@ -373,6 +378,24 @@ const DicePoolPanel = ({
 
         </div>
       )}
+      <div className="panel-action-row">
+        <button
+          type="button"
+          className="pool-action-button secondary-action-button"
+          onClick={onPush}
+          disabled={isPushDisabled}
+        >
+          {pushActionLabel}
+        </button>
+        <button
+          type="button"
+          className="pool-action-button secondary-action-button"
+          onClick={onClearDice}
+          disabled={isClearDisabled}
+        >
+          Clear Dice
+        </button>
+      </div>
     </section>
   );
 };
@@ -389,7 +412,7 @@ DicePoolPanel.propTypes = {
   setAttributeDice: PropTypes.func.isRequired,
   setSkillDice: PropTypes.func.isRequired,
   onRoll: PropTypes.func.isRequired,
-  onRollWithCounts: PropTypes.func.isRequired,
+  onRollWithCounts: PropTypes.func,
   importState: PropTypes.shape({
     fileName: PropTypes.string,
     status: PropTypes.string,
@@ -400,6 +423,11 @@ DicePoolPanel.propTypes = {
   onResetImport: PropTypes.func.isRequired,
   onSelectAttribute: PropTypes.func.isRequired,
   onSelectSkill: PropTypes.func.isRequired,
+  onPush: PropTypes.func.isRequired,
+  pushActionLabel: PropTypes.string.isRequired,
+  isPushDisabled: PropTypes.bool.isRequired,
+  onClearDice: PropTypes.func.isRequired,
+  isClearDisabled: PropTypes.bool.isRequired,
 };
 
 export default DicePoolPanel;

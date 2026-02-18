@@ -1,14 +1,26 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { usePoolSelection } from "./hooks/usePoolSelection.js";
 import { useStrainTracker } from "./hooks/useStrainTracker.js";
 import { useRollSession } from "./hooks/useRollSession.js";
 import { useCharacterImport } from "./hooks/useCharacterImport.js";
 import { useThemePreference } from "./hooks/useThemePreference.js";
+import { useToast } from "./hooks/useToast.js";
+import {
+  DEFAULT_DICE_RESULT_DURATION_MS,
+  MAX_PENDING_TOASTS,
+} from "./components/toast/constants.js";
+import {
+  buildRollToastPayload,
+  getRollToastDedupKey,
+  ROLL_TOAST_DEDUPE_BUCKET_MS,
+  normalizeRollToastEvent,
+} from "./lib/roll-toast-event.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
-const MAX_PREVIOUS_RESULTS = 10;
+export const REMOTE_ROLL_EVENT_BRIDGE_KEY = "__YEAR_ZERO_REMOTE_ROLL_EVENT__";
+const DEDUPE_TTL_MS = ROLL_TOAST_DEDUPE_BUCKET_MS * 2;
 const DiceTray3D = lazy(() => import("./components/DiceTray3D.jsx"));
 
 function App() {
@@ -20,6 +32,7 @@ function App() {
     onAttributeChange,
     onSkillChange,
   } = usePoolSelection();
+  const toast = useToast();
   const { themePreference, resolvedTheme, setThemePreference } =
     useThemePreference();
 
@@ -44,8 +57,6 @@ function App() {
     currentRoll,
     rollRequest,
     recentResults,
-    isHistoryOpen,
-    setIsHistoryOpen,
     isRolling,
     canPush,
     onRoll,
@@ -59,8 +70,6 @@ function App() {
     onBaneIncrement: applyBaneIncrement,
   });
   const activeDice = rollRequest?.dice ?? currentRoll?.dice ?? [];
-  const previousResults = recentResults.slice(1, MAX_PREVIOUS_RESULTS + 1);
-  const hasPreviousResults = previousResults.length > 0;
   const pushableDiceCount = Number(currentRoll?.pushableDiceIds?.length ?? 0);
   const canClearDice =
     isRolling || activeDice.length > 0 || recentResults.length > 0;
@@ -68,23 +77,48 @@ function App() {
   const primaryActionLabel = "Roll Dice";
   const isPrimaryActionDisabled = isRolling;
 
-  const formatRollSummary = (roll) => {
-    if (!roll) {
-      return "No results yet";
-    }
-    const withStrain = roll.outcomes.hasStrain ? " (with Strain)" : "";
-    return `${roll.outcomes.successes} successes, ${roll.outcomes.banes} banes${withStrain}`;
-  };
+  const emittedToastKeysRef = useRef(new Map());
 
-  const trayLead = isRolling
-    ? rollRequest?.action === "push"
-      ? "Pushing selected dice..."
-      : "Rolling dice..."
-    : currentRoll
-      ? formatRollSummary(currentRoll)
-      : "Roll the dice to see results.";
+  const emitRollToastEvent = useCallback(
+    (eventInput) => {
+      const normalizedEvent = normalizeRollToastEvent(eventInput);
+      const dedupeKey = getRollToastDedupKey(normalizedEvent);
+      const now = Date.now();
+      const cutoff = now - DEDUPE_TTL_MS;
+      const emittedMap = emittedToastKeysRef.current;
 
-  const historyPanelRef = useRef(null);
+      for (const [key, emittedAt] of emittedMap.entries()) {
+        if (!Number.isFinite(emittedAt) || emittedAt < cutoff) {
+          emittedMap.delete(key);
+        }
+      }
+
+      if (emittedMap.has(dedupeKey)) {
+        return;
+      }
+
+      const toastPayload = buildRollToastPayload(normalizedEvent);
+
+      if (typeof toast.diceResult !== "function") {
+        return;
+      }
+
+      toast.diceResult({
+        title: toastPayload.title,
+        message: toastPayload.message,
+        duration: DEFAULT_DICE_RESULT_DURATION_MS,
+      });
+      emittedMap.set(dedupeKey, now);
+      while (emittedMap.size > MAX_PENDING_TOASTS) {
+        const oldestKey = emittedMap.keys().next().value;
+        if (!oldestKey) {
+          break;
+        }
+        emittedMap.delete(oldestKey);
+      }
+    },
+    [toast],
+  );
 
   const onPrimaryAction = () => {
     onRoll();
@@ -118,18 +152,50 @@ function App() {
   }, [pendingRollCounts, isRolling, onRoll]);
 
   useEffect(() => {
-    if (!isHistoryOpen) {
+    if (!currentRoll) {
       return;
     }
 
-    historyPanelRef.current?.focus();
-  }, [isHistoryOpen]);
-
-  const handleHistoryKeyDown = (event) => {
-    if (event.key === "Escape") {
-      setIsHistoryOpen(false);
+    const localToastKey =
+      recentResults[0]?.id ??
+      (Number.isFinite(currentRoll?.rolledAt)
+        ? `local-${currentRoll.rolledAt}`
+        : null);
+    if (!localToastKey) {
+      return;
     }
-  };
+
+    emitRollToastEvent({
+      eventId: localToastKey,
+      source: "local",
+      action: currentRoll?.action,
+      successes: currentRoll?.outcomes?.successes,
+      banes: currentRoll?.outcomes?.banes,
+      hasStrain: currentRoll?.outcomes?.hasStrain,
+      occurredAt: currentRoll?.rolledAt,
+    });
+  }, [currentRoll, emitRollToastEvent, recentResults]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const bridgeHandler = (eventPayload) => {
+      emitRollToastEvent({
+        ...eventPayload,
+        source: "remote",
+      });
+    };
+
+    window[REMOTE_ROLL_EVENT_BRIDGE_KEY] = bridgeHandler;
+
+    return () => {
+      if (window[REMOTE_ROLL_EVENT_BRIDGE_KEY] === bridgeHandler) {
+        delete window[REMOTE_ROLL_EVENT_BRIDGE_KEY];
+      }
+    };
+  }, [emitRollToastEvent]);
 
   return (
     <main className="app-shell">
@@ -215,71 +281,12 @@ function App() {
             onResetImport={resetImport}
             onSelectAttribute={setSelectedAttribute}
             onSelectSkill={setSelectedSkill}
+            onPush={onPush}
+            pushActionLabel={`Push ${pushableDiceCount} Dice`}
+            isPushDisabled={isRolling || !hasRolled || !canPush}
+            onClearDice={onClearDice}
+            isClearDisabled={!canClearDice}
           />
-
-          <section className="tray-panel" aria-label="Dice tray" aria-busy={isRolling}>
-            <div className="tray-results" role="status" aria-live="polite">
-              <div className="tray-results-row">
-                <div className="tray-summary-wrap">
-                  <p className="tray-lead">{trayLead}</p>
-                  {!isRolling && currentRoll && hasPreviousResults ? (
-                    <button
-                      type="button"
-                      className="history-toggle"
-                      onClick={() => setIsHistoryOpen((open) => !open)}
-                      aria-label={
-                        isHistoryOpen
-                          ? "Hide previous results"
-                          : "Show previous results"
-                      }
-                      aria-expanded={isHistoryOpen}
-                      aria-controls="previous-results-list"
-                    >
-                      {isHistoryOpen ? "▴" : "▾"}
-                    </button>
-                  ) : null}
-                </div>
-                <div className="tray-action-buttons">
-                  <button
-                    type="button"
-                    className="pool-action-button tray-clear-button"
-                    onClick={onPush}
-                    disabled={isRolling || !hasRolled || !canPush}
-                  >
-                    Push {pushableDiceCount} Dice
-                  </button>
-                  <button
-                    type="button"
-                    className="pool-action-button tray-clear-button"
-                    onClick={onClearDice}
-                    disabled={!canClearDice}
-                  >
-                    Clear Dice
-                  </button>
-                </div>
-              </div>
-              {hasPreviousResults && isHistoryOpen ? (
-                // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-                <div
-                  className="history-dropdown"
-                  id="previous-results-list"
-                  role="dialog"
-                  aria-modal="false"
-                  tabIndex={-1}
-                  onKeyDown={handleHistoryKeyDown}
-                  ref={historyPanelRef}
-                >
-
-                  <ul className="history-list">
-                    {previousResults.map((entry) => (
-                      <li key={entry.id}>{entry.summary}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-
-          </section>
         </div>
       </section>
     </main>

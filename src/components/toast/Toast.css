@@ -1,0 +1,136 @@
+.toast-viewport {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.toast-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 31;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.toast-confirm-viewport {
+  width: min(30rem, 100%);
+  display: grid;
+  gap: 0.65rem;
+}
+
+.toast-item {
+  pointer-events: auto;
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--ink-900);
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.toast-item[data-kind="diceResult"] {
+  border-color: var(--accent);
+}
+
+.toast-title {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.toast-message,
+.toast-breakdown {
+  color: var(--ink-700);
+  line-height: 1.35;
+}
+
+.toast-result-text {
+  color: var(--ink-900);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.5;
+  padding-bottom: 0.5rem;
+}
+
+.toast-total {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.toast-dismiss-button,
+.toast-confirm-cancel,
+.toast-confirm-accept {
+  justify-self: end;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink-900);
+  background: var(--surface-200);
+  cursor: pointer;
+}
+
+.toast-confirm-actions {
+  display: inline-flex;
+  justify-self: end;
+  gap: 0.5rem;
+}
+
+.toast-progress-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 0.3rem;
+  width: 0;
+  background: var(--accent);
+  animation-name: toast-progress-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  pointer-events: none;
+}
+
+@keyframes toast-progress-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.toast-confirm-accept {
+  border-color: transparent;
+  color: var(--button-text);
+  background: linear-gradient(160deg, var(--accent), var(--accent-strong));
+}
+
+.toast-dismiss-button:focus-visible,
+.toast-confirm-cancel:focus-visible,
+.toast-confirm-accept:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .toast-viewport {
+    left: 1rem;
+    right: 1rem;
+    max-width: none;
+  }
+
+  .toast-item {
+    width: 100%;
+  }
+}
