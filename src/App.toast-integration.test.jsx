@@ -179,6 +179,20 @@ test("dedupes repeated local event ids emitted from rerender", () => {
   app.unmount();
 });
 
+test("tray results no longer use aria-live status announcements", () => {
+  const app = createContainer();
+
+  mocks.rollSessionState = createRollSessionState();
+  app.render(<App />);
+
+  const trayResults = app.container.querySelector(".tray-results");
+  expect(trayResults).not.toBeNull();
+  expect(trayResults?.getAttribute("role")).toBeNull();
+  expect(trayResults?.getAttribute("aria-live")).toBeNull();
+
+  app.unmount();
+});
+
 test("exposes remote roll ingestion seam and emits remote actor toast payload", () => {
   const app = createContainer();
 

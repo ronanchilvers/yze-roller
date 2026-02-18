@@ -82,20 +82,12 @@ function App() {
   const primaryActionLabel = "Roll Dice";
   const isPrimaryActionDisabled = isRolling;
 
-  const formatRollSummary = (roll) => {
-    if (!roll) {
-      return "No results yet";
-    }
-    const withStrain = roll.outcomes.hasStrain ? " (with Strain)" : "";
-    return `${roll.outcomes.successes} successes, ${roll.outcomes.banes} banes${withStrain}`;
-  };
-
   const trayLead = isRolling
     ? rollRequest?.action === "push"
       ? "Pushing selected dice..."
       : "Rolling dice..."
     : currentRoll
-      ? formatRollSummary(currentRoll)
+      ? "Latest result is shown in notifications."
       : "Roll the dice to see results.";
 
   const historyPanelRef = useRef(null);
@@ -318,7 +310,7 @@ function App() {
           />
 
           <section className="tray-panel" aria-label="Dice tray" aria-busy={isRolling}>
-            <div className="tray-results" role="status" aria-live="polite">
+            <div className="tray-results">
               <div className="tray-results-row">
                 <div className="tray-summary-wrap">
                   <p className="tray-lead">{trayLead}</p>
