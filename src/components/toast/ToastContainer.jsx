@@ -93,6 +93,13 @@ function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
             typeof toast?.id === "string" && toast.id
               ? toast.id
               : `toast-${index}`;
+          const isDiceResult = toast?.kind === TOAST_KIND.DICE_RESULT;
+          const diceResultText =
+            typeof toast?.message === "string" && toast.message
+              ? toast.message
+              : typeof toast?.breakdown === "string"
+                ? toast.breakdown
+                : "";
           return (
             <div
               key={toastId}
@@ -101,13 +108,19 @@ function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
               data-kind={toast?.kind ?? ""}
             >
               {toast?.title ? <div className="toast-title">{toast.title}</div> : null}
-              {toast?.message ? (
-                <div className="toast-message">{toast.message}</div>
-              ) : null}
-              {toast?.breakdown ? (
-                <div className="toast-breakdown">{toast.breakdown}</div>
-              ) : null}
-              {toast?.total ? <div className="toast-total">{toast.total}</div> : null}
+              {isDiceResult ? (
+                <div className="toast-result-text">{diceResultText}</div>
+              ) : (
+                <>
+                  {toast?.message ? (
+                    <div className="toast-message">{toast.message}</div>
+                  ) : null}
+                  {toast?.breakdown ? (
+                    <div className="toast-breakdown">{toast.breakdown}</div>
+                  ) : null}
+                  {toast?.total ? <div className="toast-total">{toast.total}</div> : null}
+                </>
+              )}
               <button
                 type="button"
                 className="toast-dismiss-button"

@@ -135,6 +135,33 @@ test("confirm toast includes aria labelling references", () => {
   app.unmount();
 });
 
+test("dice result renders a single main result line", () => {
+  const app = createContainer();
+
+  app.render(
+    <ToastContainer
+      toasts={[
+        {
+          id: "d1",
+          kind: TOAST_KIND.DICE_RESULT,
+          title: "Roll Result",
+          message: "0 successes, 1 banes",
+          breakdown: "0 successes, 1 banes",
+          total: "0",
+        },
+      ]}
+    />,
+  );
+
+  const resultText = app.container.querySelector(".toast-result-text");
+  expect(resultText).not.toBeNull();
+  expect(resultText?.textContent).toBe("0 successes, 1 banes");
+  expect(app.container.querySelector(".toast-breakdown")).toBeNull();
+  expect(app.container.querySelector(".toast-total")).toBeNull();
+
+  app.unmount();
+});
+
 test("returns null for invalid toast collections", () => {
   const app = createContainer();
   app.render(<ToastContainer toasts={null} />);

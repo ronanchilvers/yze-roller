@@ -53,6 +53,13 @@
   line-height: 1.35;
 }
 
+.toast-result-text {
+  color: var(--ink-900);
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .toast-total {
   font-size: 1.35rem;
   font-weight: 800;
@@ -102,4 +109,3 @@
     width: 100%;
   }
 }
-

@@ -120,8 +120,6 @@ function App() {
       toast.diceResult({
         title: toastPayload.title,
         message: toastPayload.message,
-        breakdown: toastPayload.breakdown,
-        total: toastPayload.total,
         duration: DEFAULT_DICE_RESULT_DURATION_MS,
       });
       emittedMap.set(dedupeKey, now);

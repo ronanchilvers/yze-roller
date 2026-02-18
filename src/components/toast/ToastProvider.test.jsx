@@ -156,7 +156,7 @@ test("diceResult creates a dice result toast", () => {
   const toastNode = container.querySelector(".toast-item");
   expect(toastNode).not.toBeNull();
   expect(toastNode.textContent).toContain("2 successes, 1 bane");
-  expect(toastNode.textContent).toContain("+1");
+  expect(toastNode.textContent).not.toContain("+1");
   expect(onResult).toHaveBeenCalledTimes(1);
 
   unmount();

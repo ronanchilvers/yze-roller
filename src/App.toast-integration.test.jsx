@@ -141,8 +141,6 @@ test("emits one local roll toast for a newly resolved roll and skips duplicates"
   expect(mocks.diceResult).toHaveBeenCalledWith({
     title: "Roll Result",
     message: "2 successes, 1 banes",
-    breakdown: "2 successes, 1 banes",
-    total: "2",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });
 
@@ -203,8 +201,6 @@ test("emits push result toast with strain summary", () => {
   expect(mocks.diceResult).toHaveBeenCalledWith({
     title: "Push Result",
     message: "1 successes, 2 banes (with Strain)",
-    breakdown: "1 successes, 2 banes (with Strain)",
-    total: "1",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });
 
@@ -274,8 +270,6 @@ test("exposes remote roll ingestion seam and emits remote actor toast payload", 
   expect(mocks.diceResult).toHaveBeenCalledWith({
     title: "Watcher pushed",
     message: "3 successes, 2 banes (with Strain)",
-    breakdown: "3 successes, 2 banes (with Strain)",
-    total: "3",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });
 
