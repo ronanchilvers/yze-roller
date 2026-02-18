@@ -218,6 +218,20 @@ Each task is discrete, self-contained, and has explicit validation.
 - Files: no code required if all pass; otherwise targeted fixes in touched files.
 - Validation: checklist in this plan section completed with pass/fail notes.
 
+### A16 Checklist Outcome (2026-02-18)
+Automated checks:
+- `PASS` Full test suite: `npq-hero run test` (latest run: 18 files, 153 tests, exit code 0).
+- `PASS` Local roll toast integration regression coverage.
+- `PASS` Remote ingestion seam regression coverage.
+- `PASS` Local/remote dedupe regression coverage.
+- `PASS` Toast provider/container/hook unit coverage (including accessibility-oriented assertions).
+
+Visual checks requiring local manual confirmation in the running app:
+- `PENDING USER VERIFY` Roll dice shows a single toast and tray controls still work.
+- `PENDING USER VERIFY` Push dice shows push summary toast and history panel still behaves correctly.
+- `PENDING USER VERIFY` Toast placement/readability on small viewport.
+- `PENDING USER VERIFY` Toast legibility and contrast in both light and dark themes.
+
 ## Risks and Mitigations
 - Duplicate toasts from rerenders or replayed API events:
   - Mitigation: event id/key dedupe with TTL cache.
