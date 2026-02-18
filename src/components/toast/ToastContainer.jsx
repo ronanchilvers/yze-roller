@@ -155,6 +155,10 @@ function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
       >
         {regularToasts.map(({ toast, toastId }, index) => {
           const isDiceResult = toast?.kind === TOAST_KIND.DICE_RESULT;
+          const toastDuration =
+            Number.isFinite(toast?.duration) && toast.duration > 0
+              ? toast.duration
+              : null;
           const diceResultText =
             typeof toast?.message === "string" && toast.message
               ? toast.message
@@ -195,6 +199,13 @@ function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
               >
                 Dismiss
               </button>
+              {toastDuration ? (
+                <div
+                  className="toast-progress-bar"
+                  style={{ animationDuration: `${toastDuration}ms` }}
+                  aria-hidden="true"
+                />
+              ) : null}
             </div>
           );
         })}

@@ -162,6 +162,60 @@ test("dice result renders a single main result line", () => {
   app.unmount();
 });
 
+test("renders a timed progress bar when toast duration is set", () => {
+  const app = createContainer();
+
+  app.render(
+    <ToastContainer
+      toasts={[
+        {
+          id: "a1",
+          kind: TOAST_KIND.ALERT,
+          title: "Saved",
+          message: "All changes saved.",
+          duration: 5000,
+        },
+        {
+          id: "d1",
+          kind: TOAST_KIND.DICE_RESULT,
+          title: "Roll Result",
+          message: "1 successes, 0 banes",
+          duration: 10000,
+        },
+      ]}
+    />,
+  );
+
+  const progressBars = app.container.querySelectorAll(".toast-progress-bar");
+  expect(progressBars.length).toBe(2);
+  expect(progressBars[0]?.getAttribute("style")).toContain("5000ms");
+  expect(progressBars[1]?.getAttribute("style")).toContain("10000ms");
+
+  app.unmount();
+});
+
+test("does not render a timed progress bar when toast duration is disabled", () => {
+  const app = createContainer();
+
+  app.render(
+    <ToastContainer
+      toasts={[
+        {
+          id: "a1",
+          kind: TOAST_KIND.ALERT,
+          title: "Saved",
+          message: "All changes saved.",
+          duration: 0,
+        },
+      ]}
+    />,
+  );
+
+  expect(app.container.querySelector(".toast-progress-bar")).toBeNull();
+
+  app.unmount();
+});
+
 test("keeps existing toasts visible when a new toast is added", () => {
   const app = createContainer();
 

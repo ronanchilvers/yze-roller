@@ -36,6 +36,8 @@
   background: var(--panel);
   color: var(--ink-900);
   box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
 }
 
 .toast-item[data-kind="diceResult"] {
@@ -83,6 +85,28 @@
   display: inline-flex;
   justify-self: end;
   gap: 0.5rem;
+}
+
+.toast-progress-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 0.2rem;
+  width: 0;
+  background: var(--accent);
+  animation-name: toast-progress-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  pointer-events: none;
+}
+
+@keyframes toast-progress-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
 }
 
 .toast-confirm-accept {
