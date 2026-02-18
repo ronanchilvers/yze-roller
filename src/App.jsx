@@ -5,6 +5,12 @@ import { useStrainTracker } from "./hooks/useStrainTracker.js";
 import { useRollSession } from "./hooks/useRollSession.js";
 import { useCharacterImport } from "./hooks/useCharacterImport.js";
 import { useThemePreference } from "./hooks/useThemePreference.js";
+import { useToast } from "./hooks/useToast.js";
+import { DEFAULT_DICE_RESULT_DURATION_MS } from "./components/toast/constants.js";
+import {
+  buildRollToastPayload,
+  normalizeRollToastEvent,
+} from "./lib/roll-toast-event.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
@@ -20,6 +26,7 @@ function App() {
     onAttributeChange,
     onSkillChange,
   } = usePoolSelection();
+  const toast = useToast();
   const { themePreference, resolvedTheme, setThemePreference } =
     useThemePreference();
 
@@ -85,6 +92,7 @@ function App() {
       : "Roll the dice to see results.";
 
   const historyPanelRef = useRef(null);
+  const latestLocalToastKeyRef = useRef(null);
 
   const onPrimaryAction = () => {
     onRoll();
@@ -124,6 +132,36 @@ function App() {
 
     historyPanelRef.current?.focus();
   }, [isHistoryOpen]);
+
+  useEffect(() => {
+    const localToastKey =
+      recentResults[0]?.id ??
+      (Number.isFinite(currentRoll?.rolledAt)
+        ? `local-${currentRoll.rolledAt}`
+        : null);
+    if (!localToastKey || latestLocalToastKeyRef.current === localToastKey) {
+      return;
+    }
+
+    const localEvent = normalizeRollToastEvent({
+      source: "local",
+      action: currentRoll?.action,
+      successes: currentRoll?.outcomes?.successes,
+      banes: currentRoll?.outcomes?.banes,
+      hasStrain: currentRoll?.outcomes?.hasStrain,
+      occurredAt: currentRoll?.rolledAt,
+    });
+    const toastPayload = buildRollToastPayload(localEvent);
+
+    if (typeof toast.diceResult === "function") {
+      toast.diceResult({
+        breakdown: toastPayload.breakdown,
+        total: toastPayload.total,
+        duration: DEFAULT_DICE_RESULT_DURATION_MS,
+      });
+      latestLocalToastKeyRef.current = localToastKey;
+    }
+  }, [currentRoll, recentResults, toast]);
 
   const handleHistoryKeyDown = (event) => {
     if (event.key === "Escape") {
