@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  ATTRIBUTE_DICE_OPTS,
-  SKILL_DICE_OPTS,
-  normalizeDiceCount,
-} from "../lib/dice.js";
-import {
   getBrowserStorage,
   loadPoolSelection,
   savePoolSelection,
@@ -19,9 +14,7 @@ import {
  *   attributeDice: number,
  *   skillDice: number,
  *   setAttributeDice: (value: number) => void,
- *   setSkillDice: (value: number) => void,
- *   onAttributeChange: (event: React.ChangeEvent<HTMLInputElement>) => void,
- *   onSkillChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+ *   setSkillDice: (value: number) => void
  * }}
  */
 export const usePoolSelection = () => {
@@ -39,22 +32,10 @@ export const usePoolSelection = () => {
     });
   }, [storage, attributeDice, skillDice]);
 
-  const onAttributeChange = (event) => {
-    setAttributeDice(
-      normalizeDiceCount(event.target.value, ATTRIBUTE_DICE_OPTS),
-    );
-  };
-
-  const onSkillChange = (event) => {
-    setSkillDice(normalizeDiceCount(event.target.value, SKILL_DICE_OPTS));
-  };
-
   return {
     attributeDice,
     skillDice,
     setAttributeDice,
     setSkillDice,
-    onAttributeChange,
-    onSkillChange,
   };
 };

@@ -29,8 +29,6 @@ function App() {
     skillDice,
     setAttributeDice,
     setSkillDice,
-    onAttributeChange,
-    onSkillChange,
   } = usePoolSelection();
   const toast = useToast();
   const { themePreference, resolvedTheme, setThemePreference } =
@@ -266,8 +264,6 @@ function App() {
           <DicePoolPanel
             attributeDice={attributeDice}
             skillDice={skillDice}
-            onAttributeChange={onAttributeChange}
-            onSkillChange={onSkillChange}
             onPrimaryAction={onPrimaryAction}
             primaryActionLabel={primaryActionLabel}
             isPrimaryActionDisabled={isPrimaryActionDisabled}

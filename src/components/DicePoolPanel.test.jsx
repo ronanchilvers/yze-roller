@@ -57,9 +57,13 @@ const baseCharacter = {
 };
 
 const TestHarness = ({
+  attributeDice = 2,
+  skillDice = 1,
   importStateOverrides = {},
   onRollWithCounts,
   onPrimaryAction = vi.fn(),
+  setAttributeDice = vi.fn(),
+  setSkillDice = vi.fn(),
   primaryActionLabel = "Roll Dice",
   onImportFile = vi.fn(),
   onResetImport = vi.fn(),
@@ -74,7 +78,11 @@ const TestHarness = ({
     importStateOverrides: PropTypes.object,
     onRollWithCounts: PropTypes.func,
     onPrimaryAction: PropTypes.func,
+    setAttributeDice: PropTypes.func,
+    setSkillDice: PropTypes.func,
     primaryActionLabel: PropTypes.string,
+    attributeDice: PropTypes.number,
+    skillDice: PropTypes.number,
     onImportFile: PropTypes.func,
     onResetImport: PropTypes.func,
     onRoll: PropTypes.func,
@@ -97,16 +105,14 @@ const TestHarness = ({
 
   return (
     <DicePoolPanel
-      attributeDice={2}
-      skillDice={1}
-      onAttributeChange={vi.fn()}
-      onSkillChange={vi.fn()}
+      attributeDice={attributeDice}
+      skillDice={skillDice}
       onPrimaryAction={onPrimaryAction}
       primaryActionLabel={primaryActionLabel}
       isPrimaryActionDisabled={false}
       isRolling={false}
-      setAttributeDice={vi.fn()}
-      setSkillDice={vi.fn()}
+      setAttributeDice={setAttributeDice}
+      setSkillDice={setSkillDice}
       onRoll={onRoll}
       onRollWithCounts={onRollWithCounts}
       importState={importState}
@@ -147,6 +153,72 @@ test("renders manual tab by default", () => {
   expect(container.querySelector("#attributeDice")).not.toBeNull();
   expect(container.querySelector("#skillDice")).not.toBeNull();
   expect(container.querySelector("#characterImport")).toBeNull();
+
+  unmount();
+});
+
+test("manual inputs can be cleared while editing", () => {
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<TestHarness />);
+  });
+
+  const attributeInput = container.querySelector("#attributeDice");
+  const skillInput = container.querySelector("#skillDice");
+
+  act(() => {
+    attributeInput.value = "";
+    attributeInput.dispatchEvent(new Event("input", { bubbles: true }));
+    skillInput.value = "";
+    skillInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  expect(attributeInput.value).toBe("");
+  expect(skillInput.value).toBe("");
+
+  unmount();
+});
+
+test("manual roll validates and commits counts before rolling", () => {
+  const setAttributeDice = vi.fn();
+  const setSkillDice = vi.fn();
+  const onRollWithCounts = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <TestHarness
+        setAttributeDice={setAttributeDice}
+        setSkillDice={setSkillDice}
+        onRollWithCounts={onRollWithCounts}
+      />,
+    );
+  });
+
+  const attributeInput = container.querySelector("#attributeDice");
+  const skillInput = container.querySelector("#skillDice");
+  const rollButton = getButtonByText(container, "Roll Dice");
+
+  act(() => {
+    attributeInput.value = "";
+    attributeInput.dispatchEvent(new Event("input", { bubbles: true }));
+    skillInput.value = "999";
+    skillInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  act(() => {
+    rollButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(setAttributeDice).toHaveBeenCalledWith(1);
+  expect(setSkillDice).toHaveBeenCalledWith(20);
+  expect(onRollWithCounts).toHaveBeenCalledWith({
+    attributeDice: 1,
+    skillDice: 20,
+  });
+  expect(attributeInput.value).toBe("1");
+  expect(skillInput.value).toBe("20");
 
   unmount();
 });

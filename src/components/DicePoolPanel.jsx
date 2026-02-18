@@ -1,7 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { REQUIRED_ATTRIBUTES } from "../lib/character-import.js";
 import { CANONICAL_SKILLS } from "../data/skill-mappings.js";
+import {
+  ATTRIBUTE_DICE_OPTS,
+  SKILL_DICE_OPTS,
+  normalizeDiceCount,
+} from "../lib/dice.js";
 
 const TAB_MANUAL = "manual";
 const TAB_IMPORT = "import";
@@ -24,8 +29,6 @@ const buildAttributeKeyFromLabel = (label) => {
 const DicePoolPanel = ({
   attributeDice,
   skillDice,
-  onAttributeChange,
-  onSkillChange,
   onPrimaryAction,
   primaryActionLabel,
   isPrimaryActionDisabled,
@@ -46,6 +49,10 @@ const DicePoolPanel = ({
   isClearDisabled,
 }) => {
   const [activeTab, setActiveTab] = useState(TAB_MANUAL);
+  const [manualAttributeInput, setManualAttributeInput] = useState(
+    String(attributeDice),
+  );
+  const [manualSkillInput, setManualSkillInput] = useState(String(skillDice));
 
   const {
     fileName = "",
@@ -76,6 +83,42 @@ const DicePoolPanel = ({
   const skillColumnOne = skillOptions.slice(0, skillColumnSplit);
   const skillColumnTwo = skillOptions.slice(skillColumnSplit);
 
+  useEffect(() => {
+    setManualAttributeInput(String(attributeDice));
+  }, [attributeDice]);
+
+  useEffect(() => {
+    setManualSkillInput(String(skillDice));
+  }, [skillDice]);
+
+  const commitManualCounts = () => {
+    const normalizedAttribute = normalizeDiceCount(
+      manualAttributeInput,
+      ATTRIBUTE_DICE_OPTS,
+    );
+    const normalizedSkill = normalizeDiceCount(manualSkillInput, SKILL_DICE_OPTS);
+
+    setAttributeDice(normalizedAttribute);
+    setSkillDice(normalizedSkill);
+    setManualAttributeInput(String(normalizedAttribute));
+    setManualSkillInput(String(normalizedSkill));
+
+    return {
+      attributeDice: normalizedAttribute,
+      skillDice: normalizedSkill,
+    };
+  };
+
+  const handleManualPrimaryAction = () => {
+    const counts = commitManualCounts();
+
+    if (typeof onRollWithCounts === "function") {
+      onRollWithCounts(counts);
+      return;
+    }
+
+    onPrimaryAction();
+  };
 
 
   const getSkillAttributeKey = (skill) =>
@@ -178,8 +221,8 @@ const DicePoolPanel = ({
               min={1}
               max={20}
               inputMode="numeric"
-              value={attributeDice}
-              onChange={onAttributeChange}
+              value={manualAttributeInput}
+              onChange={(event) => setManualAttributeInput(event.target.value)}
             />
           </label>
 
@@ -192,15 +235,15 @@ const DicePoolPanel = ({
               min={0}
               max={20}
               inputMode="numeric"
-              value={skillDice}
-              onChange={onSkillChange}
+              value={manualSkillInput}
+              onChange={(event) => setManualSkillInput(event.target.value)}
             />
           </label>
 
           <button
             type="button"
             className="pool-action-button"
-            onClick={onPrimaryAction}
+            onClick={handleManualPrimaryAction}
             disabled={isPrimaryActionDisabled}
           >
             {isRolling ? "Rolling..." : primaryActionLabel}
@@ -403,8 +446,6 @@ const DicePoolPanel = ({
 DicePoolPanel.propTypes = {
   attributeDice: PropTypes.number.isRequired,
   skillDice: PropTypes.number.isRequired,
-  onAttributeChange: PropTypes.func.isRequired,
-  onSkillChange: PropTypes.func.isRequired,
   onPrimaryAction: PropTypes.func.isRequired,
   primaryActionLabel: PropTypes.string.isRequired,
   isPrimaryActionDisabled: PropTypes.bool.isRequired,

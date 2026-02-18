@@ -59,3 +59,9 @@
   - **Decision:** Accept imported skill dice only when the value is an integer between 0 and 10 inclusive; otherwise reset that skill to 0 and keep import valid with a warning.
   - **Consequences:** Imported skill pools now stay within expected game bounds and malformed/out-of-range inputs are handled safely without aborting import.
   - **Alternatives considered:** Hard-fail import on out-of-range values (rejected to preserve forgiving import behavior).
+
+- **2026-02-18 — Defer manual dice input normalization until roll**
+  - **Context:** Immediate normalization in manual input change handlers forced fallback values while users were editing, making it hard to clear and replace numbers.
+  - **Decision:** Keep manual input fields as draft strings and run normalization/commit only when the manual `Roll Dice` action is triggered.
+  - **Consequences:** Users can clear and retype values naturally; persisted pool counts and roll execution still use normalized numeric bounds.
+  - **Alternatives considered:** Keep on-change normalization and rely on cursor UX workarounds (rejected due to poor editing ergonomics).
