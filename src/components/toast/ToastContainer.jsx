@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import { TOAST_KIND } from "./constants.js";
+import "./Toast.css";
 
 function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
   const safeToasts = Array.isArray(toasts) ? toasts : [];
