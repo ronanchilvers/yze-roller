@@ -157,10 +157,14 @@ function ToastProvider({ children }) {
   );
 
   useEffect(() => {
+    const timers = timersRef.current;
+    const onDismissMap = onDismissMapRef.current;
+    const confirmQueue = confirmQueueRef.current;
+    
     return () => {
-      timersRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-      timersRef.current.clear();
-      onDismissMapRef.current.clear();
+      timers.forEach((timeoutId) => clearTimeout(timeoutId));
+      timers.clear();
+      onDismissMap.clear();
 
       const activeConfirm = confirmActiveRef.current;
       confirmActiveRef.current = null;
@@ -168,9 +172,9 @@ function ToastProvider({ children }) {
         activeConfirm.resolve(false);
       }
 
-      const pendingConfirms = confirmQueueRef.current.splice(
+      const pendingConfirms = confirmQueue.splice(
         0,
-        confirmQueueRef.current.length,
+        confirmQueue.length,
       );
       pendingConfirms.forEach((item) => {
         if (typeof item.resolve === "function") {

@@ -201,10 +201,14 @@ test("manual roll validates and commits counts before rolling", () => {
   const rollButton = getButtonByText(container, "Roll Dice");
 
   act(() => {
-    attributeInput.value = "";
+    // Simulate user typing by setting value and triggering change event
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(attributeInput, "");
     attributeInput.dispatchEvent(new Event("input", { bubbles: true }));
-    skillInput.value = "999";
+    attributeInput.dispatchEvent(new Event("change", { bubbles: true }));
+    
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(skillInput, "999");
     skillInput.dispatchEvent(new Event("input", { bubbles: true }));
+    skillInput.dispatchEvent(new Event("change", { bubbles: true }));
   });
 
   act(() => {

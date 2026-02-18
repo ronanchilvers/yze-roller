@@ -131,7 +131,6 @@ function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
                     <button
                       type="button"
                       className="toast-confirm-accept"
-                      autoFocus
                       onClick={() => {
                         if (typeof onConfirmChoice === "function") {
                           onConfirmChoice(toastId, true);
