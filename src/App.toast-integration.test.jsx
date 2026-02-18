@@ -179,6 +179,62 @@ test("dedupes repeated local event ids emitted from rerender", () => {
   app.unmount();
 });
 
+test("emits push result toast with strain summary", () => {
+  const app = createContainer();
+
+  mocks.rollSessionState = createRollSessionState({
+    currentRoll: {
+      action: "push",
+      rolledAt: 1710000003000,
+      outcomes: {
+        successes: 1,
+        banes: 2,
+        hasStrain: true,
+      },
+      pushableDiceIds: [],
+      dice: [],
+    },
+    recentResults: [{ id: "push-1710000003000", summary: "1 successes, 2 banes (with Strain)" }],
+  });
+
+  app.render(<App />);
+
+  expect(mocks.diceResult).toHaveBeenCalledTimes(1);
+  expect(mocks.diceResult).toHaveBeenCalledWith({
+    title: "Push Result",
+    message: "1 successes, 2 banes (with Strain)",
+    breakdown: "1 successes, 2 banes (with Strain)",
+    total: "1",
+    duration: DEFAULT_DICE_RESULT_DURATION_MS,
+  });
+
+  app.unmount();
+});
+
+test("does not emit local result toast when no stable local identity is present", () => {
+  const app = createContainer();
+
+  mocks.rollSessionState = createRollSessionState({
+    currentRoll: {
+      action: "roll",
+      rolledAt: undefined,
+      outcomes: {
+        successes: 2,
+        banes: 0,
+        hasStrain: false,
+      },
+      pushableDiceIds: [],
+      dice: [],
+    },
+    recentResults: [],
+  });
+
+  app.render(<App />);
+  expect(mocks.diceResult).not.toHaveBeenCalled();
+
+  app.unmount();
+});
+
 test("tray results no longer use aria-live status announcements", () => {
   const app = createContainer();
 
