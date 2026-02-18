@@ -238,13 +238,17 @@ function ToastProvider({ children }) {
         timersRef,
         removeToast,
         createEntry: ({ id, payload: safePayload, durationMs }) => {
+          const title =
+            typeof safePayload.title === "string" ? safePayload.title : "";
+          const message =
+            typeof safePayload.message === "string" ? safePayload.message : "";
           const breakdown =
             typeof safePayload.breakdown === "string"
               ? safePayload.breakdown
               : "";
           const total =
             typeof safePayload.total === "string" ? safePayload.total : "";
-          if (!breakdown && !total) {
+          if (!title && !message && !breakdown && !total) {
             return null;
           }
 
@@ -262,6 +266,8 @@ function ToastProvider({ children }) {
           return {
             id,
             kind: TOAST_KIND.DICE_RESULT,
+            title,
+            message,
             breakdown,
             total,
             duration: durationMs,

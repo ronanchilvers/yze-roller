@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
-import App from "./App.jsx";
+import App, { REMOTE_ROLL_EVENT_BRIDGE_KEY } from "./App.jsx";
 import { DEFAULT_DICE_RESULT_DURATION_MS } from "./components/toast/constants.js";
 
 const mocks = vi.hoisted(() => ({
@@ -110,6 +110,7 @@ const createContainer = () => {
 
 afterEach(() => {
   mocks.diceResult.mockReset();
+  delete window[REMOTE_ROLL_EVENT_BRIDGE_KEY];
   document.body.innerHTML = "";
 });
 
@@ -138,6 +139,8 @@ test("emits one local roll toast for a newly resolved roll and skips duplicates"
 
   expect(mocks.diceResult).toHaveBeenCalledTimes(1);
   expect(mocks.diceResult).toHaveBeenCalledWith({
+    title: "Roll Result",
+    message: "2 successes, 1 banes",
     breakdown: "2 successes, 1 banes",
     total: "2",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
@@ -149,3 +152,35 @@ test("emits one local roll toast for a newly resolved roll and skips duplicates"
   app.unmount();
 });
 
+test("exposes remote roll ingestion seam and emits remote actor toast payload", () => {
+  const app = createContainer();
+
+  mocks.rollSessionState = createRollSessionState();
+  app.render(<App />);
+
+  const ingestRemoteEvent = window[REMOTE_ROLL_EVENT_BRIDGE_KEY];
+  expect(typeof ingestRemoteEvent).toBe("function");
+
+  act(() => {
+    ingestRemoteEvent({
+      source: "local",
+      actorId: "Watcher",
+      action: "push",
+      successes: 3,
+      banes: 2,
+      hasStrain: true,
+      occurredAt: 1710000001111,
+    });
+  });
+
+  expect(mocks.diceResult).toHaveBeenCalledTimes(1);
+  expect(mocks.diceResult).toHaveBeenCalledWith({
+    title: "Watcher pushed",
+    message: "3 successes, 2 banes (with Strain)",
+    breakdown: "3 successes, 2 banes (with Strain)",
+    total: "3",
+    duration: DEFAULT_DICE_RESULT_DURATION_MS,
+  });
+
+  app.unmount();
+});

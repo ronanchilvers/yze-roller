@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { usePoolSelection } from "./hooks/usePoolSelection.js";
 import { useStrainTracker } from "./hooks/useStrainTracker.js";
@@ -15,6 +15,7 @@ import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 const MAX_PREVIOUS_RESULTS = 10;
+export const REMOTE_ROLL_EVENT_BRIDGE_KEY = "__YEAR_ZERO_REMOTE_ROLL_EVENT__";
 const DiceTray3D = lazy(() => import("./components/DiceTray3D.jsx"));
 
 function App() {
@@ -94,6 +95,26 @@ function App() {
   const historyPanelRef = useRef(null);
   const latestLocalToastKeyRef = useRef(null);
 
+  const emitRollToastEvent = useCallback(
+    (eventInput) => {
+      const normalizedEvent = normalizeRollToastEvent(eventInput);
+      const toastPayload = buildRollToastPayload(normalizedEvent);
+
+      if (typeof toast.diceResult !== "function") {
+        return;
+      }
+
+      toast.diceResult({
+        title: toastPayload.title,
+        message: toastPayload.message,
+        breakdown: toastPayload.breakdown,
+        total: toastPayload.total,
+        duration: DEFAULT_DICE_RESULT_DURATION_MS,
+      });
+    },
+    [toast],
+  );
+
   const onPrimaryAction = () => {
     onRoll();
   };
@@ -143,7 +164,7 @@ function App() {
       return;
     }
 
-    const localEvent = normalizeRollToastEvent({
+    emitRollToastEvent({
       source: "local",
       action: currentRoll?.action,
       successes: currentRoll?.outcomes?.successes,
@@ -151,17 +172,29 @@ function App() {
       hasStrain: currentRoll?.outcomes?.hasStrain,
       occurredAt: currentRoll?.rolledAt,
     });
-    const toastPayload = buildRollToastPayload(localEvent);
+    latestLocalToastKeyRef.current = localToastKey;
+  }, [currentRoll, emitRollToastEvent, recentResults]);
 
-    if (typeof toast.diceResult === "function") {
-      toast.diceResult({
-        breakdown: toastPayload.breakdown,
-        total: toastPayload.total,
-        duration: DEFAULT_DICE_RESULT_DURATION_MS,
-      });
-      latestLocalToastKeyRef.current = localToastKey;
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
     }
-  }, [currentRoll, recentResults, toast]);
+
+    const bridgeHandler = (eventPayload) => {
+      emitRollToastEvent({
+        ...eventPayload,
+        source: "remote",
+      });
+    };
+
+    window[REMOTE_ROLL_EVENT_BRIDGE_KEY] = bridgeHandler;
+
+    return () => {
+      if (window[REMOTE_ROLL_EVENT_BRIDGE_KEY] === bridgeHandler) {
+        delete window[REMOTE_ROLL_EVENT_BRIDGE_KEY];
+      }
+    };
+  }, [emitRollToastEvent]);
 
   const handleHistoryKeyDown = (event) => {
     if (event.key === "Escape") {
