@@ -17,90 +17,111 @@ function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
   return (
     <>
       {confirmToasts.length > 0 ? (
-        <div className="toast-confirm-viewport">
-          {confirmToasts.map((toast, index) => {
-            const toastId =
-              typeof toast?.id === "string" && toast.id
-                ? toast.id
-                : `confirm-${index}`;
-            return (
-              <div
-                key={toastId}
-                className="toast-item toast-confirm-item"
-                role="alertdialog"
-                aria-modal="true"
-                data-kind={toast?.kind ?? ""}
-              >
-                {toast?.title ? (
-                  <div className="toast-title">{toast.title}</div>
-                ) : null}
-                {toast?.message ? (
-                  <div className="toast-message">{toast.message}</div>
-                ) : null}
-                <div className="toast-confirm-actions">
-                  <button
-                    type="button"
-                    className="toast-confirm-cancel"
-                    onClick={() => {
-                      if (typeof onConfirmChoice === "function") {
-                        onConfirmChoice(toastId, false);
-                      }
-                    }}
+        <div className="toast-overlay" role="presentation">
+          <div className="toast-confirm-viewport">
+            {confirmToasts.map((toast, index) => {
+              const toastId =
+                typeof toast?.id === "string" && toast.id
+                  ? toast.id
+                  : `confirm-${index}`;
+              const titleId = `toast-confirm-title-${toastId}`;
+              const messageId = `toast-confirm-message-${toastId}`;
+              return (
+                <div
+                  key={toastId}
+                  className="toast-item toast-confirm-item"
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-labelledby={toast?.title ? titleId : undefined}
+                  aria-describedby={toast?.message ? messageId : undefined}
+                  data-kind={toast?.kind ?? ""}
+                >
+                  {toast?.title ? (
+                    <div id={titleId} className="toast-title">
+                      {toast.title}
+                    </div>
+                  ) : null}
+                  {toast?.message ? (
+                    <div id={messageId} className="toast-message">
+                      {toast.message}
+                    </div>
+                  ) : null}
+                  <div
+                    className="toast-confirm-actions"
+                    role="group"
+                    aria-label="Confirmation"
                   >
-                    {toast?.cancelLabel ?? "Cancel"}
-                  </button>
-                  <button
-                    type="button"
-                    className="toast-confirm-accept"
-                    onClick={() => {
-                      if (typeof onConfirmChoice === "function") {
-                        onConfirmChoice(toastId, true);
-                      }
-                    }}
-                  >
-                    {toast?.confirmLabel ?? "Confirm"}
-                  </button>
+                    <button
+                      type="button"
+                      className="toast-confirm-cancel"
+                      onClick={() => {
+                        if (typeof onConfirmChoice === "function") {
+                          onConfirmChoice(toastId, false);
+                        }
+                      }}
+                    >
+                      {toast?.cancelLabel ?? "Cancel"}
+                    </button>
+                    <button
+                      type="button"
+                      className="toast-confirm-accept"
+                      autoFocus
+                      onClick={() => {
+                        if (typeof onConfirmChoice === "function") {
+                          onConfirmChoice(toastId, true);
+                        }
+                      }}
+                    >
+                      {toast?.confirmLabel ?? "Confirm"}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       ) : null}
-      <div className="toast-viewport" aria-live="polite" aria-atomic="true">
+      <div
+        className="toast-viewport"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-label="Notifications"
+      >
         {regularToasts.map((toast, index) => {
-        const toastId =
-          typeof toast?.id === "string" && toast.id
-            ? toast.id
-            : `toast-${index}`;
-        return (
-          <div
-            key={toastId}
-            className="toast-item"
-            role="status"
-            data-kind={toast?.kind ?? ""}
-          >
-            {toast?.title ? <div className="toast-title">{toast.title}</div> : null}
-            {toast?.message ? (
-              <div className="toast-message">{toast.message}</div>
-            ) : null}
-            {toast?.breakdown ? (
-              <div className="toast-breakdown">{toast.breakdown}</div>
-            ) : null}
-            {toast?.total ? <div className="toast-total">{toast.total}</div> : null}
-            <button
-              type="button"
-              className="toast-dismiss-button"
-              onClick={() => {
-                if (typeof onDismiss === "function") {
-                  onDismiss(toastId);
-                }
-              }}
+          const toastId =
+            typeof toast?.id === "string" && toast.id
+              ? toast.id
+              : `toast-${index}`;
+          return (
+            <div
+              key={toastId}
+              className="toast-item"
+              role="status"
+              data-kind={toast?.kind ?? ""}
             >
-              Dismiss
-            </button>
-          </div>
-        );
-      })}
+              {toast?.title ? <div className="toast-title">{toast.title}</div> : null}
+              {toast?.message ? (
+                <div className="toast-message">{toast.message}</div>
+              ) : null}
+              {toast?.breakdown ? (
+                <div className="toast-breakdown">{toast.breakdown}</div>
+              ) : null}
+              {toast?.total ? <div className="toast-total">{toast.total}</div> : null}
+              <button
+                type="button"
+                className="toast-dismiss-button"
+                aria-label={`Dismiss notification ${index + 1}`}
+                onClick={() => {
+                  if (typeof onDismiss === "function") {
+                    onDismiss(toastId);
+                  }
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          );
+        })}
       </div>
     </>
   );
