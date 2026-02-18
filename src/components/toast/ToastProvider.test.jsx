@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { useContext } from "react";
 import PropTypes from "prop-types";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { act } from "react-dom/test-utils";
 import { afterEach, expect, test, vi } from "vitest";
 import ToastProvider, { ToastContext } from "./ToastProvider.jsx";
 import { TOAST_KIND } from "./constants.js";
@@ -29,7 +29,7 @@ const getButtonByText = (container, text) =>
     (button) => button.textContent?.trim() === text,
   );
 
-const TriggerToast = ({ method, options, onResult }) => {
+const TriggerToast = ({ method, options = undefined, onResult = undefined }) => {
   const toast = useContext(ToastContext);
 
   return (
@@ -57,9 +57,32 @@ TriggerToast.propTypes = {
   onResult: PropTypes.func,
 };
 
-TriggerToast.defaultProps = {
-  options: undefined,
-  onResult: undefined,
+const TriggerConfirm = ({ options = undefined, onResolved = undefined }) => {
+  const toast = useContext(ToastContext);
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (!toast || typeof toast.confirm !== "function") {
+          return;
+        }
+
+        void toast.confirm(options).then((value) => {
+          if (typeof onResolved === "function") {
+            onResolved(value);
+          }
+        });
+      }}
+    >
+      Ask
+    </button>
+  );
+};
+
+TriggerConfirm.propTypes = {
+  options: PropTypes.any,
+  onResolved: PropTypes.func,
 };
 
 afterEach(() => {
@@ -265,6 +288,150 @@ test("alert toasts are tagged with the alert kind constant", () => {
   const toastNode = container.querySelector(".toast-item");
   expect(toastNode).not.toBeNull();
   expect(toastNode?.getAttribute("data-kind")).toBe(TOAST_KIND.ALERT);
+
+  unmount();
+});
+
+test("confirm resolves true when accept is clicked", async () => {
+  const onResolved = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <ToastProvider>
+        <TriggerConfirm
+          options={{
+            title: "Delete",
+            message: "Are you sure?",
+            confirmLabel: "Proceed",
+            cancelLabel: "Back",
+          }}
+          onResolved={onResolved}
+        />
+      </ToastProvider>,
+    );
+  });
+
+  const ask = getButtonByText(container, "Ask");
+  act(() => {
+    ask.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(container.querySelector('[role="alertdialog"]')).not.toBeNull();
+  expect(getButtonByText(container, "Proceed")).not.toBeUndefined();
+
+  const proceed = getButtonByText(container, "Proceed");
+  act(() => {
+    proceed.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  await act(async () => {});
+
+  expect(onResolved).toHaveBeenCalledWith(true);
+  expect(container.querySelector('[role="alertdialog"]')).toBeNull();
+
+  unmount();
+});
+
+test("confirm resolves false when cancel is clicked", async () => {
+  const onResolved = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <ToastProvider>
+        <TriggerConfirm
+          options={{
+            title: "Reset",
+            message: "Cancel?",
+            confirmLabel: "OK",
+            cancelLabel: "No",
+          }}
+          onResolved={onResolved}
+        />
+      </ToastProvider>,
+    );
+  });
+
+  const ask = getButtonByText(container, "Ask");
+  act(() => {
+    ask.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  const cancel = getButtonByText(container, "No");
+  act(() => {
+    cancel.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  await act(async () => {});
+
+  expect(onResolved).toHaveBeenCalledWith(false);
+  expect(container.querySelector('[role="alertdialog"]')).toBeNull();
+
+  unmount();
+});
+
+test("confirm queue shows one dialog at a time and resolves in order", async () => {
+  const firstResolved = vi.fn();
+  const secondResolved = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <ToastProvider>
+        <TriggerConfirm
+          options={{
+            title: "First",
+            message: "Confirm first?",
+            confirmLabel: "Yes First",
+            cancelLabel: "No First",
+          }}
+          onResolved={firstResolved}
+        />
+        <TriggerConfirm
+          options={{
+            title: "Second",
+            message: "Confirm second?",
+            confirmLabel: "Yes Second",
+            cancelLabel: "No Second",
+          }}
+          onResolved={secondResolved}
+        />
+      </ToastProvider>,
+    );
+  });
+
+  const askButtons = Array.from(container.querySelectorAll("button")).filter(
+    (button) => button.textContent?.trim() === "Ask",
+  );
+
+  act(() => {
+    askButtons[0].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    askButtons[1].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(container.textContent).toContain("Confirm first?");
+  expect(container.textContent).not.toContain("Confirm second?");
+
+  const firstConfirm = getButtonByText(container, "Yes First");
+  act(() => {
+    firstConfirm.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  await act(async () => {});
+
+  expect(firstResolved).toHaveBeenCalledWith(true);
+  expect(container.textContent).toContain("Confirm second?");
+
+  const secondCancel = getButtonByText(container, "No Second");
+  act(() => {
+    secondCancel.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  await act(async () => {});
+
+  expect(secondResolved).toHaveBeenCalledWith(false);
+  expect(container.querySelector('[role="alertdialog"]')).toBeNull();
 
   unmount();
 });

@@ -15,7 +15,7 @@ import {
   TOAST_TONE,
   isValidToastTone,
 } from "./constants.js";
-import { enqueueTimedToast } from "./enqueue-timed-toast.js";
+import { createToastId, enqueueTimedToast } from "./enqueue-timed-toast.js";
 
 export const ToastContext = createContext(null);
 
@@ -31,10 +31,20 @@ const parseDiceResultPayload = (options) => {
   return options && typeof options === "object" ? options : {};
 };
 
+const parseConfirmPayload = (options) => {
+  if (typeof options === "string") {
+    return { message: options };
+  }
+
+  return options && typeof options === "object" ? options : {};
+};
+
 function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const timersRef = useRef(new Map());
   const onDismissMapRef = useRef(new Map());
+  const confirmQueueRef = useRef([]);
+  const confirmActiveRef = useRef(null);
   const idRef = useRef(0);
 
   const removeToast = useCallback((toastId) => {
@@ -58,11 +68,115 @@ function ToastProvider({ children }) {
     }
   }, []);
 
+  const clearConfirmToast = useCallback((toastId) => {
+    if (typeof toastId !== "string" || !toastId) {
+      return;
+    }
+
+    setToasts((prev) => prev.filter((toast) => toast?.id !== toastId));
+  }, []);
+
+  const showNextConfirm = useCallback(() => {
+    if (confirmActiveRef.current || confirmQueueRef.current.length === 0) {
+      return;
+    }
+
+    const nextItem = confirmQueueRef.current.shift();
+    if (!nextItem) {
+      return;
+    }
+
+    const payload = parseConfirmPayload(nextItem.options);
+    const id = createToastId(idRef);
+    if (!id) {
+      if (typeof nextItem.resolve === "function") {
+        nextItem.resolve(false);
+      }
+      return;
+    }
+
+    const title = typeof payload.title === "string" ? payload.title : "Confirm";
+    const message =
+      typeof payload.message === "string" ? payload.message : "";
+    const confirmLabel =
+      typeof payload.confirmLabel === "string" ? payload.confirmLabel : "Confirm";
+    const cancelLabel =
+      typeof payload.cancelLabel === "string" ? payload.cancelLabel : "Cancel";
+    const tone = isValidToastTone(payload.tone)
+      ? payload.tone
+      : TOAST_TONE.WARNING;
+
+    confirmActiveRef.current = {
+      resolve: nextItem.resolve,
+      toastId: id,
+    };
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id,
+        kind: TOAST_KIND.CONFIRM,
+        title,
+        message,
+        tone,
+        confirmLabel,
+        cancelLabel,
+      },
+    ]);
+  }, []);
+
+  const resolveConfirm = useCallback(
+    (didConfirm) => {
+      const active = confirmActiveRef.current;
+      if (!active) {
+        return;
+      }
+
+      confirmActiveRef.current = null;
+      if (active.toastId) {
+        clearConfirmToast(active.toastId);
+      }
+      if (typeof active.resolve === "function") {
+        active.resolve(Boolean(didConfirm));
+      }
+      showNextConfirm();
+    },
+    [clearConfirmToast, showNextConfirm],
+  );
+
+  const handleConfirmChoice = useCallback(
+    (toastId, didConfirm) => {
+      const active = confirmActiveRef.current;
+      if (!active || active.toastId !== toastId) {
+        return;
+      }
+
+      resolveConfirm(didConfirm);
+    },
+    [resolveConfirm],
+  );
+
   useEffect(() => {
     return () => {
       timersRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
       timersRef.current.clear();
       onDismissMapRef.current.clear();
+
+      const activeConfirm = confirmActiveRef.current;
+      confirmActiveRef.current = null;
+      if (activeConfirm && typeof activeConfirm.resolve === "function") {
+        activeConfirm.resolve(false);
+      }
+
+      const pendingConfirms = confirmQueueRef.current.splice(
+        0,
+        confirmQueueRef.current.length,
+      );
+      pendingConfirms.forEach((item) => {
+        if (typeof item.resolve === "function") {
+          item.resolve(false);
+        }
+      });
     };
   }, []);
 
@@ -161,15 +275,24 @@ function ToastProvider({ children }) {
   const value = useMemo(
     () => ({
       alert,
+      confirm: (options) =>
+        new Promise((resolve) => {
+          confirmQueueRef.current.push({ options, resolve });
+          showNextConfirm();
+        }),
       diceResult,
     }),
-    [alert, diceResult],
+    [alert, diceResult, showNextConfirm],
   );
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      <ToastContainer
+        toasts={toasts}
+        onDismiss={removeToast}
+        onConfirmChoice={handleConfirmChoice}
+      />
     </ToastContext.Provider>
   );
 }
@@ -179,4 +302,3 @@ ToastProvider.propTypes = {
 };
 
 export default ToastProvider;
-
