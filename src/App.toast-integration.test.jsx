@@ -231,16 +231,16 @@ test("does not emit local result toast when no stable local identity is present"
   app.unmount();
 });
 
-test("tray results no longer use aria-live status announcements", () => {
+test("does not render the legacy tray results panel", () => {
   const app = createContainer();
 
   mocks.rollSessionState = createRollSessionState();
   app.render(<App />);
 
   const trayResults = app.container.querySelector(".tray-results");
-  expect(trayResults).not.toBeNull();
-  expect(trayResults?.getAttribute("role")).toBeNull();
-  expect(trayResults?.getAttribute("aria-live")).toBeNull();
+  const trayPanel = app.container.querySelector(".tray-panel");
+  expect(trayResults).toBeNull();
+  expect(trayPanel).toBeNull();
 
   app.unmount();
 });

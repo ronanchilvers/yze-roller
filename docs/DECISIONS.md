@@ -47,3 +47,9 @@
   - **Decision:** Use `diceResult` mode for roll outcomes, default duration `10000ms`, source-agnostic ingestion layer required now, remote label based on `actorId`, and pending queue policy of 20 items with oldest-first dropping. Defer confirm API usage for now.
   - **Consequences:** Roll-result presentation is consistent and fixed for initial delivery; queue behavior under bursty remote events is deterministic; upstream systems still own how `actorId` is represented to users.
   - **Alternatives considered:** `alert` mode for roll results, shorter duration defaults, and summarized/drop-newest overflow policies.
+
+- **2026-02-18 — Move push/clear controls into the main panel and remove tray results UI**
+  - **Context:** With toast-based roll feedback in place, the old tray results/history panel duplicated result messaging while still owning push/clear controls.
+  - **Decision:** Remove the tray results panel from `App` and render `Push X Dice` plus `Clear Dice` controls in `DicePoolPanel` footer, side-by-side on desktop and stacked on mobile.
+  - **Consequences:** Layout is simpler, controls stay in the primary panel regardless of tab, and redundant inline result/history UI is eliminated.
+  - **Alternatives considered:** Keep tray panel only for controls (rejected to avoid a split interaction surface).

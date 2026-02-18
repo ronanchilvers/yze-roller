@@ -19,7 +19,6 @@ import {
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
-const MAX_PREVIOUS_RESULTS = 10;
 export const REMOTE_ROLL_EVENT_BRIDGE_KEY = "__YEAR_ZERO_REMOTE_ROLL_EVENT__";
 const DEDUPE_TTL_MS = ROLL_TOAST_DEDUPE_BUCKET_MS * 2;
 const DiceTray3D = lazy(() => import("./components/DiceTray3D.jsx"));
@@ -58,8 +57,6 @@ function App() {
     currentRoll,
     rollRequest,
     recentResults,
-    isHistoryOpen,
-    setIsHistoryOpen,
     isRolling,
     canPush,
     onRoll,
@@ -73,8 +70,6 @@ function App() {
     onBaneIncrement: applyBaneIncrement,
   });
   const activeDice = rollRequest?.dice ?? currentRoll?.dice ?? [];
-  const previousResults = recentResults.slice(1, MAX_PREVIOUS_RESULTS + 1);
-  const hasPreviousResults = previousResults.length > 0;
   const pushableDiceCount = Number(currentRoll?.pushableDiceIds?.length ?? 0);
   const canClearDice =
     isRolling || activeDice.length > 0 || recentResults.length > 0;
@@ -82,15 +77,6 @@ function App() {
   const primaryActionLabel = "Roll Dice";
   const isPrimaryActionDisabled = isRolling;
 
-  const trayLead = isRolling
-    ? rollRequest?.action === "push"
-      ? "Pushing selected dice..."
-      : "Rolling dice..."
-    : currentRoll
-      ? "Latest result is shown in notifications."
-      : "Roll the dice to see results.";
-
-  const historyPanelRef = useRef(null);
   const emittedToastKeysRef = useRef(new Map());
 
   const emitRollToastEvent = useCallback(
@@ -166,14 +152,6 @@ function App() {
   }, [pendingRollCounts, isRolling, onRoll]);
 
   useEffect(() => {
-    if (!isHistoryOpen) {
-      return;
-    }
-
-    historyPanelRef.current?.focus();
-  }, [isHistoryOpen]);
-
-  useEffect(() => {
     const localToastKey =
       recentResults[0]?.id ??
       (Number.isFinite(currentRoll?.rolledAt)
@@ -214,12 +192,6 @@ function App() {
       }
     };
   }, [emitRollToastEvent]);
-
-  const handleHistoryKeyDown = (event) => {
-    if (event.key === "Escape") {
-      setIsHistoryOpen(false);
-    }
-  };
 
   return (
     <main className="app-shell">
@@ -305,71 +277,12 @@ function App() {
             onResetImport={resetImport}
             onSelectAttribute={setSelectedAttribute}
             onSelectSkill={setSelectedSkill}
+            onPush={onPush}
+            pushActionLabel={`Push ${pushableDiceCount} Dice`}
+            isPushDisabled={isRolling || !hasRolled || !canPush}
+            onClearDice={onClearDice}
+            isClearDisabled={!canClearDice}
           />
-
-          <section className="tray-panel" aria-label="Dice tray" aria-busy={isRolling}>
-            <div className="tray-results">
-              <div className="tray-results-row">
-                <div className="tray-summary-wrap">
-                  <p className="tray-lead">{trayLead}</p>
-                  {!isRolling && currentRoll && hasPreviousResults ? (
-                    <button
-                      type="button"
-                      className="history-toggle"
-                      onClick={() => setIsHistoryOpen((open) => !open)}
-                      aria-label={
-                        isHistoryOpen
-                          ? "Hide previous results"
-                          : "Show previous results"
-                      }
-                      aria-expanded={isHistoryOpen}
-                      aria-controls="previous-results-list"
-                    >
-                      {isHistoryOpen ? "▴" : "▾"}
-                    </button>
-                  ) : null}
-                </div>
-                <div className="tray-action-buttons">
-                  <button
-                    type="button"
-                    className="pool-action-button tray-clear-button"
-                    onClick={onPush}
-                    disabled={isRolling || !hasRolled || !canPush}
-                  >
-                    Push {pushableDiceCount} Dice
-                  </button>
-                  <button
-                    type="button"
-                    className="pool-action-button tray-clear-button"
-                    onClick={onClearDice}
-                    disabled={!canClearDice}
-                  >
-                    Clear Dice
-                  </button>
-                </div>
-              </div>
-              {hasPreviousResults && isHistoryOpen ? (
-                // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-                <div
-                  className="history-dropdown"
-                  id="previous-results-list"
-                  role="dialog"
-                  aria-modal="false"
-                  tabIndex={-1}
-                  onKeyDown={handleHistoryKeyDown}
-                  ref={historyPanelRef}
-                >
-
-                  <ul className="history-list">
-                    {previousResults.map((entry) => (
-                      <li key={entry.id}>{entry.summary}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-
-          </section>
         </div>
       </section>
     </main>

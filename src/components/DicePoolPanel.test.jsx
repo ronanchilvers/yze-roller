@@ -64,6 +64,11 @@ const TestHarness = ({
   onImportFile = vi.fn(),
   onResetImport = vi.fn(),
   onRoll = vi.fn(),
+  onPush = vi.fn(),
+  pushActionLabel = "Push 0 Dice",
+  isPushDisabled = true,
+  onClearDice = vi.fn(),
+  isClearDisabled = false,
 }) => {
   TestHarness.propTypes = {
     importStateOverrides: PropTypes.object,
@@ -73,6 +78,11 @@ const TestHarness = ({
     onImportFile: PropTypes.func,
     onResetImport: PropTypes.func,
     onRoll: PropTypes.func,
+    onPush: PropTypes.func,
+    pushActionLabel: PropTypes.string,
+    isPushDisabled: PropTypes.bool,
+    onClearDice: PropTypes.func,
+    isClearDisabled: PropTypes.bool,
   };
   const [importState, setImportState] = useState({
     fileName: "Bessie-Collins.json",
@@ -102,6 +112,11 @@ const TestHarness = ({
       importState={importState}
       onImportFile={onImportFile}
       onResetImport={onResetImport}
+      onPush={onPush}
+      pushActionLabel={pushActionLabel}
+      isPushDisabled={isPushDisabled}
+      onClearDice={onClearDice}
+      isClearDisabled={isClearDisabled}
       onSelectAttribute={(value) =>
         setImportState((current) => ({
           ...current,
@@ -132,6 +147,23 @@ test("renders manual tab by default", () => {
   expect(container.querySelector("#attributeDice")).not.toBeNull();
   expect(container.querySelector("#skillDice")).not.toBeNull();
   expect(container.querySelector("#characterImport")).toBeNull();
+
+  unmount();
+});
+
+test("renders panel action row with push and clear controls", () => {
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <TestHarness pushActionLabel="Push 4 Dice" isPushDisabled={false} />,
+    );
+  });
+
+  const panelActionRow = container.querySelector(".panel-action-row");
+  expect(panelActionRow).not.toBeNull();
+  expect(getButtonByText(container, "Push 4 Dice")).toBeDefined();
+  expect(getButtonByText(container, "Clear Dice")).toBeDefined();
 
   unmount();
 });
@@ -265,6 +297,37 @@ test("import roll defers to primary action when in push mode", () => {
 
   expect(onRoll).toHaveBeenCalled();
   expect(onPrimaryAction).not.toHaveBeenCalled();
+
+  unmount();
+});
+
+test("panel action row buttons call push and clear handlers", () => {
+  const onPush = vi.fn();
+  const onClearDice = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <TestHarness
+        onPush={onPush}
+        onClearDice={onClearDice}
+        pushActionLabel="Push 2 Dice"
+        isPushDisabled={false}
+      />,
+    );
+  });
+
+  const pushButton = getButtonByText(container, "Push 2 Dice");
+  const clearButton = getButtonByText(container, "Clear Dice");
+  act(() => {
+    pushButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  act(() => {
+    clearButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(onPush).toHaveBeenCalledTimes(1);
+  expect(onClearDice).toHaveBeenCalledTimes(1);
 
   unmount();
 });

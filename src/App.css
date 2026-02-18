@@ -22,13 +22,6 @@
   --summary-pill-bg: #fffaf2;
   --error-bg: #fff5f1;
   --warning-bg: #fffbe8;
-  --tray-border: #b9cbb9;
-  --tray-surface-1: #f4f8f4;
-  --tray-surface-2: #ecf3ec;
-  --history-toggle-bg: #f9fcf9;
-  --history-dropdown-border: #c6d5c6;
-  --history-dropdown-bg: #f8fcf8;
-  --history-shadow: 0 0 10px 1px rgba(28, 43, 28, 0.4);
   --spinner-border: rgba(47, 71, 78, 0.2);
   --spinner-border-top: rgba(47, 71, 78, 0.7);
   --shell-glow-a: #fffdf0;
@@ -59,13 +52,6 @@
   --summary-pill-bg: #2c3d47;
   --error-bg: #45292c;
   --warning-bg: #4a3a24;
-  --tray-border: #3c5a48;
-  --tray-surface-1: #1c2e25;
-  --tray-surface-2: #16251e;
-  --history-toggle-bg: #213128;
-  --history-dropdown-border: #496050;
-  --history-dropdown-bg: #1e2f26;
-  --history-shadow: 0 0 12px 1px rgba(0, 0, 0, 0.6);
   --spinner-border: rgba(184, 199, 206, 0.22);
   --spinner-border-top: rgba(184, 199, 206, 0.78);
   --shell-glow-a: #1f2e36;
@@ -244,6 +230,13 @@ h2 {
   padding: clamp(0.85rem, 1.5vw, 1.05rem);
 }
 
+.panel-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -313,8 +306,7 @@ h2 {
 .strain-reset-button:focus-visible,
 .pool-tab:focus-visible,
 .theme-select select:focus-visible,
-.import-summary-item:focus-visible,
-.history-toggle:focus-visible {
+.import-summary-item:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
@@ -517,6 +509,10 @@ h2 {
   font-weight: 700;
 }
 
+.secondary-action-button {
+  white-space: nowrap;
+}
+
 /* ── Dice stage (full-page) ───────────────────────────────────────── */
 
 .dice-stage-fullscreen {
@@ -569,103 +565,6 @@ h2 {
   }
 }
 
-/* ── Tray results & history ────────────────────────────────────────── */
-
-.tray-results {
-  position: relative;
-  z-index: 3;
-  margin-top: 0;
-  border: 1px solid var(--tray-border);
-  border-radius: 0.75rem;
-  background: linear-gradient(180deg, var(--tray-surface-1), var(--tray-surface-2));
-  padding: 0.85rem 0.95rem;
-  color: var(--ink-700);
-  width: 100%;
-}
-
-.tray-results p {
-  margin: 0 0 0.5rem;
-}
-
-.tray-results p:last-child {
-  margin-bottom: 0;
-}
-
-.tray-lead {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--ink-900);
-}
-
-.tray-results-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.tray-summary-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.tray-summary-wrap .tray-lead {
-  margin-bottom: 0;
-  text-align: left;
-}
-
-.history-toggle {
-  border: 1px solid var(--tray-border);
-  border-radius: 0.45rem;
-  background: var(--history-toggle-bg);
-  color: var(--ink-700);
-  font: inherit;
-  font-size: 0.85rem;
-  line-height: 1;
-  width: 1.4rem;
-  height: 1.4rem;
-  padding: 0;
-  cursor: pointer;
-}
-
-.history-dropdown {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  left: 0;
-  width: min(100%, 30rem);
-  border: 1px solid var(--history-dropdown-border);
-  border-radius: 0.6rem;
-  background: var(--history-dropdown-bg);
-  padding: 0.45rem 0.55rem;
-  box-shadow: var(--history-shadow);
-  z-index: 6;
-}
-
-.history-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.35rem;
-}
-
-.history-list li {
-  font-size: 0.9rem;
-  color: var(--ink-700);
-}
-
-.tray-action-buttons {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.tray-clear-button {
-  white-space: nowrap;
-}
-
 /* ── Responsive overrides ──────────────────────────────────────────── */
 
 @media (max-width: 760px) {
@@ -712,32 +611,11 @@ h2 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .tray-results {
-    width: 100%;
+  .panel-action-row {
+    grid-template-columns: 1fr;
   }
 
-  .tray-results-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-
-  .tray-summary-wrap {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .tray-summary-wrap .tray-lead {
-    text-align: center;
-  }
-
-  .tray-action-buttons {
-    width: 100%;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .tray-clear-button {
+  .secondary-action-button {
     width: 100%;
   }
 }
