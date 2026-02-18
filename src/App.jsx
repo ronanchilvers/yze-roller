@@ -152,6 +152,10 @@ function App() {
   }, [pendingRollCounts, isRolling, onRoll]);
 
   useEffect(() => {
+    if (!currentRoll) {
+      return;
+    }
+
     const localToastKey =
       recentResults[0]?.id ??
       (Number.isFinite(currentRoll?.rolledAt)

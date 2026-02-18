@@ -177,6 +177,42 @@ test("dedupes repeated local event ids emitted from rerender", () => {
   app.unmount();
 });
 
+test("clear state does not emit a synthetic local roll toast", () => {
+  const app = createContainer();
+  const nowSpy = vi.spyOn(Date, "now");
+  nowSpy.mockReturnValue(1710000004000);
+
+  mocks.rollSessionState = createRollSessionState({
+    currentRoll: {
+      action: "roll",
+      rolledAt: 1710000004000,
+      outcomes: {
+        successes: 2,
+        banes: 1,
+        hasStrain: false,
+      },
+      pushableDiceIds: [],
+      dice: [],
+    },
+    recentResults: [{ id: "clear-case-1710000004000", summary: "2 successes, 1 banes" }],
+  });
+
+  app.render(<App />);
+  expect(mocks.diceResult).toHaveBeenCalledTimes(1);
+
+  nowSpy.mockReturnValue(1710000008000);
+  mocks.rollSessionState = createRollSessionState({
+    currentRoll: null,
+    recentResults: [{ id: "clear-case-1710000004000", summary: "2 successes, 1 banes" }],
+  });
+
+  app.render(<App />);
+  expect(mocks.diceResult).toHaveBeenCalledTimes(1);
+
+  nowSpy.mockRestore();
+  app.unmount();
+});
+
 test("emits push result toast with strain summary", () => {
   const app = createContainer();
 
