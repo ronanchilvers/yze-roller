@@ -52,6 +52,7 @@ test("renders dismiss button for regular toast and calls onDismiss", () => {
 
   const dismissButton = getButtonByText(app.container, "Dismiss");
   expect(dismissButton).not.toBeUndefined();
+  expect(dismissButton?.getAttribute("aria-label")).toBe("Dismiss notification 1");
 
   act(() => {
     dismissButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -82,6 +83,8 @@ test("renders confirm toast labels from payload and calls onConfirmChoice", () =
   );
 
   expect(app.container.querySelector('[role="alertdialog"]')).not.toBeNull();
+  expect(app.container.querySelector(".toast-confirm-actions")).not.toBeNull();
+  expect(app.container.querySelector('[aria-label="Confirmation"]')).not.toBeNull();
   expect(getButtonByText(app.container, "Proceed")).not.toBeUndefined();
   expect(getButtonByText(app.container, "Keep")).not.toBeUndefined();
 
@@ -102,6 +105,36 @@ test("renders confirm toast labels from payload and calls onConfirmChoice", () =
   app.unmount();
 });
 
+test("confirm toast includes aria labelling references", () => {
+  const app = createContainer();
+
+  app.render(
+    <ToastContainer
+      toasts={[
+        {
+          id: "confirm-a11y",
+          kind: TOAST_KIND.CONFIRM,
+          title: "Reset",
+          message: "Are you sure?",
+        },
+      ]}
+    />,
+  );
+
+  const dialog = app.container.querySelector('[role="alertdialog"]');
+  expect(dialog).not.toBeNull();
+  expect(dialog?.getAttribute("aria-labelledby")).toBe(
+    "toast-confirm-title-confirm-a11y",
+  );
+  expect(dialog?.getAttribute("aria-describedby")).toBe(
+    "toast-confirm-message-confirm-a11y",
+  );
+  expect(app.container.querySelector("#toast-confirm-title-confirm-a11y")).not.toBeNull();
+  expect(app.container.querySelector("#toast-confirm-message-confirm-a11y")).not.toBeNull();
+
+  app.unmount();
+});
+
 test("returns null for invalid toast collections", () => {
   const app = createContainer();
   app.render(<ToastContainer toasts={null} />);
@@ -109,4 +142,3 @@ test("returns null for invalid toast collections", () => {
   expect(app.container.querySelector(".toast-overlay")).toBeNull();
   app.unmount();
 });
-

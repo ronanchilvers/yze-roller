@@ -162,6 +162,41 @@ test("diceResult creates a dice result toast", () => {
   unmount();
 });
 
+test("diceResult supports title/message payload for remote actor context", () => {
+  const onResult = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <ToastProvider>
+        <TriggerToast
+          method="diceResult"
+          options={{
+            title: "Watcher pushed",
+            message: "3 successes, 2 banes (with Strain)",
+            duration: 0,
+          }}
+          onResult={onResult}
+        />
+      </ToastProvider>,
+    );
+  });
+
+  const trigger = getButtonByText(container, "Trigger");
+  act(() => {
+    trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  const toastNode = container.querySelector(".toast-item");
+  expect(toastNode).not.toBeNull();
+  expect(toastNode?.getAttribute("data-kind")).toBe(TOAST_KIND.DICE_RESULT);
+  expect(toastNode?.textContent).toContain("Watcher pushed");
+  expect(toastNode?.textContent).toContain("3 successes, 2 banes (with Strain)");
+  expect(onResult).toHaveBeenCalledTimes(1);
+
+  unmount();
+});
+
 test("auto-dismisses timed toast and calls onDismiss callback", () => {
   vi.useFakeTimers();
   const onDismiss = vi.fn();

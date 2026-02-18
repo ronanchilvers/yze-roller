@@ -105,7 +105,8 @@ test("returns provider handlers when wrapped with ToastProvider", () => {
   const id = captured.alert({ message: "Hello", duration: 0 });
   expect(typeof id).toBe("string");
   expect(id).toMatch(/^toast-\d+$/);
+  expect(typeof captured.diceResult).toBe("function");
+  expect(typeof captured.confirm).toBe("function");
 
   app.unmount();
 });
-
