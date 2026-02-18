@@ -1,30 +1,95 @@
+import { useLayoutEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { TOAST_KIND } from "./constants.js";
 import "./Toast.css";
 
 function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
   const safeToasts = Array.isArray(toasts) ? toasts : [];
-  const confirmToasts = safeToasts.filter(
-    (toast) => toast?.kind === TOAST_KIND.CONFIRM,
-  );
-  const regularToasts = safeToasts.filter(
-    (toast) => toast?.kind !== TOAST_KIND.CONFIRM,
-  );
+  const resolveToastId = (toast, index, prefix = "toast") =>
+    typeof toast?.id === "string" && toast.id ? toast.id : `${prefix}-${index}`;
+  const confirmToasts = safeToasts
+    .filter((toast) => toast?.kind === TOAST_KIND.CONFIRM)
+    .map((toast, index) => ({
+      toast,
+      toastId: resolveToastId(toast, index, "confirm"),
+    }));
+  const regularToasts = safeToasts
+    .filter((toast) => toast?.kind !== TOAST_KIND.CONFIRM)
+    .map((toast, index) => ({
+      toast,
+      toastId: resolveToastId(toast, index),
+    }));
+  const toastNodeMapRef = useRef(new Map());
+  const toastPositionMapRef = useRef(new Map());
 
-  if (safeToasts.length === 0) {
+  useLayoutEffect(() => {
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      return;
+    }
+
+    const nodeMap = toastNodeMapRef.current;
+    const previousPositions = toastPositionMapRef.current;
+    const nextPositions = new Map();
+
+    regularToasts.forEach(({ toastId }) => {
+      const node = nodeMap.get(toastId);
+      if (!node) {
+        return;
+      }
+
+      const nextTop = node.getBoundingClientRect().top;
+      nextPositions.set(toastId, nextTop);
+      const previousTop = previousPositions.get(toastId);
+      if (!Number.isFinite(previousTop)) {
+        return;
+      }
+
+      const deltaY = previousTop - nextTop;
+      if (Math.abs(deltaY) < 1) {
+        return;
+      }
+
+      node.style.transition = "none";
+      node.style.transform = `translateY(${deltaY}px)`;
+      node.getBoundingClientRect();
+      node.style.transition = "transform 220ms ease-out";
+      node.style.transform = "";
+    });
+
+    toastPositionMapRef.current = nextPositions;
+  }, [regularToasts]);
+
+  const setToastNode = (toastId, node) => {
+    if (!toastId) {
+      return;
+    }
+    if (node) {
+      toastNodeMapRef.current.set(toastId, node);
+    } else {
+      toastNodeMapRef.current.delete(toastId);
+    }
+  };
+
+  const dismissLabelNumber = (index) => index + 1;
+
+  const confirmToastsCount = confirmToasts.length;
+
+  const hasSafeToasts = safeToasts.length > 0;
+
+  if (!hasSafeToasts) {
     return null;
   }
 
   return (
     <>
-      {confirmToasts.length > 0 ? (
+      {confirmToastsCount > 0 ? (
         <div className="toast-overlay" role="presentation">
           <div className="toast-confirm-viewport">
-            {confirmToasts.map((toast, index) => {
-              const toastId =
-                typeof toast?.id === "string" && toast.id
-                  ? toast.id
-                  : `confirm-${index}`;
+            {confirmToasts.map(({ toast, toastId }) => {
               const titleId = `toast-confirm-title-${toastId}`;
               const messageId = `toast-confirm-message-${toastId}`;
               return (
@@ -88,11 +153,7 @@ function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
         aria-atomic="true"
         aria-label="Notifications"
       >
-        {regularToasts.map((toast, index) => {
-          const toastId =
-            typeof toast?.id === "string" && toast.id
-              ? toast.id
-              : `toast-${index}`;
+        {regularToasts.map(({ toast, toastId }, index) => {
           const isDiceResult = toast?.kind === TOAST_KIND.DICE_RESULT;
           const diceResultText =
             typeof toast?.message === "string" && toast.message
@@ -106,6 +167,7 @@ function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
               className="toast-item"
               role="status"
               data-kind={toast?.kind ?? ""}
+              ref={(node) => setToastNode(toastId, node)}
             >
               {toast?.title ? <div className="toast-title">{toast.title}</div> : null}
               {isDiceResult ? (
@@ -124,7 +186,7 @@ function ToastContainer({ toasts = [], onDismiss, onConfirmChoice }) {
               <button
                 type="button"
                 className="toast-dismiss-button"
-                aria-label={`Dismiss notification ${index + 1}`}
+                aria-label={`Dismiss notification ${dismissLabelNumber(index)}`}
                 onClick={() => {
                   if (typeof onDismiss === "function") {
                     onDismiss(toastId);

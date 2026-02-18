@@ -162,6 +162,49 @@ test("dice result renders a single main result line", () => {
   app.unmount();
 });
 
+test("keeps existing toasts visible when a new toast is added", () => {
+  const app = createContainer();
+
+  app.render(
+    <ToastContainer
+      toasts={[
+        {
+          id: "a1",
+          kind: TOAST_KIND.ALERT,
+          title: "First",
+          message: "First message",
+        },
+      ]}
+    />,
+  );
+
+  app.render(
+    <ToastContainer
+      toasts={[
+        {
+          id: "a1",
+          kind: TOAST_KIND.ALERT,
+          title: "First",
+          message: "First message",
+        },
+        {
+          id: "a2",
+          kind: TOAST_KIND.ALERT,
+          title: "Second",
+          message: "Second message",
+        },
+      ]}
+    />,
+  );
+
+  const items = app.container.querySelectorAll(".toast-item[data-kind=\"alert\"]");
+  expect(items.length).toBe(2);
+  expect(app.container.textContent).toContain("First");
+  expect(app.container.textContent).toContain("Second");
+
+  app.unmount();
+});
+
 test("returns null for invalid toast collections", () => {
   const app = createContainer();
   app.render(<ToastContainer toasts={null} />);
