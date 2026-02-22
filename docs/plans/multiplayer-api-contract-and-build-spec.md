@@ -156,6 +156,10 @@ Indexes:
 - `session_tokens(token_session_id, token_role, token_revoked)`
 - `session_join_tokens(join_token_session_id, join_token_revoked)`
 
+Foreign key policy:
+- Do not add database foreign key constraints in v1.
+- Enforce relationships at application/service level.
+
 ## 7. Event Schema
 
 Event object returned from `GET /api/events`:

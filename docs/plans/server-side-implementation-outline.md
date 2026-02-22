@@ -37,6 +37,7 @@ Additional requirements:
   - `state_name='scene_strain'` with string integer value (for example `"0"`).
   - `state_name='joining_enabled'` with boolean string value (`"true"`/`"false"`).
 - Index `events(event_session_id, event_id)` for polling.
+- Do not add database foreign key constraints; enforce relationships in application logic.
 
 ## 4. Middleware and Shared Utilities
 
