@@ -65,3 +65,21 @@
   - **Decision:** Keep manual input fields as draft strings and run normalization/commit only when the manual `Roll Dice` action is triggered.
   - **Consequences:** Users can clear and retype values naturally; persisted pool counts and roll execution still use normalized numeric bounds.
   - **Alternatives considered:** Keep on-change normalization and rely on cursor UX workarounds (rejected due to poor editing ergonomics).
+
+- **2026-02-22 — Finalize API implementation via contract-first closure**
+  - **Context:** Client and server multiplayer docs define major flows but left implementation-critical gaps (request/response schema details, cursor semantics, actor identity authority, and GM management completeness).
+  - **Decision:** Use a contract-first readiness checklist as the implementation gate, requiring closure of all documented blockers before API build sign-off.
+  - **Consequences:** Reduces client/server drift and prevents partial endpoint implementation from hardcoding assumptions that later break polling, auth, or event consistency.
+  - **Alternatives considered:** Implement endpoints directly from outlines and refine later (rejected due to high rework and integration risk).
+
+- **2026-02-22 — Single-source API contract with role-specific runbooks**
+  - **Context:** Implementation work needed one agent-friendly spec that both client and server tracks could follow without diverging endpoint behavior.
+  - **Decision:** Create a canonical multiplayer API contract document as source of truth, then align client and server implementation docs as execution runbooks that reference the canonical contract.
+  - **Consequences:** Endpoint schemas, auth semantics, event behavior, and tests are now defined once and consumed consistently; v1 deferrals (manual scene strain set, timeout leave events) are explicit.
+  - **Alternatives considered:** Keep separate client/server specs as independent sources of truth (rejected due to synchronization drift risk).
+
+- **2026-02-22 — Store `joining_enabled` in `session_state`**
+  - **Context:** `session_state` was updated to a generic key/value component list and would otherwise overlap with `sessions.session_joining_enabled`.
+  - **Decision:** Make `session_state` authoritative for both `scene_strain` and `joining_enabled`, with `state_value` string encoding and explicit type conversion rules (`\"true\"/\"false\"` for `joining_enabled`).
+  - **Consequences:** Avoids dual-write drift between tables; join authorization and session snapshot behavior now depend on parsed `session_state` values.
+  - **Alternatives considered:** Keep `joining_enabled` in `sessions` while using `session_state` only for strain (rejected due to split state authority).
