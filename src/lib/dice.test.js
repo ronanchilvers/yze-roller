@@ -29,6 +29,7 @@ test("sanitizePoolCounts guards invalid structures with safe defaults", () => {
     attributeDice: 1,
     skillDice: 0,
     strainDice: 0,
+    modifierDice: 0,
   });
 
   assert.deepEqual(
@@ -41,6 +42,7 @@ test("sanitizePoolCounts guards invalid structures with safe defaults", () => {
       attributeDice: 1,
       skillDice: 0,
       strainDice: 0,
+      modifierDice: 0,
     },
   );
 });
@@ -137,6 +139,23 @@ test("buildDicePool creates expected number of typed dice", () => {
   );
   assert.equal(pool.filter((die) => die.type === DICE_TYPE.SKILL).length, 1);
   assert.equal(pool.filter((die) => die.type === DICE_TYPE.STRAIN).length, 3);
+});
+
+test("buildDicePool includes modifier dice when requested", () => {
+  const pool = buildDicePool({
+    attributeDice: 1,
+    skillDice: 1,
+    strainDice: 0,
+    modifierDice: 2,
+  });
+
+  assert.equal(pool.filter((die) => die.type === DICE_TYPE.MODIFIER).length, 2);
+  assert.deepEqual(
+    pool
+      .filter((die) => die.type === DICE_TYPE.MODIFIER)
+      .map((die) => die.id),
+    ["modifier-1", "modifier-2"],
+  );
 });
 
 test("aggregateDiceById merges updates while preserving unchanged dice", () => {
@@ -243,6 +262,7 @@ test("sanitizePoolCounts ignores prototype pollution attempts", () => {
     attributeDice: 5,
     skillDice: 2,
     strainDice: 0,
+    modifierDice: 0,
   });
 
   // Verify no prototype pollution occurred
