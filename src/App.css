@@ -264,6 +264,24 @@ h2 {
   accent-color: #7a4cc9;
 }
 
+.modifier-markers {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--ink-700);
+}
+
+.modifier-marker {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.modifier-marker.is-active {
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
 .panel-header {
   display: flex;
   align-items: center;

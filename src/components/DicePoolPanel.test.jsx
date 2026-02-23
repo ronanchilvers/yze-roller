@@ -182,6 +182,12 @@ test("modifier slider supports range -3 to +3 with default 0 and updates", () =>
   const valueLabel = container.querySelector("#rollModifierValue");
   const modifierControl = container.querySelector(".modifier-control");
   const actionRow = container.querySelector(".panel-action-row");
+  const markerLabels = Array.from(
+    container.querySelectorAll(".modifier-marker"),
+  ).map((node) => node.textContent?.trim());
+  const initialActiveMarker = container.querySelector(
+    ".modifier-marker.is-active",
+  );
 
   expect(slider).not.toBeNull();
   expect(slider.min).toBe("-3");
@@ -189,6 +195,8 @@ test("modifier slider supports range -3 to +3 with default 0 and updates", () =>
   expect(slider.step).toBe("1");
   expect(slider.value).toBe("0");
   expect(valueLabel?.textContent?.trim()).toBe("0");
+  expect(markerLabels).toEqual(["-3", "-2", "-1", "0", "+1", "+2", "+3"]);
+  expect(initialActiveMarker?.textContent?.trim()).toBe("0");
   expect(
     modifierControl.compareDocumentPosition(actionRow) &
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -201,6 +209,8 @@ test("modifier slider supports range -3 to +3 with default 0 and updates", () =>
 
   expect(onRollModifierChange).toHaveBeenCalledWith(3);
   expect(valueLabel?.textContent?.trim()).toBe("+3");
+  const updatedActiveMarker = container.querySelector(".modifier-marker.is-active");
+  expect(updatedActiveMarker?.textContent?.trim()).toBe("+3");
 
   unmount();
 });

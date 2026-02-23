@@ -11,6 +11,7 @@ import { normalizeRollModifier } from "../lib/roll-modifier.js";
 
 const TAB_MANUAL = "manual";
 const TAB_IMPORT = "import";
+const MODIFIER_MARKS = [-3, -2, -1, 0, 1, 2, 3];
 
 const buildAttributeLabel = (attributeKey) =>
   REQUIRED_ATTRIBUTES[attributeKey] ?? attributeKey;
@@ -186,6 +187,7 @@ const DicePoolPanel = ({
     normalizedRollModifier > 0
       ? `+${normalizedRollModifier}`
       : String(normalizedRollModifier);
+  const formatModifierMark = (value) => (value > 0 ? `+${value}` : String(value));
 
   const handleRollModifierChange = (event) => {
     onRollModifierChange(normalizeRollModifier(event.target.value));
@@ -452,6 +454,16 @@ const DicePoolPanel = ({
           onChange={handleRollModifierChange}
           aria-describedby="rollModifierValue"
         />
+        <div className="modifier-markers" aria-hidden="true">
+          {MODIFIER_MARKS.map((value) => (
+            <span
+              key={value}
+              className={`modifier-marker ${value === normalizedRollModifier ? "is-active" : ""}`}
+            >
+              {formatModifierMark(value)}
+            </span>
+          ))}
+        </div>
       </div>
       <div className="panel-action-row">
         <button
