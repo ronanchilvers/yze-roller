@@ -61,6 +61,8 @@ const TestHarness = ({
   skillDice = 1,
   importStateOverrides = {},
   onRollWithCounts,
+  rollModifier = 0,
+  onRollModifierChange = vi.fn(),
   onPrimaryAction = vi.fn(),
   setAttributeDice = vi.fn(),
   setSkillDice = vi.fn(),
@@ -77,6 +79,8 @@ const TestHarness = ({
   TestHarness.propTypes = {
     importStateOverrides: PropTypes.object,
     onRollWithCounts: PropTypes.func,
+    rollModifier: PropTypes.number,
+    onRollModifierChange: PropTypes.func,
     onPrimaryAction: PropTypes.func,
     setAttributeDice: PropTypes.func,
     setSkillDice: PropTypes.func,
@@ -102,6 +106,7 @@ const TestHarness = ({
     selectedSkill: null,
     ...importStateOverrides,
   });
+  const [modifierValue, setModifierValue] = useState(rollModifier);
 
   return (
     <DicePoolPanel
@@ -115,6 +120,11 @@ const TestHarness = ({
       setSkillDice={setSkillDice}
       onRoll={onRoll}
       onRollWithCounts={onRollWithCounts}
+      rollModifier={modifierValue}
+      onRollModifierChange={(value) => {
+        setModifierValue(value);
+        onRollModifierChange(value);
+      }}
       importState={importState}
       onImportFile={onImportFile}
       onResetImport={onResetImport}
@@ -152,7 +162,45 @@ test("renders manual tab by default", () => {
 
   expect(container.querySelector("#attributeDice")).not.toBeNull();
   expect(container.querySelector("#skillDice")).not.toBeNull();
+  expect(container.querySelector("#rollModifier")).not.toBeNull();
   expect(container.querySelector("#characterImport")).toBeNull();
+
+  unmount();
+});
+
+test("modifier slider supports range -3 to +3 with default 0 and updates", () => {
+  const onRollModifierChange = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <TestHarness onRollModifierChange={onRollModifierChange} rollModifier={0} />,
+    );
+  });
+
+  const slider = container.querySelector("#rollModifier");
+  const valueLabel = container.querySelector("#rollModifierValue");
+  const modifierControl = container.querySelector(".modifier-control");
+  const actionRow = container.querySelector(".panel-action-row");
+
+  expect(slider).not.toBeNull();
+  expect(slider.min).toBe("-3");
+  expect(slider.max).toBe("3");
+  expect(slider.step).toBe("1");
+  expect(slider.value).toBe("0");
+  expect(valueLabel?.textContent?.trim()).toBe("0");
+  expect(
+    modifierControl.compareDocumentPosition(actionRow) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).not.toBe(0);
+
+  act(() => {
+    slider.value = "3";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  expect(onRollModifierChange).toHaveBeenCalledWith(3);
+  expect(valueLabel?.textContent?.trim()).toBe("+3");
 
   unmount();
 });
