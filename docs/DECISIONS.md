@@ -95,3 +95,9 @@
   - **Decision:** Add `src/lib/api-client.js` as the single fetch abstraction: compose URLs via app config, attach bearer headers when token exists, parse JSON on 2xx responses, treat `204` as no-content, and throw `ApiClientError` with envelope-derived `code/message` or `HTTP_<status>` fallback.
   - **Consequences:** Later client flows can consume one stable transport contract and centralize retry/auth UX behavior around normalized errors.
   - **Alternatives considered:** Parse each endpoint inline in hooks/components (rejected because it duplicates envelope handling and increases drift risk).
+
+- **2026-02-23 — Add dedicated `/join` route flow with memory-only auth handoff**
+  - **Context:** Contract-aligned client flow needs fragment-token join handling and session-token handoff before snapshot bootstrap/polling are implemented.
+  - **Decision:** Route `/join` paths to a dedicated `JoinSessionView`, parse `#join=<token>` from URL hash, call `/api/join` through the shared API client, normalize success payload into in-memory auth (`sessionToken`, `sessionId`, `role`, `self`), clear the hash fragment, and navigate out of `/join`.
+  - **Consequences:** Join-token and session-token concerns are decoupled from main gameplay UI, and future bootstrap polling work can read auth from one in-memory store.
+  - **Alternatives considered:** Keep join behavior embedded in `App` without route/view split (rejected due to coupling and harder testing).

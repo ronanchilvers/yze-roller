@@ -16,14 +16,38 @@ import {
   ROLL_TOAST_DEDUPE_BUCKET_MS,
   normalizeRollToastEvent,
 } from "./lib/roll-toast-event.js";
+import {
+  clearLocationHash,
+  getSessionPathFromJoinPath,
+  isJoinSessionPath,
+  parseJoinTokenFromHash,
+} from "./lib/join-session-route.js";
+import { setSessionAuth } from "./lib/session-auth.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
+import JoinSessionView from "./components/JoinSessionView.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 export const REMOTE_ROLL_EVENT_BRIDGE_KEY = "__YEAR_ZERO_REMOTE_ROLL_EVENT__";
 const DEDUPE_TTL_MS = ROLL_TOAST_DEDUPE_BUCKET_MS * 2;
 const DiceTray3D = lazy(() => import("./components/DiceTray3D.jsx"));
 
-function App() {
+const getBrowserPathname = () => {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+
+  return window.location.pathname || "/";
+};
+
+const getBrowserHash = () => {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.location.hash || "";
+};
+
+function DiceRollerApp() {
   const {
     attributeDice,
     skillDice,
@@ -287,6 +311,70 @@ function App() {
       </section>
     </main>
   );
+}
+
+function App() {
+  const [pathname, setPathname] = useState(getBrowserPathname);
+  const [hash, setHash] = useState(getBrowserHash);
+  const isJoinRoute = isJoinSessionPath(pathname);
+  const joinToken = parseJoinTokenFromHash(hash);
+
+  const syncLocation = useCallback(() => {
+    setPathname(getBrowserPathname());
+    setHash(getBrowserHash());
+  }, []);
+
+  const navigateToPath = useCallback(
+    (nextPath) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      window.history.pushState({}, "", nextPath);
+      syncLocation();
+    },
+    [syncLocation],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    window.addEventListener("popstate", syncLocation);
+    window.addEventListener("hashchange", syncLocation);
+
+    return () => {
+      window.removeEventListener("popstate", syncLocation);
+      window.removeEventListener("hashchange", syncLocation);
+    };
+  }, [syncLocation]);
+
+  const exitJoinRoute = useCallback(() => {
+    clearLocationHash(window);
+    navigateToPath(getSessionPathFromJoinPath(pathname));
+  }, [navigateToPath, pathname]);
+
+  const handleJoinSuccess = useCallback(
+    (authState) => {
+      setSessionAuth(authState);
+      clearLocationHash(window);
+      navigateToPath(getSessionPathFromJoinPath(pathname));
+    },
+    [navigateToPath, pathname],
+  );
+
+  if (isJoinRoute) {
+    return (
+      <JoinSessionView
+        joinToken={joinToken}
+        onJoinSuccess={handleJoinSuccess}
+        onExitJoin={exitJoinRoute}
+      />
+    );
+  }
+
+  return <DiceRollerApp />;
 }
 
 export default App;
