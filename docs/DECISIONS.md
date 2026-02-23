@@ -101,3 +101,9 @@
   - **Decision:** Route `/join` paths to a dedicated `JoinSessionView`, parse `#join=<token>` from URL hash, call `/api/join` through the shared API client, normalize success payload into in-memory auth (`sessionToken`, `sessionId`, `role`, `self`), clear the hash fragment, and navigate out of `/join`.
   - **Consequences:** Join-token and session-token concerns are decoupled from main gameplay UI, and future bootstrap polling work can read auth from one in-memory store.
   - **Alternatives considered:** Keep join behavior embedded in `App` without route/view split (rejected due to coupling and harder testing).
+
+- **2026-02-23 — Introduce normalized `/api/session` bootstrap state hook**
+  - **Context:** The client requires a deterministic bootstrap step after join success to seed `sinceId`, player roster, scene strain, and role before polling begins.
+  - **Decision:** Add `useMultiplayerSession` as the bootstrap boundary that reads in-memory auth, fetches `/api/session`, normalizes payloads via `normalizeSessionSnapshot`, and maps auth failures to `auth_lost` while clearing memory auth.
+  - **Consequences:** Snapshot initialization is centralized and testable, reducing drift in later polling/reducer work and giving one consistent path for handling revoked/invalid session tokens.
+  - **Alternatives considered:** Parse `/api/session` ad hoc inside route components (rejected due to duplicated validation and inconsistent auth-failure handling).

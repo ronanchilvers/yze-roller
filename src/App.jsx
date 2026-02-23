@@ -6,6 +6,7 @@ import { useRollSession } from "./hooks/useRollSession.js";
 import { useCharacterImport } from "./hooks/useCharacterImport.js";
 import { useThemePreference } from "./hooks/useThemePreference.js";
 import { useToast } from "./hooks/useToast.js";
+import { useMultiplayerSession } from "./hooks/useMultiplayerSession.js";
 import {
   DEFAULT_DICE_RESULT_DURATION_MS,
   MAX_PENDING_TOASTS,
@@ -318,6 +319,7 @@ function App() {
   const [hash, setHash] = useState(getBrowserHash);
   const isJoinRoute = isJoinSessionPath(pathname);
   const joinToken = parseJoinTokenFromHash(hash);
+  const { bootstrapFromAuth } = useMultiplayerSession();
 
   const syncLocation = useCallback(() => {
     setPathname(getBrowserPathname());
@@ -358,10 +360,11 @@ function App() {
   const handleJoinSuccess = useCallback(
     (authState) => {
       setSessionAuth(authState);
+      void bootstrapFromAuth();
       clearLocationHash(window);
       navigateToPath(getSessionPathFromJoinPath(pathname));
     },
-    [navigateToPath, pathname],
+    [bootstrapFromAuth, navigateToPath, pathname],
   );
 
   if (isJoinRoute) {

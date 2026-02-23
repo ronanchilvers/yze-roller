@@ -71,6 +71,16 @@ vi.mock("./hooks/useToast.js", () => ({
   }),
 }));
 
+vi.mock("./hooks/useMultiplayerSession.js", () => ({
+  useMultiplayerSession: () => ({
+    sessionState: {
+      status: "idle",
+    },
+    bootstrapFromAuth: mocks.noop,
+    resetSession: mocks.noop,
+  }),
+}));
+
 const createRollSessionState = (overrides = {}) => ({
   currentRoll: null,
   rollRequest: null,

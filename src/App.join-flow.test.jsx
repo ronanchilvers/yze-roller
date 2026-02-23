@@ -7,6 +7,7 @@ import App from "./App.jsx";
 const mocks = vi.hoisted(() => ({
   latestJoinProps: null,
   setSessionAuth: vi.fn(),
+  bootstrapFromAuth: vi.fn(),
   noop: vi.fn(),
 }));
 
@@ -89,6 +90,16 @@ vi.mock("./hooks/useToast.js", () => ({
   }),
 }));
 
+vi.mock("./hooks/useMultiplayerSession.js", () => ({
+  useMultiplayerSession: () => ({
+    sessionState: {
+      status: "idle",
+    },
+    bootstrapFromAuth: mocks.bootstrapFromAuth,
+    resetSession: mocks.noop,
+  }),
+}));
+
 const createContainer = () => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -114,6 +125,7 @@ const createContainer = () => {
 afterEach(() => {
   mocks.latestJoinProps = null;
   mocks.setSessionAuth.mockReset();
+  mocks.bootstrapFromAuth.mockReset();
   window.history.replaceState({}, "", "/");
   document.body.innerHTML = "";
 });
@@ -152,6 +164,7 @@ test("join success stores in-memory auth, clears hash, and exits join route", ()
   });
 
   expect(mocks.setSessionAuth).toHaveBeenCalledWith(authState);
+  expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(1);
   expect(window.location.pathname).toBe("/");
   expect(window.location.hash).toBe("");
 
