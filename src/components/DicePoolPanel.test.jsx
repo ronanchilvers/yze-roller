@@ -2,7 +2,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { createRoot } from "react-dom/client";
-import { act } from "react-dom/test-utils";
+import { act, Simulate } from "react-dom/test-utils";
 import { afterEach, test, expect, vi } from "vitest";
 import DicePoolPanel from "./DicePoolPanel.jsx";
 
@@ -203,8 +203,7 @@ test("modifier slider supports range -3 to +3 with default 0 and updates", () =>
   ).not.toBe(0);
 
   act(() => {
-    slider.value = "3";
-    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    Simulate.change(slider, { target: { value: "3" } });
   });
 
   expect(onRollModifierChange).toHaveBeenCalledWith(3);
@@ -226,10 +225,8 @@ test("manual inputs can be cleared while editing", () => {
   const skillInput = container.querySelector("#skillDice");
 
   act(() => {
-    attributeInput.value = "";
-    attributeInput.dispatchEvent(new Event("input", { bubbles: true }));
-    skillInput.value = "";
-    skillInput.dispatchEvent(new Event("input", { bubbles: true }));
+    Simulate.change(attributeInput, { target: { value: "" } });
+    Simulate.change(skillInput, { target: { value: "" } });
   });
 
   expect(attributeInput.value).toBe("");
@@ -259,14 +256,8 @@ test("manual roll validates and commits counts before rolling", () => {
   const rollButton = getButtonByText(container, "Roll Dice");
 
   act(() => {
-    // Simulate user typing by setting value and triggering change event
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(attributeInput, "");
-    attributeInput.dispatchEvent(new Event("input", { bubbles: true }));
-    attributeInput.dispatchEvent(new Event("change", { bubbles: true }));
-    
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(skillInput, "999");
-    skillInput.dispatchEvent(new Event("input", { bubbles: true }));
-    skillInput.dispatchEvent(new Event("change", { bubbles: true }));
+    Simulate.change(attributeInput, { target: { value: "" } });
+    Simulate.change(skillInput, { target: { value: "999" } });
   });
 
   act(() => {
