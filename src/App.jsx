@@ -133,6 +133,11 @@ function App() {
     setPendingRollCounts(counts);
   };
 
+  const handleClearDice = () => {
+    setRollModifier(0);
+    onClearDice();
+  };
+
   useEffect(() => {
     if (typeof document === "undefined") {
       return;
@@ -284,7 +289,7 @@ function App() {
             onPush={onPush}
             pushActionLabel={`Push ${pushableDiceCount} Dice`}
             isPushDisabled={isRolling || !hasRolled || !canPush}
-            onClearDice={onClearDice}
+            onClearDice={handleClearDice}
             isClearDisabled={!canClearDice}
           />
         </div>

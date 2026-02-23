@@ -12,7 +12,25 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("./components/DicePoolPanel.jsx", () => ({
-  default: () => <div data-testid="dice-pool-panel" />,
+  default: ({ rollModifier, onRollModifierChange, onClearDice }) => (
+    <div data-testid="dice-pool-panel">
+      <output data-testid="roll-modifier-value">{String(rollModifier)}</output>
+      <button
+        type="button"
+        data-testid="set-modifier-button"
+        onClick={() => onRollModifierChange?.(3)}
+      >
+        Set Modifier
+      </button>
+      <button
+        type="button"
+        data-testid="clear-dice-button"
+        onClick={() => onClearDice?.()}
+      >
+        Clear Dice
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("./components/ErrorBoundary.jsx", () => ({
@@ -277,6 +295,41 @@ test("does not render the legacy tray results panel", () => {
   const trayPanel = app.container.querySelector(".tray-panel");
   expect(trayResults).toBeNull();
   expect(trayPanel).toBeNull();
+
+  app.unmount();
+});
+
+test("clear dice resets roll modifier to zero", () => {
+  const app = createContainer();
+  const onClearDice = vi.fn();
+
+  mocks.rollSessionState = createRollSessionState({
+    onClearDice,
+  });
+  app.render(<App />);
+
+  const modifierValue = app.container.querySelector(
+    '[data-testid="roll-modifier-value"]',
+  );
+  const setModifierButton = app.container.querySelector(
+    '[data-testid="set-modifier-button"]',
+  );
+  const clearDiceButton = app.container.querySelector(
+    '[data-testid="clear-dice-button"]',
+  );
+
+  expect(modifierValue?.textContent).toBe("0");
+
+  act(() => {
+    setModifierButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(modifierValue?.textContent).toBe("3");
+
+  act(() => {
+    clearDiceButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(modifierValue?.textContent).toBe("0");
+  expect(onClearDice).toHaveBeenCalledTimes(1);
 
   app.unmount();
 });
