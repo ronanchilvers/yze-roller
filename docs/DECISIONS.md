@@ -89,3 +89,9 @@
   - **Decision:** Centralize endpoint configuration in `src/lib/app-config.js` using `import.meta.env.VITE_API_BASE_URL`; enforce non-empty string values when provided, normalize trailing slashes, and default to same-origin `"/api"` when unset.
   - **Consequences:** Future API client code can compose request URLs from one validated source; deployments can switch API targets per build mode without touching feature logic.
   - **Alternatives considered:** Hardcode `"/api"` only (rejected because staging/production splits may require different origins), runtime-injected global config (deferred unless one artifact must serve multiple environments).
+
+- **2026-02-23 — Normalize API request/response handling in a shared client**
+  - **Context:** Client implementation steps require consistent bearer-token auth, error envelope parsing, and deterministic status/code/message handling across join/bootstrap/poll/action requests.
+  - **Decision:** Add `src/lib/api-client.js` as the single fetch abstraction: compose URLs via app config, attach bearer headers when token exists, parse JSON on 2xx responses, treat `204` as no-content, and throw `ApiClientError` with envelope-derived `code/message` or `HTTP_<status>` fallback.
+  - **Consequences:** Later client flows can consume one stable transport contract and centralize retry/auth UX behavior around normalized errors.
+  - **Alternatives considered:** Parse each endpoint inline in hooks/components (rejected because it duplicates envelope handling and increases drift risk).
