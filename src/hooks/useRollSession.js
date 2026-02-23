@@ -10,6 +10,7 @@ import {
   buildCountsWithStrain,
   calculateBaneIncrease,
 } from "../lib/strain-points.js";
+import { applyRollModifierToCounts } from "../lib/roll-modifier.js";
 import { useLatestRef } from "./useLatestRef.js";
 
 const MAX_PREVIOUS_RESULTS = 10;
@@ -45,6 +46,7 @@ const createHistoryEntry = (roll, key, rolledAt) => {
  * @param {{
  *   attributeDice: number,
  *   skillDice: number,
+ *   rollModifier: number,
  *   normalizedStrainPoints: number,
  *   onBaneIncrement: (baneCount: number) => void
  * }} options
@@ -66,6 +68,7 @@ const createHistoryEntry = (roll, key, rolledAt) => {
 export const useRollSession = ({
   attributeDice,
   skillDice,
+  rollModifier,
   normalizedStrainPoints,
   onBaneIncrement,
 }) => {
@@ -87,15 +90,18 @@ export const useRollSession = ({
       return;
     }
 
-    const dicePool = buildDicePool(
-      buildCountsWithStrain(
-        {
-          attributeDice,
-          skillDice,
-        },
-        normalizedStrainPoints,
-      ),
+    const countsWithStrain = buildCountsWithStrain(
+      {
+        attributeDice,
+        skillDice,
+      },
+      normalizedStrainPoints,
     );
+    const modifiedCounts = applyRollModifierToCounts(
+      countsWithStrain,
+      rollModifier,
+    );
+    const dicePool = buildDicePool(modifiedCounts);
 
     requestCounterRef.current += 1;
     setRollRequest({

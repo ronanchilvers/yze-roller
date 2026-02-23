@@ -47,6 +47,7 @@ function App() {
 
   const [overrideCounts, setOverrideCounts] = useState(null);
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
+  const [rollModifier, setRollModifier] = useState(0);
 
   const effectiveAttributeDice = overrideCounts?.attributeDice ?? attributeDice;
   const effectiveSkillDice = overrideCounts?.skillDice ?? skillDice;
@@ -64,6 +65,7 @@ function App() {
   } = useRollSession({
     attributeDice: effectiveAttributeDice,
     skillDice: effectiveSkillDice,
+    rollModifier,
     normalizedStrainPoints,
     onBaneIncrement: applyBaneIncrement,
   });
@@ -272,6 +274,8 @@ function App() {
             setSkillDice={setSkillDice}
             onRoll={onRoll}
             onRollWithCounts={handleRollWithCounts}
+            rollModifier={rollModifier}
+            onRollModifierChange={setRollModifier}
             importState={characterImport}
             onImportFile={importFromFile}
             onResetImport={resetImport}
