@@ -113,3 +113,9 @@
   - **Decision:** Extend `useMultiplayerSession` with timer-managed polling for `/api/events` (`limit=10`) using `1000ms` base interval, `x1.5` growth to `8000ms` on `204`, exponential error backoff with jitter to `30000ms`, and immediate auth-loss shutdown (`401`/`403` + token error codes) that clears in-memory auth.
   - **Consequences:** Polling behavior is now centralized and testable; downstream reducer/UI work can consume one stream state (`events`, `sinceId`, `pollingStatus`, `pollIntervalMs`) rather than reimplementing transport semantics.
   - **Alternatives considered:** Poll inside UI components with ad hoc timers (rejected due to duplicated timer logic and weaker auth-failure guarantees).
+
+- **2026-02-23 — Centralize multiplayer event reduction and event submit validation**
+  - **Context:** Client needs deterministic updates for event stream ingestion and local action posting (`roll`/`push`) without leaking actor identity fields into request payloads.
+  - **Decision:** Add `multiplayer-event-reducer` for ordered, idempotent event application (`roll`, `push`, `strain_reset`, `join`, `leave`) and extend `useMultiplayerSession` with `submitRoll`/`submitPush` that enforce local payload constraints (integers `0..99`, boolean `strain`) before posting `{ type, payload }`, then apply server-returned event/state as authoritative.
+  - **Consequences:** Event handling and action submit behavior are now consistent between poll-driven and response-driven updates, reducing drift and duplicate logic in UI layers.
+  - **Alternatives considered:** Inline reducer logic in hook and route components (rejected because behavior would be harder to test and easier to desynchronize).

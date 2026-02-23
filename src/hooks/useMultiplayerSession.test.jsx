@@ -10,6 +10,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   apiGet: vi.fn(),
+  apiPost: vi.fn(),
   isApiClientError: vi.fn(),
   getSessionAuth: vi.fn(),
   clearSessionAuth: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("../lib/api-client.js", async () => {
   return {
     ...actual,
     apiGet: (...args) => mocks.apiGet(...args),
+    apiPost: (...args) => mocks.apiPost(...args),
     isApiClientError: (...args) => mocks.isApiClientError(...args),
   };
 });
@@ -76,6 +78,7 @@ const buildSessionSnapshot = (overrides = {}) => ({
 
 afterEach(() => {
   mocks.apiGet.mockReset();
+  mocks.apiPost.mockReset();
   mocks.isApiClientError.mockReset();
   mocks.getSessionAuth.mockReset();
   mocks.clearSessionAuth.mockReset();
@@ -316,6 +319,162 @@ test("polling loop uses exponential backoff on non-auth errors", async () => {
   expect(finalState.errorCode).toBe("NETWORK_ERROR");
 
   randomSpy.mockRestore();
+  app.unmount();
+});
+
+test("submitRoll validates payload locally before posting", async () => {
+  const capture = vi.fn();
+  const app = createContainer();
+
+  await act(async () => {
+    app.root.render(<CaptureMultiplayerSession onCapture={capture} />);
+  });
+
+  let result = null;
+  await act(async () => {
+    result = await getLatestHookValue(capture).submitRoll({
+      successes: -1,
+      banes: 0,
+    });
+  });
+
+  expect(result.ok).toBe(false);
+  expect(result.errorCode).toBe("VALIDATION_ERROR");
+  expect(mocks.apiPost).not.toHaveBeenCalled();
+
+  app.unmount();
+});
+
+test("submitRoll posts roll event and appends server event", async () => {
+  vi.useFakeTimers();
+
+  mocks.getSessionAuth.mockReturnValue({
+    sessionToken: "player-token-1",
+  });
+  mocks.isApiClientError.mockImplementation(
+    (error) => error instanceof ApiClientError,
+  );
+  mocks.apiGet.mockResolvedValue({
+    status: 200,
+    data: buildSessionSnapshot({
+      latest_event_id: 0,
+    }),
+  });
+  mocks.apiPost.mockResolvedValue({
+    status: 201,
+    data: {
+      event: {
+        id: 40,
+        type: "roll",
+        payload: {
+          successes: 2,
+          banes: 1,
+        },
+      },
+    },
+  });
+
+  const capture = vi.fn();
+  const app = createContainer();
+
+  await act(async () => {
+    app.root.render(<CaptureMultiplayerSession onCapture={capture} />);
+  });
+
+  await act(async () => {
+    await getLatestHookValue(capture).bootstrapFromAuth();
+  });
+
+  let submitResult = null;
+  await act(async () => {
+    submitResult = await getLatestHookValue(capture).submitRoll({
+      successes: 2,
+      banes: 1,
+    });
+  });
+
+  const finalState = getLatestHookValue(capture).sessionState;
+
+  expect(submitResult.ok).toBe(true);
+  expect(mocks.apiPost).toHaveBeenCalledWith(
+    "/events",
+    {
+      type: "roll",
+      payload: {
+        successes: 2,
+        banes: 1,
+      },
+    },
+    {
+      token: "player-token-1",
+    },
+  );
+  expect(finalState.events.some((event) => event.id === 40)).toBe(true);
+  expect(finalState.sinceId).toBe(40);
+
+  app.unmount();
+});
+
+test("submitPush posts push event and applies authoritative strain value", async () => {
+  vi.useFakeTimers();
+
+  mocks.getSessionAuth.mockReturnValue({
+    sessionToken: "player-token-1",
+  });
+  mocks.isApiClientError.mockImplementation(
+    (error) => error instanceof ApiClientError,
+  );
+  mocks.apiGet.mockResolvedValue({
+    status: 200,
+    data: buildSessionSnapshot({
+      scene_strain: 1,
+      latest_event_id: 0,
+    }),
+  });
+  mocks.apiPost.mockResolvedValue({
+    status: 201,
+    data: {
+      event: {
+        id: 41,
+        type: "push",
+        payload: {
+          successes: 2,
+          banes: 1,
+          strain: true,
+          scene_strain: 5,
+        },
+      },
+      scene_strain: 5,
+    },
+  });
+
+  const capture = vi.fn();
+  const app = createContainer();
+
+  await act(async () => {
+    app.root.render(<CaptureMultiplayerSession onCapture={capture} />);
+  });
+
+  await act(async () => {
+    await getLatestHookValue(capture).bootstrapFromAuth();
+  });
+
+  let submitResult = null;
+  await act(async () => {
+    submitResult = await getLatestHookValue(capture).submitPush({
+      successes: 2,
+      banes: 1,
+      strain: true,
+    });
+  });
+
+  const finalState = getLatestHookValue(capture).sessionState;
+
+  expect(submitResult.ok).toBe(true);
+  expect(finalState.sceneStrain).toBe(5);
+  expect(finalState.events.some((event) => event.id === 41)).toBe(true);
+  expect(finalState.sinceId).toBe(41);
+
   app.unmount();
 });
 

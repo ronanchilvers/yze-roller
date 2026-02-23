@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiGet, isApiClientError } from "../lib/api-client.js";
+import { apiGet, apiPost, isApiClientError } from "../lib/api-client.js";
 import { clearSessionAuth, getSessionAuth } from "../lib/session-auth.js";
 import { normalizeSessionSnapshot } from "../lib/session-snapshot.js";
+import { applySessionEvents } from "../lib/multiplayer-event-reducer.js";
 
 export const EVENTS_POLL_LIMIT = 10;
 export const DEFAULT_POLL_INTERVAL_MS = 1000;
@@ -41,6 +42,51 @@ const normalizeNonNegativeInteger = (value, fallback = 0) => {
 
 const normalizeEventList = (value) =>
   Array.isArray(value) ? value.filter(isObjectLike) : [];
+
+const normalizeOutcomeCount = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isInteger(numeric) || numeric < 0 || numeric > 99) {
+    return null;
+  }
+
+  return numeric;
+};
+
+const validateRollPayload = (payload) => {
+  if (!isObjectLike(payload)) {
+    return null;
+  }
+
+  const successes = normalizeOutcomeCount(payload.successes);
+  const banes = normalizeOutcomeCount(payload.banes);
+
+  if (successes === null || banes === null) {
+    return null;
+  }
+
+  return {
+    successes,
+    banes,
+  };
+};
+
+const validatePushPayload = (payload) => {
+  if (!isObjectLike(payload)) {
+    return null;
+  }
+
+  const normalizedRollPayload = validateRollPayload(payload);
+
+  if (!normalizedRollPayload || typeof payload.strain !== "boolean") {
+    return null;
+  }
+
+  return {
+    ...normalizedRollPayload,
+    strain: payload.strain,
+  };
+};
 
 const isAuthFailure = (error) => {
   if (!isApiClientError(error)) {
@@ -107,6 +153,16 @@ const extractNextSinceId = (currentSinceId, eventsPayload, nextSinceIdValue) => 
 
   return normalizeNonNegativeInteger(currentSinceId, 0);
 };
+
+const buildAuthLostState = (error) => ({
+  ...INITIAL_MULTIPLAYER_SESSION_STATE,
+  status: "auth_lost",
+  pollingStatus: "stopped",
+  errorCode: isApiClientError(error) ? error.code : "TOKEN_INVALID",
+  errorMessage: isApiClientError(error)
+    ? error.message
+    : "Session authorization is no longer valid.",
+});
 
 export const useMultiplayerSession = () => {
   const [sessionState, setSessionState] = useState(
@@ -180,16 +236,19 @@ export const useMultiplayerSession = () => {
       sinceIdRef.current = nextSinceId;
       pollIntervalRef.current = DEFAULT_POLL_INTERVAL_MS;
 
-      setSessionState((current) => ({
-        ...current,
-        events: [...current.events, ...nextEvents],
-        sinceId: nextSinceId,
-        latestEventId: Math.max(current.latestEventId, nextSinceId),
-        pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
-        pollingStatus: "running",
-        errorCode: null,
-        errorMessage: "",
-      }));
+      setSessionState((current) => {
+        const reducedState = applySessionEvents(current, nextEvents);
+
+        return {
+          ...reducedState,
+          sinceId: nextSinceId,
+          latestEventId: Math.max(reducedState.latestEventId, nextSinceId),
+          pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
+          pollingStatus: "running",
+          errorCode: null,
+          errorMessage: "",
+        };
+      });
 
       pollTimerRef.current = setTimeout(() => {
         void runPollCycle();
@@ -204,16 +263,7 @@ export const useMultiplayerSession = () => {
         pollingActiveRef.current = false;
         sessionTokenRef.current = "";
         clearPollTimer();
-
-        setSessionState({
-          ...INITIAL_MULTIPLAYER_SESSION_STATE,
-          status: "auth_lost",
-          pollingStatus: "stopped",
-          errorCode: isApiClientError(error) ? error.code : "TOKEN_INVALID",
-          errorMessage: isApiClientError(error)
-            ? error.message
-            : "Session authorization is no longer valid.",
-        });
+        setSessionState(buildAuthLostState(error));
         return;
       }
 
@@ -305,15 +355,7 @@ export const useMultiplayerSession = () => {
 
       if (isAuthFailure(error)) {
         clearSessionAuth();
-        setSessionState({
-          ...INITIAL_MULTIPLAYER_SESSION_STATE,
-          status: "auth_lost",
-          pollingStatus: "stopped",
-          errorCode: isApiClientError(error) ? error.code : "TOKEN_INVALID",
-          errorMessage: isApiClientError(error)
-            ? error.message
-            : "Session authorization is no longer valid.",
-        });
+        setSessionState(buildAuthLostState(error));
         return null;
       }
 
@@ -329,6 +371,180 @@ export const useMultiplayerSession = () => {
       return null;
     }
   }, [startPolling, stopPolling]);
+
+  const submitRoll = useCallback(
+    async (payloadInput) => {
+      const validatedPayload = validateRollPayload(payloadInput);
+
+      if (!validatedPayload) {
+        return {
+          ok: false,
+          errorCode: "VALIDATION_ERROR",
+          errorMessage: "Roll payload must include integer successes/banes in range 0..99.",
+        };
+      }
+
+      if (!sessionTokenRef.current) {
+        return {
+          ok: false,
+          errorCode: "TOKEN_MISSING",
+          errorMessage: "Session token is missing.",
+        };
+      }
+
+      try {
+        const response = await apiPost(
+          "/events",
+          {
+            type: "roll",
+            payload: validatedPayload,
+          },
+          {
+            token: sessionTokenRef.current,
+          },
+        );
+        const payload = isObjectLike(response.data) ? response.data : {};
+        const responseEvent = isObjectLike(payload.event) ? payload.event : null;
+        const responseEventId = normalizeNonNegativeInteger(responseEvent?.id, -1);
+
+        if (responseEventId >= 0) {
+          sinceIdRef.current = Math.max(sinceIdRef.current, responseEventId);
+        }
+
+        setSessionState((current) => {
+          const nextState = responseEvent
+            ? applySessionEvents(current, [responseEvent])
+            : current;
+
+          return {
+            ...nextState,
+            sinceId: responseEventId >= 0
+              ? Math.max(nextState.sinceId, responseEventId)
+              : nextState.sinceId,
+          };
+        });
+
+        return {
+          ok: true,
+          event: responseEvent,
+        };
+      } catch (error) {
+        if (isAuthFailure(error)) {
+          clearSessionAuth();
+          stopPolling();
+          setSessionState(buildAuthLostState(error));
+          return {
+            ok: false,
+            errorCode: isApiClientError(error) ? error.code : "TOKEN_INVALID",
+            errorMessage: isApiClientError(error)
+              ? error.message
+              : "Session authorization is no longer valid.",
+          };
+        }
+
+        return {
+          ok: false,
+          errorCode: isApiClientError(error) ? error.code : "NETWORK_ERROR",
+          errorMessage: isApiClientError(error)
+            ? error.message
+            : "Unable to submit roll event.",
+        };
+      }
+    },
+    [stopPolling],
+  );
+
+  const submitPush = useCallback(
+    async (payloadInput) => {
+      const validatedPayload = validatePushPayload(payloadInput);
+
+      if (!validatedPayload) {
+        return {
+          ok: false,
+          errorCode: "VALIDATION_ERROR",
+          errorMessage:
+            "Push payload must include integer successes/banes (0..99) and boolean strain.",
+        };
+      }
+
+      if (!sessionTokenRef.current) {
+        return {
+          ok: false,
+          errorCode: "TOKEN_MISSING",
+          errorMessage: "Session token is missing.",
+        };
+      }
+
+      try {
+        const response = await apiPost(
+          "/events",
+          {
+            type: "push",
+            payload: validatedPayload,
+          },
+          {
+            token: sessionTokenRef.current,
+          },
+        );
+        const payload = isObjectLike(response.data) ? response.data : {};
+        const responseEvent = isObjectLike(payload.event) ? payload.event : null;
+        const responseEventId = normalizeNonNegativeInteger(responseEvent?.id, -1);
+        const responseSceneStrain = normalizeNonNegativeInteger(
+          payload.scene_strain,
+          null,
+        );
+
+        if (responseEventId >= 0) {
+          sinceIdRef.current = Math.max(sinceIdRef.current, responseEventId);
+        }
+
+        setSessionState((current) => {
+          const reducedState = responseEvent
+            ? applySessionEvents(current, [responseEvent])
+            : current;
+          const nextSceneStrain =
+            responseSceneStrain === null
+              ? reducedState.sceneStrain
+              : responseSceneStrain;
+
+          return {
+            ...reducedState,
+            sceneStrain: nextSceneStrain,
+            sinceId: responseEventId >= 0
+              ? Math.max(reducedState.sinceId, responseEventId)
+              : reducedState.sinceId,
+          };
+        });
+
+        return {
+          ok: true,
+          event: responseEvent,
+        };
+      } catch (error) {
+        if (isAuthFailure(error)) {
+          clearSessionAuth();
+          stopPolling();
+          setSessionState(buildAuthLostState(error));
+          return {
+            ok: false,
+            errorCode: isApiClientError(error) ? error.code : "TOKEN_INVALID",
+            errorMessage: isApiClientError(error)
+              ? error.message
+              : "Session authorization is no longer valid.",
+          };
+        }
+
+        return {
+          ok: false,
+          errorCode: isApiClientError(error) ? error.code : "NETWORK_ERROR",
+          errorMessage: isApiClientError(error)
+            ? error.message
+            : "Unable to submit push event.",
+        };
+      }
+    },
+    [stopPolling],
+  );
 
   const resetSession = useCallback(() => {
     clearSessionAuth();
@@ -347,6 +563,8 @@ export const useMultiplayerSession = () => {
   return {
     sessionState,
     bootstrapFromAuth,
+    submitRoll,
+    submitPush,
     stopPolling,
     resetSession,
   };
