@@ -43,6 +43,48 @@ const normalizeNonNegativeInteger = (value, fallback = 0) => {
 const normalizeEventList = (value) =>
   Array.isArray(value) ? value.filter(isObjectLike) : [];
 
+const normalizeRole = (value) =>
+  value === "gm" || value === "player" ? value : null;
+
+const normalizeDisplayName = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
+};
+
+const normalizePlayerSummary = (value) => {
+  if (!isObjectLike(value)) {
+    return null;
+  }
+
+  const tokenId = normalizeNonNegativeInteger(value.token_id, -1);
+  const role = normalizeRole(value.role);
+  const displayName = normalizeDisplayName(value.display_name);
+
+  if (tokenId < 0 || !role || !displayName) {
+    return null;
+  }
+
+  return {
+    tokenId,
+    role,
+    displayName,
+  };
+};
+
+const normalizeGmPlayers = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((player) => !player?.revoked)
+    .map(normalizePlayerSummary)
+    .filter(Boolean);
+};
+
 const normalizeOutcomeCount = (value) => {
   const numeric = Number(value);
 
@@ -164,16 +206,55 @@ const buildAuthLostState = (error) => ({
     : "Session authorization is no longer valid.",
 });
 
+const getGmContext = (sessionState, sessionToken) => {
+  const sessionId = normalizeNonNegativeInteger(sessionState?.sessionId, -1);
+  const role = sessionState?.role;
+
+  if (!sessionToken) {
+    return {
+      ok: false,
+      errorCode: "TOKEN_MISSING",
+      errorMessage: "Session token is missing.",
+    };
+  }
+
+  if (role !== "gm") {
+    return {
+      ok: false,
+      errorCode: "ROLE_FORBIDDEN",
+      errorMessage: "GM role is required for this action.",
+    };
+  }
+
+  if (sessionId < 0) {
+    return {
+      ok: false,
+      errorCode: "SESSION_NOT_FOUND",
+      errorMessage: "Session id is unavailable.",
+    };
+  }
+
+  return {
+    ok: true,
+    sessionId,
+  };
+};
+
 export const useMultiplayerSession = () => {
   const [sessionState, setSessionState] = useState(
     INITIAL_MULTIPLAYER_SESSION_STATE,
   );
+  const sessionStateRef = useRef(INITIAL_MULTIPLAYER_SESSION_STATE);
 
   const pollTimerRef = useRef(null);
   const pollIntervalRef = useRef(DEFAULT_POLL_INTERVAL_MS);
   const sinceIdRef = useRef(0);
   const sessionTokenRef = useRef("");
   const pollingActiveRef = useRef(false);
+
+  useEffect(() => {
+    sessionStateRef.current = sessionState;
+  }, [sessionState]);
 
   const clearPollTimer = useCallback(() => {
     if (pollTimerRef.current !== null) {
@@ -546,6 +627,284 @@ export const useMultiplayerSession = () => {
     [stopPolling],
   );
 
+  const rotateJoinLink = useCallback(async () => {
+    const gmContext = getGmContext(
+      sessionStateRef.current,
+      sessionTokenRef.current,
+    );
+
+    if (!gmContext.ok) {
+      return gmContext;
+    }
+
+    try {
+      const response = await apiPost(
+        `/sessions/${gmContext.sessionId}/join-link/rotate`,
+        {},
+        {
+          token: sessionTokenRef.current,
+        },
+      );
+      const payload = isObjectLike(response.data) ? response.data : {};
+
+      return {
+        ok: true,
+        joinLink:
+          typeof payload.join_link === "string" ? payload.join_link.trim() : "",
+      };
+    } catch (error) {
+      if (isAuthFailure(error)) {
+        clearSessionAuth();
+        stopPolling();
+        setSessionState(buildAuthLostState(error));
+      }
+
+      return {
+        ok: false,
+        errorCode: isApiClientError(error) ? error.code : "NETWORK_ERROR",
+        errorMessage: isApiClientError(error)
+          ? error.message
+          : "Unable to rotate join link.",
+      };
+    }
+  }, [stopPolling]);
+
+  const setJoiningEnabled = useCallback(
+    async (joiningEnabled) => {
+      if (typeof joiningEnabled !== "boolean") {
+        return {
+          ok: false,
+          errorCode: "VALIDATION_ERROR",
+          errorMessage: "joining_enabled must be a boolean.",
+        };
+      }
+
+      const gmContext = getGmContext(
+        sessionStateRef.current,
+        sessionTokenRef.current,
+      );
+
+      if (!gmContext.ok) {
+        return gmContext;
+      }
+
+      try {
+        const response = await apiPost(
+          `/gm/sessions/${gmContext.sessionId}/joining`,
+          {
+            joining_enabled: joiningEnabled,
+          },
+          {
+            token: sessionTokenRef.current,
+          },
+        );
+        const payload = isObjectLike(response.data) ? response.data : {};
+        const nextJoiningEnabled =
+          typeof payload.joining_enabled === "boolean"
+            ? payload.joining_enabled
+            : joiningEnabled;
+
+        setSessionState((current) => ({
+          ...current,
+          joiningEnabled: nextJoiningEnabled,
+        }));
+
+        return {
+          ok: true,
+          joiningEnabled: nextJoiningEnabled,
+        };
+      } catch (error) {
+        if (isAuthFailure(error)) {
+          clearSessionAuth();
+          stopPolling();
+          setSessionState(buildAuthLostState(error));
+        }
+
+        return {
+          ok: false,
+          errorCode: isApiClientError(error) ? error.code : "NETWORK_ERROR",
+          errorMessage: isApiClientError(error)
+            ? error.message
+            : "Unable to update joining state.",
+        };
+      }
+    },
+    [stopPolling],
+  );
+
+  const resetSceneStrain = useCallback(async () => {
+    const gmContext = getGmContext(
+      sessionStateRef.current,
+      sessionTokenRef.current,
+    );
+
+    if (!gmContext.ok) {
+      return gmContext;
+    }
+
+    try {
+      const response = await apiPost(
+        `/gm/sessions/${gmContext.sessionId}/reset_scene_strain`,
+        {},
+        {
+          token: sessionTokenRef.current,
+        },
+      );
+      const payload = isObjectLike(response.data) ? response.data : {};
+      const nextSceneStrain = normalizeNonNegativeInteger(payload.scene_strain, 0);
+      const resetEventId = normalizeNonNegativeInteger(payload.event_id, -1);
+
+      if (resetEventId >= 0) {
+        sinceIdRef.current = Math.max(sinceIdRef.current, resetEventId);
+      }
+
+      setSessionState((current) => ({
+        ...current,
+        sceneStrain: nextSceneStrain,
+        sinceId: resetEventId >= 0
+          ? Math.max(current.sinceId, resetEventId)
+          : current.sinceId,
+        latestEventId: resetEventId >= 0
+          ? Math.max(current.latestEventId, resetEventId)
+          : current.latestEventId,
+      }));
+
+      return {
+        ok: true,
+        sceneStrain: nextSceneStrain,
+      };
+    } catch (error) {
+      if (isAuthFailure(error)) {
+        clearSessionAuth();
+        stopPolling();
+        setSessionState(buildAuthLostState(error));
+      }
+
+      return {
+        ok: false,
+        errorCode: isApiClientError(error) ? error.code : "NETWORK_ERROR",
+        errorMessage: isApiClientError(error)
+          ? error.message
+          : "Unable to reset scene strain.",
+      };
+    }
+  }, [stopPolling]);
+
+  const refreshPlayers = useCallback(async () => {
+    const gmContext = getGmContext(
+      sessionStateRef.current,
+      sessionTokenRef.current,
+    );
+
+    if (!gmContext.ok) {
+      return gmContext;
+    }
+
+    try {
+      const response = await apiGet(`/gm/sessions/${gmContext.sessionId}/players`, {
+        token: sessionTokenRef.current,
+      });
+      const payload = isObjectLike(response.data) ? response.data : {};
+      const players = normalizeGmPlayers(payload.players);
+
+      setSessionState((current) => ({
+        ...current,
+        players,
+      }));
+
+      return {
+        ok: true,
+        players,
+      };
+    } catch (error) {
+      if (isAuthFailure(error)) {
+        clearSessionAuth();
+        stopPolling();
+        setSessionState(buildAuthLostState(error));
+      }
+
+      return {
+        ok: false,
+        errorCode: isApiClientError(error) ? error.code : "NETWORK_ERROR",
+        errorMessage: isApiClientError(error)
+          ? error.message
+          : "Unable to fetch player list.",
+      };
+    }
+  }, [stopPolling]);
+
+  const revokePlayer = useCallback(
+    async (tokenIdInput) => {
+      const tokenId = normalizeNonNegativeInteger(tokenIdInput, -1);
+
+      if (tokenId < 0) {
+        return {
+          ok: false,
+          errorCode: "VALIDATION_ERROR",
+          errorMessage: "token_id must be a non-negative integer.",
+        };
+      }
+
+      const gmContext = getGmContext(
+        sessionStateRef.current,
+        sessionTokenRef.current,
+      );
+
+      if (!gmContext.ok) {
+        return gmContext;
+      }
+
+      try {
+        const response = await apiPost(
+          `/gm/sessions/${gmContext.sessionId}/players/${tokenId}/revoke`,
+          {},
+          {
+            token: sessionTokenRef.current,
+          },
+        );
+        const payload = isObjectLike(response.data) ? response.data : {};
+        const eventId = normalizeNonNegativeInteger(payload.event_id, -1);
+        const revoked = Boolean(payload.revoked);
+
+        if (eventId >= 0) {
+          sinceIdRef.current = Math.max(sinceIdRef.current, eventId);
+        }
+
+        if (revoked) {
+          setSessionState((current) => ({
+            ...current,
+            players: current.players.filter((player) => player.tokenId !== tokenId),
+            sinceId: eventId >= 0 ? Math.max(current.sinceId, eventId) : current.sinceId,
+            latestEventId: eventId >= 0
+              ? Math.max(current.latestEventId, eventId)
+              : current.latestEventId,
+          }));
+        }
+
+        return {
+          ok: true,
+          revoked,
+          eventId: eventId >= 0 ? eventId : null,
+        };
+      } catch (error) {
+        if (isAuthFailure(error)) {
+          clearSessionAuth();
+          stopPolling();
+          setSessionState(buildAuthLostState(error));
+        }
+
+        return {
+          ok: false,
+          errorCode: isApiClientError(error) ? error.code : "NETWORK_ERROR",
+          errorMessage: isApiClientError(error)
+            ? error.message
+            : "Unable to revoke player.",
+        };
+      }
+    },
+    [stopPolling],
+  );
+
   const resetSession = useCallback(() => {
     clearSessionAuth();
     stopPolling();
@@ -565,6 +924,11 @@ export const useMultiplayerSession = () => {
     bootstrapFromAuth,
     submitRoll,
     submitPush,
+    rotateJoinLink,
+    setJoiningEnabled,
+    resetSceneStrain,
+    refreshPlayers,
+    revokePlayer,
     stopPolling,
     resetSession,
   };

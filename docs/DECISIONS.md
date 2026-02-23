@@ -119,3 +119,9 @@
   - **Decision:** Add `multiplayer-event-reducer` for ordered, idempotent event application (`roll`, `push`, `strain_reset`, `join`, `leave`) and extend `useMultiplayerSession` with `submitRoll`/`submitPush` that enforce local payload constraints (integers `0..99`, boolean `strain`) before posting `{ type, payload }`, then apply server-returned event/state as authoritative.
   - **Consequences:** Event handling and action submit behavior are now consistent between poll-driven and response-driven updates, reducing drift and duplicate logic in UI layers.
   - **Alternatives considered:** Inline reducer logic in hook and route components (rejected because behavior would be harder to test and easier to desynchronize).
+
+- **2026-02-23 — Keep GM operations in the multiplayer session hook with explicit role guards**
+  - **Context:** GM-only endpoints need consistent guardrails and state updates, but a dedicated GM UI surface has not been fully introduced yet.
+  - **Decision:** Implement GM API methods directly in `useMultiplayerSession` (`rotateJoinLink`, `setJoiningEnabled`, `resetSceneStrain`, `refreshPlayers`, `revokePlayer`) with shared role/session/token checks and auth-failure handling, returning structured `{ ok, ... }` results for future UI composition.
+  - **Consequences:** GM operations are available immediately to any UI layer with consistent behavior and test coverage, while avoiding premature coupling to a specific panel design.
+  - **Alternatives considered:** Build GM endpoint calls directly into a temporary component (rejected because it duplicates guard/error handling and makes future refactors harder).

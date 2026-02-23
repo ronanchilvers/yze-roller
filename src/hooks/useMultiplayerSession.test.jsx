@@ -478,6 +478,210 @@ test("submitPush posts push event and applies authoritative strain value", async
   app.unmount();
 });
 
+test("GM-only actions are role-gated for non-GM sessions", async () => {
+  vi.useFakeTimers();
+
+  mocks.getSessionAuth.mockReturnValue({
+    sessionToken: "player-token-1",
+  });
+  mocks.isApiClientError.mockImplementation(
+    (error) => error instanceof ApiClientError,
+  );
+  mocks.apiGet.mockResolvedValue({
+    status: 200,
+    data: buildSessionSnapshot({
+      role: "player",
+      latest_event_id: 0,
+    }),
+  });
+
+  const capture = vi.fn();
+  const app = createContainer();
+
+  await act(async () => {
+    app.root.render(<CaptureMultiplayerSession onCapture={capture} />);
+  });
+
+  await act(async () => {
+    await getLatestHookValue(capture).bootstrapFromAuth();
+  });
+
+  let gmResult = null;
+  await act(async () => {
+    gmResult = await getLatestHookValue(capture).setJoiningEnabled(false);
+  });
+
+  expect(gmResult.ok).toBe(false);
+  expect(gmResult.errorCode).toBe("ROLE_FORBIDDEN");
+
+  app.unmount();
+});
+
+test("GM actions update joining state and refresh players", async () => {
+  vi.useFakeTimers();
+
+  mocks.getSessionAuth.mockReturnValue({
+    sessionToken: "gm-token-1",
+  });
+  mocks.isApiClientError.mockImplementation(
+    (error) => error instanceof ApiClientError,
+  );
+  mocks.apiGet.mockImplementation(async (path) => {
+    if (path === "/session") {
+      return {
+        status: 200,
+        data: buildSessionSnapshot({
+          role: "gm",
+          self: {
+            token_id: 1,
+            display_name: "GM",
+            role: "gm",
+          },
+        }),
+      };
+    }
+
+    if (path === "/gm/sessions/7/players") {
+      return {
+        status: 200,
+        data: {
+          session_id: 7,
+          players: [
+            {
+              token_id: 1,
+              display_name: "GM",
+              role: "gm",
+              revoked: false,
+            },
+            {
+              token_id: 31,
+              display_name: "Alice",
+              role: "player",
+              revoked: false,
+            },
+            {
+              token_id: 99,
+              display_name: "Old",
+              role: "player",
+              revoked: true,
+            },
+          ],
+        },
+      };
+    }
+
+    return {
+      status: 204,
+      data: null,
+    };
+  });
+  mocks.apiPost.mockResolvedValue({
+    status: 200,
+    data: {
+      session_id: 7,
+      joining_enabled: false,
+    },
+  });
+
+  const capture = vi.fn();
+  const app = createContainer();
+
+  await act(async () => {
+    app.root.render(<CaptureMultiplayerSession onCapture={capture} />);
+  });
+
+  await act(async () => {
+    await getLatestHookValue(capture).bootstrapFromAuth();
+  });
+
+  let joinResult = null;
+  await act(async () => {
+    joinResult = await getLatestHookValue(capture).setJoiningEnabled(false);
+  });
+  expect(joinResult.ok).toBe(true);
+  expect(getLatestHookValue(capture).sessionState.joiningEnabled).toBe(false);
+
+  let playersResult = null;
+  await act(async () => {
+    playersResult = await getLatestHookValue(capture).refreshPlayers();
+  });
+
+  expect(playersResult.ok).toBe(true);
+  expect(playersResult.players).toHaveLength(2);
+  expect(
+    getLatestHookValue(capture).sessionState.players.some(
+      (player) => player.tokenId === 31,
+    ),
+  ).toBe(true);
+
+  app.unmount();
+});
+
+test("GM revoke action removes player and advances latest event cursor", async () => {
+  vi.useFakeTimers();
+
+  mocks.getSessionAuth.mockReturnValue({
+    sessionToken: "gm-token-1",
+  });
+  mocks.isApiClientError.mockImplementation(
+    (error) => error instanceof ApiClientError,
+  );
+  mocks.apiGet.mockResolvedValue({
+    status: 200,
+    data: buildSessionSnapshot({
+      role: "gm",
+      players: [
+        {
+          token_id: 1,
+          display_name: "GM",
+          role: "gm",
+        },
+        {
+          token_id: 31,
+          display_name: "Alice",
+          role: "player",
+        },
+      ],
+    }),
+  });
+  mocks.apiPost.mockResolvedValue({
+    status: 200,
+    data: {
+      session_id: 7,
+      token_id: 31,
+      revoked: true,
+      event_emitted: true,
+      event_id: 250,
+    },
+  });
+
+  const capture = vi.fn();
+  const app = createContainer();
+
+  await act(async () => {
+    app.root.render(<CaptureMultiplayerSession onCapture={capture} />);
+  });
+
+  await act(async () => {
+    await getLatestHookValue(capture).bootstrapFromAuth();
+  });
+
+  let revokeResult = null;
+  await act(async () => {
+    revokeResult = await getLatestHookValue(capture).revokePlayer(31);
+  });
+
+  const finalState = getLatestHookValue(capture).sessionState;
+
+  expect(revokeResult.ok).toBe(true);
+  expect(revokeResult.revoked).toBe(true);
+  expect(finalState.players.some((player) => player.tokenId === 31)).toBe(false);
+  expect(finalState.sinceId).toBe(250);
+  expect(finalState.latestEventId).toBe(250);
+
+  app.unmount();
+});
+
 test("bootstrapFromAuth handles auth failures by clearing memory auth", async () => {
   vi.useFakeTimers();
 
