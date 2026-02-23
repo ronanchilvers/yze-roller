@@ -6,6 +6,7 @@ export const DICE_TYPE = Object.freeze({
   ATTRIBUTE: "attribute",
   SKILL: "skill",
   STRAIN: "strain",
+  MODIFIER: "modifier",
 });
 export const EMPTY_OUTCOME = Object.freeze({
   successes: 0,
@@ -31,6 +32,13 @@ export const SKILL_DICE_OPTS = Object.freeze({
 export const STRAIN_DICE_OPTS = Object.freeze({
   min: 0,
   max: MAX_STRAIN_DICE,
+  fallback: 0,
+});
+
+/** Normalization options for modifier dice (min 0, max 3, fallback 0). */
+export const MODIFIER_DICE_OPTS = Object.freeze({
+  min: 0,
+  max: 3,
   fallback: 0,
 });
 
@@ -68,6 +76,7 @@ export const sanitizePoolCounts = (counts) => {
     ),
     skillDice: normalizeDiceCount(source.skillDice, SKILL_DICE_OPTS),
     strainDice: normalizeDiceCount(source.strainDice, STRAIN_DICE_OPTS),
+    modifierDice: normalizeDiceCount(source.modifierDice, MODIFIER_DICE_OPTS),
   };
 };
 
@@ -83,7 +92,11 @@ export const getDieId = (die, index) => {
 };
 
 const normalizeDieType = (value) => {
-  if (value === DICE_TYPE.SKILL || value === DICE_TYPE.STRAIN) {
+  if (
+    value === DICE_TYPE.SKILL ||
+    value === DICE_TYPE.STRAIN ||
+    value === DICE_TYPE.MODIFIER
+  ) {
     return value;
   }
 
@@ -129,6 +142,14 @@ export const buildDicePool = (counts) => {
     pool.push({
       id: `strain-${index + 1}`,
       type: DICE_TYPE.STRAIN,
+      face: null,
+    });
+  }
+
+  for (let index = 0; index < normalized.modifierDice; index += 1) {
+    pool.push({
+      id: `modifier-${index + 1}`,
+      type: DICE_TYPE.MODIFIER,
       face: null,
     });
   }
@@ -252,7 +273,7 @@ export const summarizeRoll = (dicePool) => {
  * resolves faces via physics simulation), but serves as the public API
  * for non-visual / integration testing (e.g. strain accumulation tests).
  *
- * @param {{ attributeDice?: number, skillDice?: number, strainDice?: number }} counts
+ * @param {{ attributeDice?: number, skillDice?: number, strainDice?: number, modifierDice?: number }} counts
  * @param {() => number} [randomSource=cryptoRandom]
  * @returns {{ dice: object[], outcomes: object, pushableDiceIds: string[], canPush: boolean }}
  */

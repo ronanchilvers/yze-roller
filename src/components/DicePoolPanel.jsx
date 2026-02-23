@@ -7,9 +7,11 @@ import {
   SKILL_DICE_OPTS,
   normalizeDiceCount,
 } from "../lib/dice.js";
+import { normalizeRollModifier } from "../lib/roll-modifier.js";
 
 const TAB_MANUAL = "manual";
 const TAB_IMPORT = "import";
+const MODIFIER_MARKS = [-3, -2, -1, 0, 1, 2, 3];
 
 const buildAttributeLabel = (attributeKey) =>
   REQUIRED_ATTRIBUTES[attributeKey] ?? attributeKey;
@@ -37,6 +39,8 @@ const DicePoolPanel = ({
   setSkillDice,
   onRoll,
   onRollWithCounts,
+  rollModifier,
+  onRollModifierChange,
   importState,
   onImportFile,
   onResetImport,
@@ -178,6 +182,16 @@ const DicePoolPanel = ({
 
 
   const isImportReady = status === "ready" && Boolean(character);
+  const normalizedRollModifier = normalizeRollModifier(rollModifier);
+  const formattedRollModifier =
+    normalizedRollModifier > 0
+      ? `+${normalizedRollModifier}`
+      : String(normalizedRollModifier);
+  const formatModifierMark = (value) => (value > 0 ? `+${value}` : String(value));
+
+  const handleRollModifierChange = (event) => {
+    onRollModifierChange(normalizeRollModifier(event.target.value));
+  };
 
   return (
     <section className="panel controls-panel" aria-labelledby="dice-pool-label">
@@ -421,6 +435,36 @@ const DicePoolPanel = ({
 
         </div>
       )}
+      <div className="modifier-control">
+        <div className="modifier-control-header">
+          <label htmlFor="rollModifier">Dice Modifier</label>
+          <output id="rollModifierValue" aria-live="polite">
+            {formattedRollModifier}
+          </output>
+        </div>
+        <input
+          id="rollModifier"
+          name="rollModifier"
+          className="modifier-slider"
+          type="range"
+          min={-3}
+          max={3}
+          step={1}
+          value={normalizedRollModifier}
+          onChange={handleRollModifierChange}
+          aria-describedby="rollModifierValue"
+        />
+        <div className="modifier-markers" aria-hidden="true">
+          {MODIFIER_MARKS.map((value) => (
+            <span
+              key={value}
+              className={`modifier-marker ${value === normalizedRollModifier ? "is-active" : ""}`}
+            >
+              {formatModifierMark(value)}
+            </span>
+          ))}
+        </div>
+      </div>
       <div className="panel-action-row">
         <button
           type="button"
@@ -454,6 +498,8 @@ DicePoolPanel.propTypes = {
   setSkillDice: PropTypes.func.isRequired,
   onRoll: PropTypes.func.isRequired,
   onRollWithCounts: PropTypes.func,
+  rollModifier: PropTypes.number.isRequired,
+  onRollModifierChange: PropTypes.func.isRequired,
   importState: PropTypes.shape({
     fileName: PropTypes.string,
     status: PropTypes.string,

@@ -47,6 +47,7 @@ function App() {
 
   const [overrideCounts, setOverrideCounts] = useState(null);
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
+  const [rollModifier, setRollModifier] = useState(0);
 
   const effectiveAttributeDice = overrideCounts?.attributeDice ?? attributeDice;
   const effectiveSkillDice = overrideCounts?.skillDice ?? skillDice;
@@ -64,6 +65,7 @@ function App() {
   } = useRollSession({
     attributeDice: effectiveAttributeDice,
     skillDice: effectiveSkillDice,
+    rollModifier,
     normalizedStrainPoints,
     onBaneIncrement: applyBaneIncrement,
   });
@@ -129,6 +131,11 @@ function App() {
 
     setOverrideCounts(counts);
     setPendingRollCounts(counts);
+  };
+
+  const handleClearDice = () => {
+    setRollModifier(0);
+    onClearDice();
   };
 
   useEffect(() => {
@@ -272,6 +279,8 @@ function App() {
             setSkillDice={setSkillDice}
             onRoll={onRoll}
             onRollWithCounts={handleRollWithCounts}
+            rollModifier={rollModifier}
+            onRollModifierChange={setRollModifier}
             importState={characterImport}
             onImportFile={importFromFile}
             onResetImport={resetImport}
@@ -280,7 +289,7 @@ function App() {
             onPush={onPush}
             pushActionLabel={`Push ${pushableDiceCount} Dice`}
             isPushDisabled={isRolling || !hasRolled || !canPush}
-            onClearDice={onClearDice}
+            onClearDice={handleClearDice}
             isClearDisabled={!canClearDice}
           />
         </div>

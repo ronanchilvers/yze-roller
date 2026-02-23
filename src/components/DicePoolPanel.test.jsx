@@ -2,7 +2,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { createRoot } from "react-dom/client";
-import { act } from "react-dom/test-utils";
+import { act, Simulate } from "react-dom/test-utils";
 import { afterEach, test, expect, vi } from "vitest";
 import DicePoolPanel from "./DicePoolPanel.jsx";
 
@@ -61,6 +61,8 @@ const TestHarness = ({
   skillDice = 1,
   importStateOverrides = {},
   onRollWithCounts,
+  rollModifier = 0,
+  onRollModifierChange = vi.fn(),
   onPrimaryAction = vi.fn(),
   setAttributeDice = vi.fn(),
   setSkillDice = vi.fn(),
@@ -77,6 +79,8 @@ const TestHarness = ({
   TestHarness.propTypes = {
     importStateOverrides: PropTypes.object,
     onRollWithCounts: PropTypes.func,
+    rollModifier: PropTypes.number,
+    onRollModifierChange: PropTypes.func,
     onPrimaryAction: PropTypes.func,
     setAttributeDice: PropTypes.func,
     setSkillDice: PropTypes.func,
@@ -102,6 +106,7 @@ const TestHarness = ({
     selectedSkill: null,
     ...importStateOverrides,
   });
+  const [modifierValue, setModifierValue] = useState(rollModifier);
 
   return (
     <DicePoolPanel
@@ -115,6 +120,11 @@ const TestHarness = ({
       setSkillDice={setSkillDice}
       onRoll={onRoll}
       onRollWithCounts={onRollWithCounts}
+      rollModifier={modifierValue}
+      onRollModifierChange={(value) => {
+        setModifierValue(value);
+        onRollModifierChange(value);
+      }}
       importState={importState}
       onImportFile={onImportFile}
       onResetImport={onResetImport}
@@ -152,7 +162,54 @@ test("renders manual tab by default", () => {
 
   expect(container.querySelector("#attributeDice")).not.toBeNull();
   expect(container.querySelector("#skillDice")).not.toBeNull();
+  expect(container.querySelector("#rollModifier")).not.toBeNull();
   expect(container.querySelector("#characterImport")).toBeNull();
+
+  unmount();
+});
+
+test("modifier slider supports range -3 to +3 with default 0 and updates", () => {
+  const onRollModifierChange = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <TestHarness onRollModifierChange={onRollModifierChange} rollModifier={0} />,
+    );
+  });
+
+  const slider = container.querySelector("#rollModifier");
+  const valueLabel = container.querySelector("#rollModifierValue");
+  const modifierControl = container.querySelector(".modifier-control");
+  const actionRow = container.querySelector(".panel-action-row");
+  const markerLabels = Array.from(
+    container.querySelectorAll(".modifier-marker"),
+  ).map((node) => node.textContent?.trim());
+  const initialActiveMarker = container.querySelector(
+    ".modifier-marker.is-active",
+  );
+
+  expect(slider).not.toBeNull();
+  expect(slider.min).toBe("-3");
+  expect(slider.max).toBe("3");
+  expect(slider.step).toBe("1");
+  expect(slider.value).toBe("0");
+  expect(valueLabel?.textContent?.trim()).toBe("0");
+  expect(markerLabels).toEqual(["-3", "-2", "-1", "0", "+1", "+2", "+3"]);
+  expect(initialActiveMarker?.textContent?.trim()).toBe("0");
+  expect(
+    modifierControl.compareDocumentPosition(actionRow) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).not.toBe(0);
+
+  act(() => {
+    Simulate.change(slider, { target: { value: "3" } });
+  });
+
+  expect(onRollModifierChange).toHaveBeenCalledWith(3);
+  expect(valueLabel?.textContent?.trim()).toBe("+3");
+  const updatedActiveMarker = container.querySelector(".modifier-marker.is-active");
+  expect(updatedActiveMarker?.textContent?.trim()).toBe("+3");
 
   unmount();
 });
@@ -168,10 +225,8 @@ test("manual inputs can be cleared while editing", () => {
   const skillInput = container.querySelector("#skillDice");
 
   act(() => {
-    attributeInput.value = "";
-    attributeInput.dispatchEvent(new Event("input", { bubbles: true }));
-    skillInput.value = "";
-    skillInput.dispatchEvent(new Event("input", { bubbles: true }));
+    Simulate.change(attributeInput, { target: { value: "" } });
+    Simulate.change(skillInput, { target: { value: "" } });
   });
 
   expect(attributeInput.value).toBe("");
@@ -201,14 +256,8 @@ test("manual roll validates and commits counts before rolling", () => {
   const rollButton = getButtonByText(container, "Roll Dice");
 
   act(() => {
-    // Simulate user typing by setting value and triggering change event
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(attributeInput, "");
-    attributeInput.dispatchEvent(new Event("input", { bubbles: true }));
-    attributeInput.dispatchEvent(new Event("change", { bubbles: true }));
-    
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(skillInput, "999");
-    skillInput.dispatchEvent(new Event("input", { bubbles: true }));
-    skillInput.dispatchEvent(new Event("change", { bubbles: true }));
+    Simulate.change(attributeInput, { target: { value: "" } });
+    Simulate.change(skillInput, { target: { value: "999" } });
   });
 
   act(() => {

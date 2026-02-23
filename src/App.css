@@ -237,6 +237,51 @@ h2 {
   margin-top: 0.9rem;
 }
 
+.modifier-control {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+
+.modifier-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 600;
+}
+
+.modifier-control-header output {
+  min-width: 2.4rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-900);
+}
+
+.modifier-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: #7a4cc9;
+}
+
+.modifier-markers {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--ink-700);
+}
+
+.modifier-marker {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.modifier-marker.is-active {
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -303,6 +348,7 @@ h2 {
 .pool-action-button:focus-visible,
 .panel-reset-button:focus-visible,
 .number-field input:focus-visible,
+.modifier-slider:focus-visible,
 .strain-reset-button:focus-visible,
 .pool-tab:focus-visible,
 .theme-select select:focus-visible,
