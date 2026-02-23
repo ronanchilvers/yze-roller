@@ -107,3 +107,9 @@
   - **Decision:** Add `useMultiplayerSession` as the bootstrap boundary that reads in-memory auth, fetches `/api/session`, normalizes payloads via `normalizeSessionSnapshot`, and maps auth failures to `auth_lost` while clearing memory auth.
   - **Consequences:** Snapshot initialization is centralized and testable, reducing drift in later polling/reducer work and giving one consistent path for handling revoked/invalid session tokens.
   - **Alternatives considered:** Parse `/api/session` ad hoc inside route components (rejected due to duplicated validation and inconsistent auth-failure handling).
+
+- **2026-02-23 — Implement polling loop semantics inside multiplayer session hook**
+  - **Context:** Contract requires deterministic client polling behavior across idle periods, server/network errors, and auth invalidation while preserving `since_id` cursor progression.
+  - **Decision:** Extend `useMultiplayerSession` with timer-managed polling for `/api/events` (`limit=10`) using `1000ms` base interval, `x1.5` growth to `8000ms` on `204`, exponential error backoff with jitter to `30000ms`, and immediate auth-loss shutdown (`401`/`403` + token error codes) that clears in-memory auth.
+  - **Consequences:** Polling behavior is now centralized and testable; downstream reducer/UI work can consume one stream state (`events`, `sinceId`, `pollingStatus`, `pollIntervalMs`) rather than reimplementing transport semantics.
+  - **Alternatives considered:** Poll inside UI components with ad hoc timers (rejected due to duplicated timer logic and weaker auth-failure guarantees).
