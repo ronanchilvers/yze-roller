@@ -83,3 +83,9 @@
   - **Decision:** Make `session_state` authoritative for both `scene_strain` and `joining_enabled`, with `state_value` string encoding and explicit type conversion rules (`\"true\"/\"false\"` for `joining_enabled`).
   - **Consequences:** Avoids dual-write drift between tables; join authorization and session snapshot behavior now depend on parsed `session_state` values.
   - **Alternatives considered:** Keep `joining_enabled` in `sessions` while using `session_state` only for strain (rejected due to split state authority).
+
+- **2026-02-23 — Use build-time Vite env for API base URL with safe fallback**
+  - **Context:** Client-side API integration needs environment-specific endpoint targeting while avoiding hardcoded URLs across join/session/poll/action paths.
+  - **Decision:** Centralize endpoint configuration in `src/lib/app-config.js` using `import.meta.env.VITE_API_BASE_URL`; enforce non-empty string values when provided, normalize trailing slashes, and default to same-origin `"/api"` when unset.
+  - **Consequences:** Future API client code can compose request URLs from one validated source; deployments can switch API targets per build mode without touching feature logic.
+  - **Alternatives considered:** Hardcode `"/api"` only (rejected because staging/production splits may require different origins), runtime-injected global config (deferred unless one artifact must serve multiple environments).
