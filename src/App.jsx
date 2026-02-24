@@ -363,6 +363,7 @@ function DiceRollerApp({
   const [gmPendingAction, setGmPendingAction] = useState("");
   const [rotatedJoinLink, setRotatedJoinLink] = useState("");
   const [isRetryPending, setIsRetryPending] = useState(false);
+  const [rollModifier, setRollModifier] = useState(0);
   const visibleSessionEvents = useMemo(
     () => normalizeSessionEventsForFeed(sessionEvents),
     [sessionEvents],
@@ -388,6 +389,7 @@ function DiceRollerApp({
   } = useRollSession({
     attributeDice: effectiveAttributeDice,
     skillDice: effectiveSkillDice,
+    rollModifier,
     normalizedStrainPoints,
     onBaneIncrement: applyBaneIncrement,
   });
@@ -466,6 +468,11 @@ function DiceRollerApp({
 
     setOverrideCounts(counts);
     setPendingRollCounts(counts);
+  };
+
+  const handleClearDice = () => {
+    setRollModifier(0);
+    onClearDice();
   };
 
   useEffect(() => {
@@ -1075,6 +1082,8 @@ function DiceRollerApp({
             setSkillDice={setSkillDice}
             onRoll={onRoll}
             onRollWithCounts={handleRollWithCounts}
+            rollModifier={rollModifier}
+            onRollModifierChange={setRollModifier}
             importState={characterImport}
             onImportFile={importFromFile}
             onResetImport={resetImport}
@@ -1083,7 +1092,7 @@ function DiceRollerApp({
             onPush={onPush}
             pushActionLabel={`Push ${pushableDiceCount} Dice`}
             isPushDisabled={isRolling || !hasRolled || !canPush || isActionSubmitPending}
-            onClearDice={onClearDice}
+            onClearDice={handleClearDice}
             isClearDisabled={!canClearDice}
           />
         </div>
