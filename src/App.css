@@ -207,34 +207,29 @@
   gap: 0.55rem;
 }
 
-.session-connection-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--line);
+.session-connection-dot {
+  width: 5px;
+  height: 5px;
+  min-width: 5px;
+  min-height: 5px;
   border-radius: 999px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  background: var(--summary-pill-bg);
-  color: var(--ink-700);
+  align-self: center;
+  background: var(--ink-700);
 }
 
-.session-connection-badge.is-online {
-  border-color: #3f8650;
-  color: #2a6f3a;
+.session-connection-dot.is-online {
+  background: #2a6f3a;
+  box-shadow: 0 0 6px rgba(42, 111, 58, 0.65);
 }
 
-.session-connection-badge.is-pending {
-  border-color: #9d8647;
-  color: #7d6728;
+.session-connection-dot.is-pending {
+  background: #7d6728;
+  box-shadow: 0 0 6px rgba(125, 103, 40, 0.65);
 }
 
-.session-connection-badge.is-error {
-  border-color: var(--strain-line);
-  color: var(--strain-line);
+.session-connection-dot.is-error {
+  background: var(--strain-line);
+  box-shadow: 0 0 6px rgba(114, 30, 27, 0.65);
 }
 
 .session-status-strip {

@@ -837,15 +837,15 @@ function DiceRollerApp({
           <div className="top-bar-title">
             <p className="eyebrow">Year Zero Engine</p>
             <div className="session-heading-row">
-              <h1>{resolvedSessionName}</h1>
               {sessionSummary ? (
                 <span
-                  className={`session-connection-badge is-${sessionSummary.connectionTone}`}
-                  data-testid="session-connection-badge"
-                >
-                  {sessionSummary.connectionStatus}
-                </span>
+                  className={`session-connection-dot is-${sessionSummary.connectionTone}`}
+                  data-testid="session-connection-dot"
+                  aria-label={`Connection status: ${sessionSummary.connectionStatus}`}
+                  title={sessionSummary.connectionStatus}
+                />
               ) : null}
+              <h1>{resolvedSessionName}</h1>
             </div>
           </div>
           <div className="top-bar-actions">

@@ -355,15 +355,17 @@ test("session mode renders multiplayer status in the header", () => {
   app.render(<App />);
 
   const heading = app.container.querySelector("h1");
-  const connectionBadge = app.container.querySelector(
-    '[data-testid="session-connection-badge"]',
+  const connectionDot = app.container.querySelector(
+    '[data-testid="session-connection-dot"]',
   );
   const roleIndicator = app.container.querySelector(
     '[data-testid="session-role-indicator"]',
   );
 
   expect(heading?.textContent).toBe("Streetwise Night");
-  expect(connectionBadge?.textContent).toContain("Connected");
+  expect(connectionDot).not.toBeNull();
+  expect(connectionDot?.className).toContain("is-online");
+  expect(connectionDot?.getAttribute("aria-label")).toContain("Connected");
   expect(roleIndicator).not.toBeNull();
   expect(roleIndicator?.textContent).toContain("Role");
   expect(roleIndicator?.textContent).toContain("Player");
@@ -473,12 +475,13 @@ test("session mode shows reconnecting label while polling is in backoff", () => 
 
   app.render(<App />);
 
-  const connectionBadge = app.container.querySelector(
-    '[data-testid="session-connection-badge"]',
+  const connectionDot = app.container.querySelector(
+    '[data-testid="session-connection-dot"]',
   );
 
-  expect(connectionBadge).not.toBeNull();
-  expect(connectionBadge?.textContent).toContain("Reconnecting");
+  expect(connectionDot).not.toBeNull();
+  expect(connectionDot?.className).toContain("is-pending");
+  expect(connectionDot?.getAttribute("aria-label")).toContain("Reconnecting");
 
   app.unmount();
 });
@@ -500,16 +503,17 @@ test("session mode shows connection error label when session state is error", ()
 
   app.render(<App />);
 
-  const connectionBadge = app.container.querySelector(
-    '[data-testid="session-connection-badge"]',
+  const connectionDot = app.container.querySelector(
+    '[data-testid="session-connection-dot"]',
   );
   const connectionError = app.container.querySelector(
     '[data-testid="session-connection-error"]',
   );
   const retryButton = app.container.querySelector('[data-testid="session-retry-button"]');
 
-  expect(connectionBadge).not.toBeNull();
-  expect(connectionBadge?.textContent).toContain("Connection Error");
+  expect(connectionDot).not.toBeNull();
+  expect(connectionDot?.className).toContain("is-error");
+  expect(connectionDot?.getAttribute("aria-label")).toContain("Connection Error");
   expect(connectionError?.textContent).toContain("Unable to reach session service.");
   expect(retryButton).not.toBeNull();
 
