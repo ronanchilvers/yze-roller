@@ -215,3 +215,9 @@
   - **Decision:** In session mode, resolve strain points from authoritative session state and pass that value into `useRollSession`; disable local bane-increment strain accumulation in session mode; route top-bar reset through GM reset action when role permits and disable it for non-GM players.
   - **Consequences:** Strain metric and dice behavior are now consistent with server-authoritative multiplayer state, and reset behavior matches role permissions.
   - **Alternatives considered:** Keep dual local/session strain paths and reconcile opportunistically (rejected due to persistent drift risk and unclear UX).
+
+- **2026-02-24 — Add 5s poll watchdog and cap polling backoff at 5s**
+  - **Context:** Event polling used timer-chained single-flight requests with no request-level timeout, so a hung `/events` fetch could block the loop indefinitely; prior max idle/error intervals (`8s`/`30s`) also exceeded desired responsiveness.
+  - **Decision:** Add a poll request timeout watchdog at `5000ms` using timeout-race semantics (with `AbortController` cancellation when available), and cap both idle and error poll intervals at `5000ms`.
+  - **Consequences:** Hung polls now fail fast into controlled backoff/retry flow instead of stalling; maximum wait between poll attempts is bounded at 5s.
+  - **Alternatives considered:** Keep unbounded request duration and rely on browser/network timeouts (rejected due to indefinite stall risk).

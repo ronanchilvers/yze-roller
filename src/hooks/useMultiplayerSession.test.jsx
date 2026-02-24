@@ -5,6 +5,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { ApiClientError } from "../lib/api-client.js";
 import {
   DEFAULT_POLL_INTERVAL_MS,
+  POLL_REQUEST_TIMEOUT_MS,
   useMultiplayerSession,
 } from "./useMultiplayerSession.js";
 
@@ -383,6 +384,65 @@ test("polling loop returns to connected state after a transient error", async ()
   expect(stateAfterRecovery.errorCode).toBeNull();
   expect(stateAfterRecovery.errorMessage).toBe("");
   expect(stateAfterRecovery.pollIntervalMs).toBe(3000);
+
+  randomSpy.mockRestore();
+  app.unmount();
+});
+
+test("polling loop times out stalled event requests and keeps polling", async () => {
+  vi.useFakeTimers();
+  const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5);
+  let eventsCallCount = 0;
+
+  mocks.getSessionAuth.mockReturnValue({
+    sessionToken: "player-token-1",
+  });
+  mocks.isApiClientError.mockImplementation(
+    (error) => error instanceof ApiClientError,
+  );
+  mocks.apiGet.mockImplementation(async (path) => {
+    if (path === "/session") {
+      return {
+        status: 200,
+        data: buildSessionSnapshot({
+          latest_event_id: 0,
+        }),
+      };
+    }
+
+    eventsCallCount += 1;
+    return new Promise(() => {});
+  });
+
+  const capture = vi.fn();
+  const app = createContainer();
+
+  await act(async () => {
+    app.root.render(<CaptureMultiplayerSession onCapture={capture} />);
+  });
+
+  await act(async () => {
+    await getLatestHookValue(capture).bootstrapFromAuth();
+  });
+
+  await act(async () => {
+    vi.advanceTimersByTime(DEFAULT_POLL_INTERVAL_MS);
+  });
+
+  await act(async () => {
+    vi.advanceTimersByTime(POLL_REQUEST_TIMEOUT_MS);
+  });
+
+  const stateAfterTimeout = getLatestHookValue(capture).sessionState;
+  expect(stateAfterTimeout.pollingStatus).toBe("backoff");
+  expect(stateAfterTimeout.pollIntervalMs).toBe(2000);
+  expect(eventsCallCount).toBe(1);
+
+  await act(async () => {
+    vi.advanceTimersByTime(2000);
+  });
+
+  expect(eventsCallCount).toBe(2);
 
   randomSpy.mockRestore();
   app.unmount();

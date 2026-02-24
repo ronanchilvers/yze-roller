@@ -91,6 +91,7 @@ export const isApiClientError = (value) => value instanceof ApiClientError;
  *   token?: string | null,
  *   method?: string,
  *   body?: unknown,
+ *   signal?: AbortSignal,
  *   headers?: Record<string, string>,
  *   fetchImpl?: typeof fetch,
  *   env?: Record<string, unknown>,
@@ -102,6 +103,7 @@ export const apiFetch = async (path, options = {}) => {
     token = null,
     method = "GET",
     body,
+    signal,
     headers = {},
     fetchImpl = globalThis.fetch,
     env = import.meta.env,
@@ -125,6 +127,10 @@ export const apiFetch = async (path, options = {}) => {
     method,
     headers: requestHeaders,
   };
+
+  if (signal) {
+    requestInit.signal = signal;
+  }
 
   if (body !== undefined) {
     requestHeaders["Content-Type"] = "application/json";

@@ -6,8 +6,9 @@ import { applySessionEvents } from "../lib/multiplayer-event-reducer.js";
 
 export const EVENTS_POLL_LIMIT = 10;
 export const DEFAULT_POLL_INTERVAL_MS = 1000;
-export const MAX_IDLE_POLL_INTERVAL_MS = 8000;
-export const MAX_ERROR_POLL_INTERVAL_MS = 30000;
+export const MAX_IDLE_POLL_INTERVAL_MS = 5000;
+export const MAX_ERROR_POLL_INTERVAL_MS = 5000;
+export const POLL_REQUEST_TIMEOUT_MS = 5000;
 
 const INITIAL_MULTIPLAYER_SESSION_STATE = Object.freeze({
   status: "idle",
@@ -149,6 +150,46 @@ const isAuthFailure = (error) => {
 const buildEventsPath = (sinceId) =>
   `/events?since_id=${normalizeNonNegativeInteger(sinceId, 0)}&limit=${EVENTS_POLL_LIMIT}`;
 
+const requestEventsWithTimeout = async (path, token) => {
+  const timeoutMs = normalizeNonNegativeInteger(POLL_REQUEST_TIMEOUT_MS, 0);
+  const controller =
+    typeof AbortController === "function" ? new AbortController() : null;
+  const requestOptions = controller
+    ? {
+        token,
+        signal: controller.signal,
+      }
+    : { token };
+  const requestPromise = apiGet(path, requestOptions);
+
+  if (timeoutMs <= 0) {
+    return requestPromise;
+  }
+
+  let timeoutId = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      if (controller) {
+        try {
+          controller.abort();
+        } catch {
+          // Ignore abort errors and rely on timeout rejection path.
+        }
+      }
+
+      reject(new Error("Polling request timed out."));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([requestPromise, timeoutPromise]);
+  } finally {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
+
 const scaleIdleInterval = (currentIntervalMs) =>
   Math.min(
     MAX_IDLE_POLL_INTERVAL_MS,
@@ -282,9 +323,10 @@ export const useMultiplayerSession = () => {
     }
 
     try {
-      const response = await apiGet(buildEventsPath(sinceIdRef.current), {
-        token: sessionTokenRef.current,
-      });
+      const response = await requestEventsWithTimeout(
+        buildEventsPath(sinceIdRef.current),
+        sessionTokenRef.current,
+      );
 
       if (!pollingActiveRef.current) {
         return;
