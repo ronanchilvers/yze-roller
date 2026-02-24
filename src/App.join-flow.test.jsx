@@ -398,14 +398,49 @@ test("session mode shows connection error label when session state is error", ()
     sessionName: "Streetwise Night",
     sceneStrain: 4,
     players: [{ tokenId: 1 }, { tokenId: 2 }],
+    errorMessage: "Unable to reach session service.",
   };
 
   app.render(<App />);
 
   const summary = app.container.querySelector('[data-testid="session-summary"]');
+  const connectionError = app.container.querySelector(
+    '[data-testid="session-connection-error"]',
+  );
+  const retryButton = app.container.querySelector('[data-testid="session-retry-button"]');
 
   expect(summary).not.toBeNull();
   expect(summary?.textContent).toContain("Connection Error");
+  expect(connectionError?.textContent).toContain("Unable to reach session service.");
+  expect(retryButton).not.toBeNull();
+
+  app.unmount();
+});
+
+test("session mode retry button re-runs bootstrap when session status is error", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "error",
+    pollingStatus: "stopped",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+    errorMessage: "Unable to reach session service.",
+  };
+
+  app.render(<App />);
+
+  const retryButton = app.container.querySelector('[data-testid="session-retry-button"]');
+
+  act(() => {
+    retryButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(1);
 
   app.unmount();
 });

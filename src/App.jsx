@@ -331,6 +331,7 @@ function DiceRollerApp({
   sessionActions = null,
   sessionEvents = [],
   gmControls = null,
+  sessionConnectionMeta = null,
 }) {
   const {
     attributeDice,
@@ -838,6 +839,31 @@ function DiceRollerApp({
                 {sessionActionError}
               </p>
             ) : null}
+            {sessionConnectionMeta?.status === "error" ? (
+              <div className="session-connection-error-row">
+                <p
+                  className="panel-copy session-connection-error-copy"
+                  role="alert"
+                  data-testid="session-connection-error"
+                >
+                  {normalizeSessionText(
+                    sessionConnectionMeta?.errorMessage,
+                    "Unable to load multiplayer session.",
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className="join-secondary"
+                  data-testid="session-retry-button"
+                  onClick={() => {
+                    void sessionConnectionMeta?.onRetry?.();
+                  }}
+                  disabled={sessionConnectionMeta?.status === "loading"}
+                >
+                  Retry Connection
+                </button>
+              </div>
+            ) : null}
           </section>
         ) : null}
 
@@ -1040,6 +1066,11 @@ DiceRollerApp.propTypes = {
     refreshPlayers: PropTypes.func,
     revokePlayer: PropTypes.func,
   }),
+  sessionConnectionMeta: PropTypes.shape({
+    status: PropTypes.string,
+    errorMessage: PropTypes.string,
+    onRetry: PropTypes.func,
+  }),
 };
 
 const resolveMultiplayerMode = ({
@@ -1224,6 +1255,11 @@ function SessionView({
       sessionActions={resolvedSessionActions}
       sessionEvents={Array.isArray(sessionState?.events) ? sessionState.events : []}
       gmControls={resolvedGmControls}
+      sessionConnectionMeta={{
+        status: sessionState?.status ?? "idle",
+        errorMessage: normalizeSessionText(sessionState?.errorMessage, ""),
+        onRetry: bootstrapFromAuth,
+      }}
     />
   );
 }

@@ -266,6 +266,20 @@
   font-weight: 600;
 }
 
+.session-connection-error-row {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 0.6rem;
+}
+
+.session-connection-error-copy {
+  margin: 0;
+  color: var(--strain-line);
+  font-weight: 600;
+}
+
 .session-events-panel {
   margin-bottom: 1rem;
 }
@@ -913,6 +927,14 @@ h2 {
 
   .session-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .session-connection-error-row {
+    grid-template-columns: 1fr;
+  }
+
+  .session-connection-error-row .join-secondary {
+    width: 100%;
   }
 
   .gm-controls-actions {

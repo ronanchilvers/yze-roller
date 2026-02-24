@@ -197,3 +197,9 @@
   - **Decision:** Add a `Copy Join Link` control that uses `navigator.clipboard.writeText` when available and falls back to a hidden textarea + `document.execCommand("copy")` path when clipboard APIs are unavailable or denied.
   - **Consequences:** Hosts can copy shareable links in one action across modern and constrained environments; the panel now surfaces deterministic success/error feedback for clipboard failures.
   - **Alternatives considered:** Depend on Clipboard API only (rejected because permission/context constraints can fail in some deployment environments).
+
+- **2026-02-24 — Add explicit retry action for session bootstrap errors**
+  - **Context:** Session summary indicated connection error state, but users had no direct in-panel action to retry bootstrap after transient network/API failures.
+  - **Decision:** Pass session connection metadata into `DiceRollerApp` and render an error row with server-facing error text plus a `Retry Connection` button that calls `bootstrapFromAuth`.
+  - **Consequences:** Recovery from transient connection failures is now a one-click in-session action without forcing route changes or auth reset.
+  - **Alternatives considered:** Require full-page refresh for retry (rejected due to poorer recovery UX and slower iteration while testing integrations).
