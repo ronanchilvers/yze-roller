@@ -5,6 +5,8 @@ import { afterEach, expect, test, vi } from "vitest";
 import { ApiClientError } from "../lib/api-client.js";
 import {
   DEFAULT_POLL_INTERVAL_MS,
+  IDLE_BACKOFF_MULTIPLIER,
+  IDLE_BACKOFF_START_AFTER_POLLS,
   POLL_REQUEST_TIMEOUT_MS,
   useMultiplayerSession,
 } from "./useMultiplayerSession.js";
@@ -227,7 +229,7 @@ test("polling loop appends events and advances cursor on 200 responses", async (
   app.unmount();
 });
 
-test("polling loop increases interval on 204 no-content responses while staying connected", async () => {
+test("polling loop keeps a tight interval for early 204 responses before backing off", async () => {
   vi.useFakeTimers();
 
   mocks.getSessionAuth.mockReturnValue({
@@ -263,14 +265,18 @@ test("polling loop increases interval on 204 no-content responses while staying 
     await getLatestHookValue(capture).bootstrapFromAuth();
   });
 
-  await act(async () => {
-    vi.advanceTimersByTime(DEFAULT_POLL_INTERVAL_MS);
-  });
+  for (let index = 0; index < IDLE_BACKOFF_START_AFTER_POLLS + 1; index += 1) {
+    await act(async () => {
+      vi.advanceTimersByTime(DEFAULT_POLL_INTERVAL_MS);
+    });
+  }
 
   const finalState = getLatestHookValue(capture).sessionState;
 
   expect(finalState.pollingStatus).toBe("running");
-  expect(finalState.pollIntervalMs).toBe(1500);
+  expect(finalState.pollIntervalMs).toBe(
+    Math.round(DEFAULT_POLL_INTERVAL_MS * IDLE_BACKOFF_MULTIPLIER),
+  );
 
   app.unmount();
 });
@@ -316,7 +322,7 @@ test("polling loop uses exponential backoff on non-auth errors", async () => {
   const finalState = getLatestHookValue(capture).sessionState;
 
   expect(finalState.pollingStatus).toBe("backoff");
-  expect(finalState.pollIntervalMs).toBe(2000);
+  expect(finalState.pollIntervalMs).toBe(1000);
   expect(finalState.errorCode).toBe("NETWORK_ERROR");
 
   randomSpy.mockRestore();
@@ -373,17 +379,17 @@ test("polling loop returns to connected state after a transient error", async ()
   let stateAfterError = getLatestHookValue(capture).sessionState;
   expect(stateAfterError.pollingStatus).toBe("backoff");
   expect(stateAfterError.errorCode).toBe("NETWORK_ERROR");
-  expect(stateAfterError.pollIntervalMs).toBe(2000);
+  expect(stateAfterError.pollIntervalMs).toBe(1000);
 
   await act(async () => {
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(1000);
   });
 
   const stateAfterRecovery = getLatestHookValue(capture).sessionState;
   expect(stateAfterRecovery.pollingStatus).toBe("running");
   expect(stateAfterRecovery.errorCode).toBeNull();
   expect(stateAfterRecovery.errorMessage).toBe("");
-  expect(stateAfterRecovery.pollIntervalMs).toBe(3000);
+  expect(stateAfterRecovery.pollIntervalMs).toBe(DEFAULT_POLL_INTERVAL_MS);
 
   randomSpy.mockRestore();
   app.unmount();
@@ -435,11 +441,11 @@ test("polling loop times out stalled event requests and keeps polling", async ()
 
   const stateAfterTimeout = getLatestHookValue(capture).sessionState;
   expect(stateAfterTimeout.pollingStatus).toBe("backoff");
-  expect(stateAfterTimeout.pollIntervalMs).toBe(2000);
+  expect(stateAfterTimeout.pollIntervalMs).toBe(1000);
   expect(eventsCallCount).toBe(1);
 
   await act(async () => {
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(1000);
   });
 
   expect(eventsCallCount).toBe(2);

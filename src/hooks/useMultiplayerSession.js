@@ -5,10 +5,12 @@ import { normalizeSessionSnapshot } from "../lib/session-snapshot.js";
 import { applySessionEvents } from "../lib/multiplayer-event-reducer.js";
 
 export const EVENTS_POLL_LIMIT = 10;
-export const DEFAULT_POLL_INTERVAL_MS = 1000;
+export const DEFAULT_POLL_INTERVAL_MS = 500;
 export const MAX_IDLE_POLL_INTERVAL_MS = 5000;
 export const MAX_ERROR_POLL_INTERVAL_MS = 5000;
 export const POLL_REQUEST_TIMEOUT_MS = 5000;
+export const IDLE_BACKOFF_START_AFTER_POLLS = 3;
+export const IDLE_BACKOFF_MULTIPLIER = 1.25;
 
 const INITIAL_MULTIPLAYER_SESSION_STATE = Object.freeze({
   status: "idle",
@@ -195,7 +197,10 @@ const scaleIdleInterval = (currentIntervalMs) =>
     MAX_IDLE_POLL_INTERVAL_MS,
     Math.max(
       DEFAULT_POLL_INTERVAL_MS,
-      Math.round(normalizeNonNegativeInteger(currentIntervalMs, DEFAULT_POLL_INTERVAL_MS) * 1.5),
+      Math.round(
+        normalizeNonNegativeInteger(currentIntervalMs, DEFAULT_POLL_INTERVAL_MS) *
+          IDLE_BACKOFF_MULTIPLIER,
+      ),
     ),
   );
 
@@ -292,6 +297,7 @@ export const useMultiplayerSession = () => {
   const sinceIdRef = useRef(0);
   const sessionTokenRef = useRef("");
   const pollingActiveRef = useRef(false);
+  const idlePollStreakRef = useRef(0);
 
   useEffect(() => {
     sessionStateRef.current = sessionState;
@@ -308,6 +314,7 @@ export const useMultiplayerSession = () => {
     pollingActiveRef.current = false;
     sessionTokenRef.current = "";
     pollIntervalRef.current = DEFAULT_POLL_INTERVAL_MS;
+    idlePollStreakRef.current = 0;
     clearPollTimer();
 
     setSessionState((current) => ({
@@ -333,7 +340,12 @@ export const useMultiplayerSession = () => {
       }
 
       if (response.status === 204) {
-        const nextInterval = scaleIdleInterval(pollIntervalRef.current);
+        idlePollStreakRef.current += 1;
+        const shouldApplyIdleBackoff =
+          idlePollStreakRef.current > IDLE_BACKOFF_START_AFTER_POLLS;
+        const nextInterval = shouldApplyIdleBackoff
+          ? scaleIdleInterval(pollIntervalRef.current)
+          : DEFAULT_POLL_INTERVAL_MS;
         pollIntervalRef.current = nextInterval;
 
         setSessionState((current) => ({
@@ -352,6 +364,7 @@ export const useMultiplayerSession = () => {
 
       const payload = isObjectLike(response.data) ? response.data : {};
       const nextEvents = normalizeEventList(payload.events);
+      idlePollStreakRef.current = 0;
       const nextSinceId = extractNextSinceId(
         sinceIdRef.current,
         nextEvents,
@@ -394,6 +407,7 @@ export const useMultiplayerSession = () => {
 
       const nextInterval = buildErrorBackoffIntervalMs(pollIntervalRef.current);
       pollIntervalRef.current = nextInterval;
+      idlePollStreakRef.current = 0;
 
       setSessionState((current) => ({
         ...current,
@@ -425,6 +439,7 @@ export const useMultiplayerSession = () => {
       sessionTokenRef.current = normalizedToken;
       sinceIdRef.current = normalizeNonNegativeInteger(sinceId, 0);
       pollIntervalRef.current = DEFAULT_POLL_INTERVAL_MS;
+      idlePollStreakRef.current = 0;
 
       setSessionState((current) => ({
         ...current,
