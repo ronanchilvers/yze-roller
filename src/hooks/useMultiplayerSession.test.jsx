@@ -226,7 +226,7 @@ test("polling loop appends events and advances cursor on 200 responses", async (
   app.unmount();
 });
 
-test("polling loop increases interval on 204 no-content responses", async () => {
+test("polling loop increases interval on 204 no-content responses while staying connected", async () => {
   vi.useFakeTimers();
 
   mocks.getSessionAuth.mockReturnValue({
@@ -268,7 +268,7 @@ test("polling loop increases interval on 204 no-content responses", async () => 
 
   const finalState = getLatestHookValue(capture).sessionState;
 
-  expect(finalState.pollingStatus).toBe("backoff");
+  expect(finalState.pollingStatus).toBe("running");
   expect(finalState.pollIntervalMs).toBe(1500);
 
   app.unmount();
@@ -317,6 +317,72 @@ test("polling loop uses exponential backoff on non-auth errors", async () => {
   expect(finalState.pollingStatus).toBe("backoff");
   expect(finalState.pollIntervalMs).toBe(2000);
   expect(finalState.errorCode).toBe("NETWORK_ERROR");
+
+  randomSpy.mockRestore();
+  app.unmount();
+});
+
+test("polling loop returns to connected state after a transient error", async () => {
+  vi.useFakeTimers();
+  const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5);
+  let eventsCallCount = 0;
+
+  mocks.getSessionAuth.mockReturnValue({
+    sessionToken: "player-token-1",
+  });
+  mocks.isApiClientError.mockImplementation(
+    (error) => error instanceof ApiClientError,
+  );
+  mocks.apiGet.mockImplementation(async (path) => {
+    if (path === "/session") {
+      return {
+        status: 200,
+        data: buildSessionSnapshot({
+          latest_event_id: 0,
+        }),
+      };
+    }
+
+    eventsCallCount += 1;
+    if (eventsCallCount === 1) {
+      throw new Error("temporary network issue");
+    }
+
+    return {
+      status: 204,
+      data: null,
+    };
+  });
+
+  const capture = vi.fn();
+  const app = createContainer();
+
+  await act(async () => {
+    app.root.render(<CaptureMultiplayerSession onCapture={capture} />);
+  });
+
+  await act(async () => {
+    await getLatestHookValue(capture).bootstrapFromAuth();
+  });
+
+  await act(async () => {
+    vi.advanceTimersByTime(DEFAULT_POLL_INTERVAL_MS);
+  });
+
+  let stateAfterError = getLatestHookValue(capture).sessionState;
+  expect(stateAfterError.pollingStatus).toBe("backoff");
+  expect(stateAfterError.errorCode).toBe("NETWORK_ERROR");
+  expect(stateAfterError.pollIntervalMs).toBe(2000);
+
+  await act(async () => {
+    vi.advanceTimersByTime(2000);
+  });
+
+  const stateAfterRecovery = getLatestHookValue(capture).sessionState;
+  expect(stateAfterRecovery.pollingStatus).toBe("running");
+  expect(stateAfterRecovery.errorCode).toBeNull();
+  expect(stateAfterRecovery.errorMessage).toBe("");
+  expect(stateAfterRecovery.pollIntervalMs).toBe(3000);
 
   randomSpy.mockRestore();
   app.unmount();

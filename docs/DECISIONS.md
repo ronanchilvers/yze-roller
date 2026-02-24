@@ -173,3 +173,9 @@
   - **Decision:** Keep the manual action label unchanged (`Roll Dice`) while the submit lock is active and rely on disabled state plus session-level feedback for pending/error status.
   - **Consequences:** Button semantics stay stable while still preventing duplicate actions during in-flight submit calls.
   - **Alternatives considered:** Continue swapping button text during submit (rejected by UX preference).
+
+- **2026-02-24 — Treat 204 event polls as connected-idle, not reconnecting**
+  - **Context:** Connection badge logic maps `pollingStatus: backoff` to `Reconnecting`; the polling hook previously set `backoff` for both `204` idle responses and actual error backoff, causing a persistent reconnecting label during normal idle operation.
+  - **Decision:** Keep `pollingStatus: running` on `204` responses (while still increasing interval), reserve `backoff` for error retry paths only, and clear transient error fields once polling succeeds again.
+  - **Consequences:** Session status remains `Connected` during idle periods; `Reconnecting` now signals real retry-after-error behavior.
+  - **Alternatives considered:** Add an additional polling status enum for idle (deferred; current change keeps model minimal while fixing misleading UX).

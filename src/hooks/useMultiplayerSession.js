@@ -297,7 +297,9 @@ export const useMultiplayerSession = () => {
         setSessionState((current) => ({
           ...current,
           pollIntervalMs: nextInterval,
-          pollingStatus: "backoff",
+          pollingStatus: "running",
+          errorCode: null,
+          errorMessage: "",
         }));
 
         pollTimerRef.current = setTimeout(() => {
