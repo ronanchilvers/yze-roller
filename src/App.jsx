@@ -886,6 +886,16 @@ function DiceRollerApp({
                 >
                   Retry Connection
                 </button>
+                {isRetryPending ? (
+                  <p
+                    className="panel-copy session-retry-status"
+                    role="status"
+                    aria-live="polite"
+                    data-testid="session-retry-status"
+                  >
+                    Retrying connection...
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </section>
@@ -996,8 +1006,23 @@ function DiceRollerApp({
                 {gmActionError}
               </p>
             ) : null}
+            {gmPendingAction ? (
+              <p
+                className="panel-copy gm-controls-message"
+                role="status"
+                aria-live="polite"
+                data-testid="gm-action-pending"
+              >
+                Applying GM action...
+              </p>
+            ) : null}
             {gmActionMessage ? (
-              <p className="panel-copy gm-controls-message" data-testid="gm-action-message">
+              <p
+                className="panel-copy gm-controls-message"
+                role="status"
+                aria-live="polite"
+                data-testid="gm-action-message"
+              >
                 {gmActionMessage}
               </p>
             ) : null}

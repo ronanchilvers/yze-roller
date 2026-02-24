@@ -446,6 +446,7 @@ test("session mode retry button re-runs bootstrap once while request is pending"
 
   expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(1);
   expect(retryButton?.hasAttribute("disabled")).toBe(true);
+  expect(app.container.querySelector('[data-testid="session-retry-status"]')).not.toBeNull();
 
   await act(async () => {
     retryDeferred.resolve(null);
@@ -453,6 +454,7 @@ test("session mode retry button re-runs bootstrap once while request is pending"
   });
 
   expect(retryButton?.hasAttribute("disabled")).toBe(false);
+  expect(app.container.querySelector('[data-testid="session-retry-status"]')).toBeNull();
 
   app.unmount();
 });
@@ -551,6 +553,7 @@ test("session mode only renders GM controls for gm role", () => {
 
 test("session mode wires gm control actions and revoke player action", async () => {
   const app = createContainer();
+  const rotateDeferred = createDeferred();
   mocks.sessionAuth = {
     sessionToken: "gm-token-1",
   };
@@ -567,10 +570,7 @@ test("session mode wires gm control actions and revoke player action", async () 
       { tokenId: 31, role: "player", displayName: "Alice" },
     ],
   };
-  mocks.rotateJoinLink.mockResolvedValue({
-    ok: true,
-    joinLink: "https://api.example.com/join#join=abc123",
-  });
+  mocks.rotateJoinLink.mockReturnValue(rotateDeferred.promise);
   mocks.setJoiningEnabled.mockResolvedValue({
     ok: true,
     joiningEnabled: false,
@@ -607,6 +607,21 @@ test("session mode wires gm control actions and revoke player action", async () 
     await Promise.resolve();
   });
   expect(mocks.rotateJoinLink).toHaveBeenCalledTimes(1);
+  expect(app.container.querySelector('[data-testid="gm-action-pending"]')).not.toBeNull();
+  expect(
+    app.container
+      .querySelector('[data-testid="gm-joining-toggle-button"]')
+      ?.hasAttribute("disabled"),
+  ).toBe(true);
+
+  await act(async () => {
+    rotateDeferred.resolve({
+      ok: true,
+      joinLink: "https://api.example.com/join#join=abc123",
+    });
+    await rotateDeferred.promise;
+  });
+
   expect(app.container.textContent).toContain("Join link rotated.");
   expect(app.container.querySelector('[data-testid="gm-copy-link-button"]')).not.toBeNull();
 

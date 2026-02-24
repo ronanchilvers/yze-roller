@@ -201,5 +201,5 @@
 - **2026-02-24 — Add explicit retry action for session bootstrap errors**
   - **Context:** Session summary indicated connection error state, but users had no direct in-panel action to retry bootstrap after transient network/API failures.
   - **Decision:** Pass session connection metadata into `DiceRollerApp` and render an error row with server-facing error text plus a `Retry Connection` button that calls `bootstrapFromAuth`.
-  - **Consequences:** Recovery from transient connection failures is now a one-click in-session action without forcing route changes or auth reset; in-flight retries are guarded to prevent duplicate bootstrap requests from rapid repeated clicks.
+  - **Consequences:** Recovery from transient connection failures is now a one-click in-session action without forcing route changes or auth reset; in-flight retries are guarded to prevent duplicate bootstrap requests from rapid repeated clicks, and retry progress is exposed via a live status announcement for accessibility.
   - **Alternatives considered:** Require full-page refresh for retry (rejected due to poorer recovery UX and slower iteration while testing integrations).
