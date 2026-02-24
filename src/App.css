@@ -266,6 +266,48 @@
   font-weight: 600;
 }
 
+.session-events-panel {
+  margin-bottom: 1rem;
+}
+
+.session-events-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.session-events-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.session-event-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin: 0;
+  padding: 0.42rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: var(--summary-pill-bg);
+}
+
+.session-event-id {
+  font-size: 0.73rem;
+  color: var(--ink-700);
+  font-weight: 700;
+}
+
+.session-events-empty {
+  margin: 0;
+}
+
 .theme-select {
   display: grid;
   gap: 0.3rem;

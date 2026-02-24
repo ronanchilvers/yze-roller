@@ -334,6 +334,77 @@ test("session mode renders multiplayer session summary details", () => {
   app.unmount();
 });
 
+test("session mode renders ordered multiplayer event feed entries", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+    events: [
+      {
+        id: 11,
+        type: "join",
+        payload: {
+          token_id: 31,
+          display_name: "Alice",
+        },
+        actor: {
+          token_id: 31,
+          display_name: "Alice",
+          role: "player",
+        },
+      },
+      {
+        id: 12,
+        type: "roll",
+        payload: {
+          successes: 2,
+          banes: 1,
+        },
+        actor: {
+          token_id: 31,
+          display_name: "Alice",
+          role: "player",
+        },
+      },
+      {
+        id: 13,
+        type: "strain_reset",
+        payload: {},
+        actor: {
+          token_id: 1,
+          display_name: "GM",
+          role: "gm",
+        },
+      },
+    ],
+  };
+
+  app.render(<App />);
+
+  const feed = app.container.querySelector('[data-testid="session-events-feed"]');
+  const items = Array.from(
+    app.container.querySelectorAll('[data-testid="session-event-item"]'),
+  );
+
+  expect(feed).not.toBeNull();
+  expect(items).toHaveLength(3);
+  expect(items[0].textContent).toContain("#11");
+  expect(items[0].textContent).toContain("joined the session");
+  expect(items[1].textContent).toContain("#12");
+  expect(items[1].textContent).toContain("rolled 2 successes, 1 banes");
+  expect(items[2].textContent).toContain("#13");
+  expect(items[2].textContent).toContain("Scene strain was reset");
+
+  app.unmount();
+});
+
 test("session mode submits roll outcomes once and disables controls while pending", async () => {
   const app = createContainer();
   const submitDeferred = createDeferred();

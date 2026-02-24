@@ -129,9 +129,118 @@ const normalizeActionErrorMessage = (value) => {
   return value.trim();
 };
 
+const MAX_VISIBLE_SESSION_EVENTS = 20;
+
+const normalizeSessionEventId = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+
+  return Math.floor(numeric);
+};
+
+const normalizeSessionEventType = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().toLowerCase();
+};
+
+const normalizeSessionEventCount = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+
+  return Math.floor(numeric);
+};
+
+const normalizeSessionEventActorLabel = (event) => {
+  const displayName = event?.actor?.display_name;
+  if (typeof displayName === "string" && displayName.trim()) {
+    return displayName.trim();
+  }
+
+  const tokenId = normalizeSessionEventId(event?.actor?.token_id);
+  if (tokenId !== null) {
+    return `Player ${tokenId}`;
+  }
+
+  const payloadName = event?.payload?.display_name;
+  if (typeof payloadName === "string" && payloadName.trim()) {
+    return payloadName.trim();
+  }
+
+  return "Player";
+};
+
+const buildSessionEventSummary = (event) => {
+  const eventType = normalizeSessionEventType(event?.type);
+  const payload = event && typeof event.payload === "object" && event.payload
+    ? event.payload
+    : {};
+  const actorLabel = normalizeSessionEventActorLabel(event);
+  const successes = normalizeSessionEventCount(payload.successes);
+  const banes = normalizeSessionEventCount(payload.banes);
+
+  if (eventType === "roll") {
+    return `${actorLabel} rolled ${successes} successes, ${banes} banes.`;
+  }
+
+  if (eventType === "push") {
+    return `${actorLabel} pushed to ${successes} successes, ${banes} banes.`;
+  }
+
+  if (eventType === "join") {
+    return `${actorLabel} joined the session.`;
+  }
+
+  if (eventType === "leave") {
+    return `${actorLabel} left the session.`;
+  }
+
+  if (eventType === "strain_reset") {
+    return "Scene strain was reset.";
+  }
+
+  return "Session event received.";
+};
+
+const normalizeSessionEventsForFeed = (eventsInput) => {
+  if (!Array.isArray(eventsInput)) {
+    return [];
+  }
+
+  const eventMap = new Map();
+
+  for (const event of eventsInput) {
+    if (!event || typeof event !== "object") {
+      continue;
+    }
+
+    const eventId = normalizeSessionEventId(event.id);
+    if (eventId === null || eventMap.has(eventId)) {
+      continue;
+    }
+
+    eventMap.set(eventId, {
+      id: eventId,
+      type: normalizeSessionEventType(event.type),
+      summary: buildSessionEventSummary(event),
+    });
+  }
+
+  return Array.from(eventMap.values()).slice(-MAX_VISIBLE_SESSION_EVENTS);
+};
+
 function DiceRollerApp({
   sessionSummary = null,
   sessionActions = null,
+  sessionEvents = [],
 }) {
   const {
     attributeDice,
@@ -158,6 +267,10 @@ function DiceRollerApp({
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
   const [isActionSubmitPending, setIsActionSubmitPending] = useState(false);
   const [sessionActionError, setSessionActionError] = useState("");
+  const visibleSessionEvents = useMemo(
+    () => normalizeSessionEventsForFeed(sessionEvents),
+    [sessionEvents],
+  );
 
   const effectiveAttributeDice = overrideCounts?.attributeDice ?? attributeDice;
   const effectiveSkillDice = overrideCounts?.skillDice ?? skillDice;
@@ -492,6 +605,36 @@ function DiceRollerApp({
           </section>
         ) : null}
 
+        {sessionSummary ? (
+          <section
+            className="panel session-events-panel"
+            aria-label="Multiplayer event feed"
+            data-testid="session-events-feed"
+          >
+            <div className="session-events-head">
+              <h2>Session Events</h2>
+            </div>
+            {visibleSessionEvents.length > 0 ? (
+              <ol className="session-events-list">
+                {visibleSessionEvents.map((event) => (
+                  <li
+                    key={event.id}
+                    className="session-event-item"
+                    data-testid="session-event-item"
+                  >
+                    <span className="session-event-id">#{event.id}</span>
+                    <span>{event.summary}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="panel-copy session-events-empty">
+                No multiplayer events yet.
+              </p>
+            )}
+          </section>
+        ) : null}
+
         <div className="content-grid">
           <DicePoolPanel
             attributeDice={attributeDice}
@@ -535,6 +678,7 @@ DiceRollerApp.propTypes = {
     submitRoll: PropTypes.func,
     submitPush: PropTypes.func,
   }),
+  sessionEvents: PropTypes.arrayOf(PropTypes.object),
 };
 
 const resolveMultiplayerMode = ({
@@ -688,6 +832,7 @@ function SessionView({
         playerCount,
       }}
       sessionActions={resolvedSessionActions}
+      sessionEvents={Array.isArray(sessionState?.events) ? sessionState.events : []}
     />
   );
 }

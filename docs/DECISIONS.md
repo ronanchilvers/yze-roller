@@ -179,3 +179,9 @@
   - **Decision:** Keep `pollingStatus: running` on `204` responses (while still increasing interval), reserve `backoff` for error retry paths only, and clear transient error fields once polling succeeds again.
   - **Consequences:** Session status remains `Connected` during idle periods; `Reconnecting` now signals real retry-after-error behavior.
   - **Alternatives considered:** Add an additional polling status enum for idle (deferred; current change keeps model minimal while fixing misleading UX).
+
+- **2026-02-24 — Add lightweight session event feed derived from authoritative event stream**
+  - **Context:** Multiplayer state had connection/session summaries, but users lacked direct visibility of recent session events (`roll`, `push`, `join`, `leave`, `strain_reset`) without deeper tooling.
+  - **Decision:** Render a compact event feed panel in session mode from `sessionState.events`, normalize entries to stable summaries, and key list items by `event.id` while preserving server order.
+  - **Consequences:** Session activity is visible in UI with minimal overhead; feed remains deterministic and resilient to duplicate event ids.
+  - **Alternatives considered:** Defer feed to a later dedicated timeline view (rejected because basic observability was needed now for multiplayer UX and debugging).
