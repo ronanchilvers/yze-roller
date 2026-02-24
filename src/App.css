@@ -640,7 +640,8 @@ h2 {
 .strain-reset-button:focus-visible,
 .pool-tab:focus-visible,
 .theme-select select:focus-visible,
-.import-summary-item:focus-visible {
+.import-summary-item:focus-visible,
+.join-secondary:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }

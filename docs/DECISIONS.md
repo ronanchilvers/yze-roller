@@ -203,3 +203,9 @@
   - **Decision:** Pass session connection metadata into `DiceRollerApp` and render an error row with server-facing error text plus a `Retry Connection` button that calls `bootstrapFromAuth`.
   - **Consequences:** Recovery from transient connection failures is now a one-click in-session action without forcing route changes or auth reset; in-flight retries are guarded to prevent duplicate bootstrap requests from rapid repeated clicks, and retry progress is exposed via a live status announcement for accessibility.
   - **Alternatives considered:** Require full-page refresh for retry (rejected due to poorer recovery UX and slower iteration while testing integrations).
+
+- **2026-02-24 — Apply a single focus-visible treatment to secondary action buttons**
+  - **Context:** Task 10 required keyboard/focus verification, and secondary buttons (`join-secondary`) were used for join/GM/retry flows without the shared custom focus ring.
+  - **Decision:** Include `.join-secondary:focus-visible` in the shared focus-visible selector group in `App.css`.
+  - **Consequences:** Keyboard users now get consistent, high-contrast focus affordances across primary and secondary controls.
+  - **Alternatives considered:** Rely on browser default focus styles for secondary buttons (rejected for inconsistent visual contrast with the existing tokenized focus system).
