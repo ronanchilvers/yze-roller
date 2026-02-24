@@ -183,22 +183,28 @@
   margin-bottom: 1rem;
 }
 
+.top-bar-title {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.session-heading-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
 .top-bar-actions {
   display: inline-flex;
   align-items: flex-start;
   gap: 0.8rem;
 }
 
-.session-summary-panel {
-  margin-bottom: 1rem;
-}
-
-.session-summary-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.6rem;
+.strain-status-group {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.55rem;
 }
 
 .session-connection-badge {
@@ -231,43 +237,20 @@
   color: var(--strain-line);
 }
 
-.session-summary-grid {
+.session-status-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.6rem;
-}
-
-.session-summary-item {
-  margin: 0;
-  display: grid;
-  gap: 0.2rem;
-  border: 1px solid var(--line);
-  border-radius: 0.65rem;
-  padding: 0.45rem 0.55rem;
-  background: var(--summary-pill-bg);
-}
-
-.session-summary-item span {
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-700);
-  font-weight: 600;
-}
-
-.session-summary-item strong {
-  font-size: 0.96rem;
-  color: var(--ink-900);
+  margin-bottom: 1rem;
 }
 
 .session-action-error {
-  margin: 0.7rem 0 0;
+  margin: 0;
   color: var(--strain-line);
   font-weight: 600;
 }
 
 .session-connection-error-row {
-  margin-top: 0.7rem;
+  margin: 0;
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: start;
@@ -327,6 +310,38 @@
 
 .session-events-empty {
   margin: 0;
+}
+
+.role-indicator {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: var(--summary-pill-bg);
+  color: var(--ink-700);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  cursor: default;
+}
+
+.role-indicator-player {
+  border-color: #3f8650;
+  color: #2a6f3a;
+}
+
+.role-indicator-gm {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+
+.role-indicator-unknown {
+  border-color: var(--line);
+  color: var(--ink-700);
 }
 
 .gm-controls-panel {
@@ -958,13 +973,16 @@ h2 {
     flex-direction: column;
   }
 
-  .theme-select,
-  .strain-pill {
+  .theme-select {
     width: 100%;
   }
 
-  .session-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .strain-status-group {
+    width: 100%;
+  }
+
+  .strain-status-group .strain-pill {
+    width: 100%;
   }
 
   .control-grid {
@@ -976,10 +994,6 @@ h2 {
   }
 
   .import-controls {
-    grid-template-columns: 1fr;
-  }
-
-  .session-summary-grid {
     grid-template-columns: 1fr;
   }
 

@@ -388,6 +388,20 @@ function DiceRollerApp({
   const canResetStrain =
     resolvedStrainPoints > 0 && (canResetStrainLocally || canResetStrainAsGm);
   const ignoreBaneIncrement = useCallback(() => {}, []);
+  const resolvedSessionName = normalizeSessionText(sessionSummary?.sessionName, "Dice Roller");
+  const resolvedRoleLabel = normalizeSessionText(sessionSummary?.roleLabel, "Unknown");
+  const roleIndicatorTone =
+    resolvedRoleLabel === "GM"
+      ? "gm"
+      : resolvedRoleLabel === "Player"
+        ? "player"
+        : "unknown";
+  const roleIndicatorSymbol =
+    resolvedRoleLabel === "GM"
+      ? "GM"
+      : resolvedRoleLabel === "Player"
+        ? "P"
+        : "?";
 
   const {
     currentRoll,
@@ -826,9 +840,19 @@ function DiceRollerApp({
         aria-label="Year Zero dice roller"
       >
         <header className="top-bar">
-          <div>
+          <div className="top-bar-title">
             <p className="eyebrow">Year Zero Engine</p>
-            <h1>Dice Roller</h1>
+            <div className="session-heading-row">
+              <h1>{resolvedSessionName}</h1>
+              {sessionSummary ? (
+                <span
+                  className={`session-connection-badge is-${sessionSummary.connectionTone}`}
+                  data-testid="session-connection-badge"
+                >
+                  {sessionSummary.connectionStatus}
+                </span>
+              ) : null}
+            </div>
           </div>
           <div className="top-bar-actions">
             <label className="theme-select" htmlFor="themePreference">
@@ -844,59 +868,44 @@ function DiceRollerApp({
                 <option value="dark">Dark</option>
               </select>
             </label>
-            <output className="strain-pill" aria-label="Current strain points">
-              <div className="strain-pill-head">
-                <span>Strain Points</span>
-                <button
-                  type="button"
-                  className="strain-reset-button"
-                  aria-label="Reset strain points"
-                  onClick={handleTopBarStrainReset}
-                  disabled={!canResetStrain}
+            <div className="strain-status-group">
+              {sessionSummary ? (
+                <span
+                  className={`role-indicator role-indicator-${roleIndicatorTone}`}
+                  aria-label={`Session role: ${resolvedRoleLabel}`}
+                  data-testid="session-role-indicator"
                 >
-                  ↺
-                </button>
-              </div>
-              <strong>{resolvedStrainPoints}</strong>
-            </output>
+                  {roleIndicatorSymbol}
+                </span>
+              ) : null}
+              <output className="strain-pill" aria-label="Current strain points">
+                <div className="strain-pill-head">
+                  <span>Strain Points</span>
+                  <button
+                    type="button"
+                    className="strain-reset-button"
+                    aria-label="Reset strain points"
+                    onClick={handleTopBarStrainReset}
+                    disabled={!canResetStrain}
+                  >
+                    ↺
+                  </button>
+                </div>
+                <strong>{resolvedStrainPoints}</strong>
+              </output>
+            </div>
           </div>
         </header>
 
-        {sessionSummary ? (
+        {sessionSummary && (sessionActionError || sessionConnectionMeta?.status === "error") ? (
           <section
-            className="panel session-summary-panel"
+            className="session-status-strip"
             aria-label="Multiplayer session status"
-            data-testid="session-summary"
+            data-testid="session-status-strip"
           >
-            <div className="session-summary-head">
-              <p className="eyebrow">Multiplayer Session</p>
-              <span
-                className={`session-connection-badge is-${sessionSummary.connectionTone}`}
-              >
-                {sessionSummary.connectionStatus}
-              </span>
-            </div>
-            <div className="session-summary-grid">
-              <p className="session-summary-item">
-                <span>Role</span>
-                <strong>{sessionSummary.roleLabel}</strong>
-              </p>
-              <p className="session-summary-item">
-                <span>Session</span>
-                <strong>{sessionSummary.sessionName}</strong>
-              </p>
-              <p className="session-summary-item">
-                <span>Strain Points</span>
-                <strong>{sessionSummary.sceneStrain}</strong>
-              </p>
-              <p className="session-summary-item">
-                <span>Players</span>
-                <strong>{sessionSummary.playerCount}</strong>
-              </p>
-            </div>
             {sessionActionError ? (
               <p
-                className="panel-copy session-action-error"
+                className="session-action-error"
                 role="alert"
                 data-testid="session-action-error"
               >
@@ -906,7 +915,7 @@ function DiceRollerApp({
             {sessionConnectionMeta?.status === "error" ? (
               <div className="session-connection-error-row" aria-busy={isRetryPending}>
                 <p
-                  className="panel-copy session-connection-error-copy"
+                  className="session-connection-error-copy"
                   role="alert"
                   data-testid="session-connection-error"
                 >
@@ -926,7 +935,7 @@ function DiceRollerApp({
                 </button>
                 {isRetryPending ? (
                   <p
-                    className="panel-copy session-retry-status"
+                    className="session-retry-status"
                     role="status"
                     aria-live="polite"
                     data-testid="session-retry-status"
@@ -1139,7 +1148,6 @@ DiceRollerApp.propTypes = {
     roleLabel: PropTypes.string.isRequired,
     sessionName: PropTypes.string.isRequired,
     sceneStrain: PropTypes.number.isRequired,
-    playerCount: PropTypes.number.isRequired,
   }),
   sessionActions: PropTypes.shape({
     submitRoll: PropTypes.func,
@@ -1293,9 +1301,6 @@ function SessionView({
       : "Session",
   );
   const sceneStrain = normalizeSessionCount(sessionState?.sceneStrain);
-  const playerCount = Array.isArray(sessionState?.players)
-    ? sessionState.players.length
-    : 0;
   const resolvedSessionActions = useMemo(() => {
     if (typeof submitRoll !== "function" && typeof submitPush !== "function") {
       return null;
@@ -1339,7 +1344,6 @@ function SessionView({
         roleLabel,
         sessionName,
         sceneStrain,
-        playerCount,
       }}
       sessionActions={resolvedSessionActions}
       sessionEvents={Array.isArray(sessionState?.events) ? sessionState.events : []}

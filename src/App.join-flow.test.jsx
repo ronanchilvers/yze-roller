@@ -338,7 +338,7 @@ test("renders session mode and bootstraps when in-memory auth exists", () => {
   app.unmount();
 });
 
-test("session mode renders multiplayer session summary details", () => {
+test("session mode renders multiplayer status in the header", () => {
   const app = createContainer();
   mocks.sessionAuth = {
     sessionToken: "player-token-1",
@@ -354,14 +354,19 @@ test("session mode renders multiplayer session summary details", () => {
 
   app.render(<App />);
 
-  const summary = app.container.querySelector('[data-testid="session-summary"]');
+  const heading = app.container.querySelector("h1");
+  const connectionBadge = app.container.querySelector(
+    '[data-testid="session-connection-badge"]',
+  );
+  const roleIndicator = app.container.querySelector(
+    '[data-testid="session-role-indicator"]',
+  );
 
-  expect(summary).not.toBeNull();
-  expect(summary?.textContent).toContain("Connected");
-  expect(summary?.textContent).toContain("Player");
-  expect(summary?.textContent).toContain("Streetwise Night");
-  expect(summary?.textContent).toContain("4");
-  expect(summary?.textContent).toContain("2");
+  expect(heading?.textContent).toBe("Streetwise Night");
+  expect(connectionBadge?.textContent).toContain("Connected");
+  expect(roleIndicator).not.toBeNull();
+  expect(roleIndicator?.getAttribute("aria-label")).toContain("Player");
+  expect(app.container.querySelector('[data-testid="session-summary"]')).toBeNull();
   expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(0);
 
   app.unmount();
@@ -467,10 +472,12 @@ test("session mode shows reconnecting label while polling is in backoff", () => 
 
   app.render(<App />);
 
-  const summary = app.container.querySelector('[data-testid="session-summary"]');
+  const connectionBadge = app.container.querySelector(
+    '[data-testid="session-connection-badge"]',
+  );
 
-  expect(summary).not.toBeNull();
-  expect(summary?.textContent).toContain("Reconnecting");
+  expect(connectionBadge).not.toBeNull();
+  expect(connectionBadge?.textContent).toContain("Reconnecting");
 
   app.unmount();
 });
@@ -492,14 +499,16 @@ test("session mode shows connection error label when session state is error", ()
 
   app.render(<App />);
 
-  const summary = app.container.querySelector('[data-testid="session-summary"]');
+  const connectionBadge = app.container.querySelector(
+    '[data-testid="session-connection-badge"]',
+  );
   const connectionError = app.container.querySelector(
     '[data-testid="session-connection-error"]',
   );
   const retryButton = app.container.querySelector('[data-testid="session-retry-button"]');
 
-  expect(summary).not.toBeNull();
-  expect(summary?.textContent).toContain("Connection Error");
+  expect(connectionBadge).not.toBeNull();
+  expect(connectionBadge?.textContent).toContain("Connection Error");
   expect(connectionError?.textContent).toContain("Unable to reach session service.");
   expect(retryButton).not.toBeNull();
 
