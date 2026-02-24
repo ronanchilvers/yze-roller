@@ -349,6 +349,54 @@ test("session mode renders multiplayer session summary details", () => {
   app.unmount();
 });
 
+test("session mode shows reconnecting label while polling is in backoff", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "backoff",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+  };
+
+  app.render(<App />);
+
+  const summary = app.container.querySelector('[data-testid="session-summary"]');
+
+  expect(summary).not.toBeNull();
+  expect(summary?.textContent).toContain("Reconnecting");
+
+  app.unmount();
+});
+
+test("session mode shows connection error label when session state is error", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "error",
+    pollingStatus: "stopped",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+  };
+
+  app.render(<App />);
+
+  const summary = app.container.querySelector('[data-testid="session-summary"]');
+
+  expect(summary).not.toBeNull();
+  expect(summary?.textContent).toContain("Connection Error");
+
+  app.unmount();
+});
+
 test("session mode renders ordered multiplayer event feed entries", () => {
   const app = createContainer();
   mocks.sessionAuth = {
