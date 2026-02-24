@@ -137,3 +137,9 @@
   - **Decision:** Add `HostSessionView` to submit `POST /api/sessions` with `session_name`, map creation errors to user-facing messages, normalize success payload (`gm_token`, `session_id`) to in-memory auth, and transition via existing mode/bootstrap logic in `App`.
   - **Consequences:** GMs can now initialize a multiplayer session from UI without manual API calls; host-to-session handoff remains centralized in `App`.
   - **Alternatives considered:** Build session creation directly inside `App` (rejected to keep host-flow concerns isolated and testable).
+
+- **2026-02-24 — Make CSP `connect-src` configurable per environment for cross-origin API calls**
+  - **Context:** The frontend CSP was fixed at `connect-src 'self'`, which blocks API requests when `VITE_API_BASE_URL` points to a different origin (for example `https://api.example.com`).
+  - **Decision:** Parameterize CSP connect sources in `index.html` using `%VITE_CSP_CONNECT_SRC%`, keep `'self'` as default baseline, and define `VITE_CSP_CONNECT_SRC` in each environment file next to `VITE_API_BASE_URL`.
+  - **Consequences:** Cross-origin API calls can be allowed per environment without weakening CSP globally; deployments must keep API base URL and CSP connect sources in sync.
+  - **Alternatives considered:** Loosen CSP globally (`https:`/`*`) (rejected due to reduced exfiltration protection), or move CSP generation to Vite config (deferred to avoid config changes during current task flow).

@@ -54,10 +54,15 @@ Set Vite env by deployment mode:
 
 ```env
 VITE_API_BASE_URL=https://api.example.com/api
+VITE_CSP_CONNECT_SRC=https://api.example.com
 ```
 
 Client URL composition is centralized in:
 - `src/lib/app-config.js`
+
+CSP note:
+- `index.html` includes `connect-src 'self' %VITE_CSP_CONNECT_SRC%`.
+- Set `VITE_CSP_CONNECT_SRC` to one or more space-delimited CSP source values for the API origin(s).
 
 ## 6. Verify in browser + API logs
 

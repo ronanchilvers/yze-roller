@@ -96,6 +96,7 @@ Tests use `createSequenceRng()` from `test-helpers.js` to inject deterministic v
   - `script-src 'self'` — no inline scripts
   - `style-src 'self' 'unsafe-inline'` — required for Three.js canvas styles
   - `img-src 'self' blob: data:` — canvas-generated textures only
+  - `connect-src 'self' %VITE_CSP_CONNECT_SRC%` — same-origin by default with env-configurable API origins
   - `object-src 'none'` — disable Flash, Java, etc.
   - `frame-ancestors 'none'` — prevent embedding in iframes
 - React's built-in XSS protection (auto-escapes interpolated values)
