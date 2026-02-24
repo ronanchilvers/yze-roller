@@ -7,6 +7,9 @@ import { DEFAULT_DICE_RESULT_DURATION_MS } from "./components/toast/constants.js
 
 const mocks = vi.hoisted(() => ({
   rollSessionState: null,
+  sessionAuth: {
+    sessionToken: "player-token-1",
+  },
   diceResult: vi.fn(),
   noop: vi.fn(),
 }));
@@ -79,6 +82,11 @@ vi.mock("./hooks/useMultiplayerSession.js", () => ({
     bootstrapFromAuth: mocks.noop,
     resetSession: mocks.noop,
   }),
+}));
+
+vi.mock("./lib/session-auth.js", () => ({
+  getSessionAuth: () => mocks.sessionAuth,
+  setSessionAuth: mocks.noop,
 }));
 
 const createRollSessionState = (overrides = {}) => ({

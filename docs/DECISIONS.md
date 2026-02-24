@@ -125,3 +125,9 @@
   - **Decision:** Implement GM API methods directly in `useMultiplayerSession` (`rotateJoinLink`, `setJoiningEnabled`, `resetSceneStrain`, `refreshPlayers`, `revokePlayer`) with shared role/session/token checks and auth-failure handling, returning structured `{ ok, ... }` results for future UI composition.
   - **Consequences:** GM operations are available immediately to any UI layer with consistent behavior and test coverage, while avoiding premature coupling to a specific panel design.
   - **Alternatives considered:** Build GM endpoint calls directly into a temporary component (rejected because it duplicates guard/error handling and makes future refactors harder).
+
+- **2026-02-24 — Introduce explicit top-level multiplayer UI modes in `App`**
+  - **Context:** UI integration needed a predictable boundary for upcoming host/session/GM surfaces instead of implicitly rendering gameplay UI when route or auth state changed.
+  - **Decision:** Add mode resolution in `App` across `host`, `join`, `session`, and `auth_lost`, driven by route (`/join`), in-memory auth presence, and `useMultiplayerSession().sessionState.status`; bootstrap is triggered only in `session` mode when status is `idle`.
+  - **Consequences:** Host and auth-lost states now have dedicated UI shells and deterministic transitions, making subsequent Task 2+ UI work additive rather than cross-cutting.
+  - **Alternatives considered:** Keep mode inference scattered across route handlers and join callbacks (rejected due to coupling and inconsistent transitions).

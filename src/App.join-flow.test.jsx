@@ -6,8 +6,13 @@ import App from "./App.jsx";
 
 const mocks = vi.hoisted(() => ({
   latestJoinProps: null,
+  sessionAuth: null,
+  multiplayerSessionState: {
+    status: "idle",
+  },
   setSessionAuth: vi.fn(),
   bootstrapFromAuth: vi.fn(),
+  resetSession: vi.fn(),
   noop: vi.fn(),
 }));
 
@@ -19,6 +24,7 @@ vi.mock("./components/JoinSessionView.jsx", () => ({
 }));
 
 vi.mock("./lib/session-auth.js", () => ({
+  getSessionAuth: () => mocks.sessionAuth,
   setSessionAuth: (...args) => mocks.setSessionAuth(...args),
 }));
 
@@ -92,11 +98,9 @@ vi.mock("./hooks/useToast.js", () => ({
 
 vi.mock("./hooks/useMultiplayerSession.js", () => ({
   useMultiplayerSession: () => ({
-    sessionState: {
-      status: "idle",
-    },
+    sessionState: mocks.multiplayerSessionState,
     bootstrapFromAuth: mocks.bootstrapFromAuth,
-    resetSession: mocks.noop,
+    resetSession: mocks.resetSession,
   }),
 }));
 
@@ -124,10 +128,26 @@ const createContainer = () => {
 
 afterEach(() => {
   mocks.latestJoinProps = null;
+  mocks.sessionAuth = null;
+  mocks.multiplayerSessionState = {
+    status: "idle",
+  };
   mocks.setSessionAuth.mockReset();
   mocks.bootstrapFromAuth.mockReset();
+  mocks.resetSession.mockReset();
   window.history.replaceState({}, "", "/");
   document.body.innerHTML = "";
+});
+
+test("renders host mode when not on join route and no auth token is present", () => {
+  const app = createContainer();
+
+  app.render(<App />);
+
+  expect(app.container.textContent).toContain("Host Game");
+  expect(app.container.querySelector('[data-testid="dice-pool-panel"]')).toBeNull();
+
+  app.unmount();
 });
 
 test("join route parses #join token and passes it to JoinSessionView", () => {
@@ -164,9 +184,45 @@ test("join success stores in-memory auth, clears hash, and exits join route", ()
   });
 
   expect(mocks.setSessionAuth).toHaveBeenCalledWith(authState);
-  expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(1);
+  expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(0);
   expect(window.location.pathname).toBe("/");
   expect(window.location.hash).toBe("");
+
+  app.unmount();
+});
+
+test("renders session mode and bootstraps when in-memory auth exists", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+
+  app.render(<App />);
+
+  expect(app.container.querySelector('[data-testid="dice-pool-panel"]')).not.toBeNull();
+  expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(1);
+
+  app.unmount();
+});
+
+test("renders auth-lost mode and supports reset action", () => {
+  const app = createContainer();
+  mocks.multiplayerSessionState = {
+    status: "auth_lost",
+  };
+
+  app.render(<App />);
+
+  expect(app.container.textContent).toContain("Session Ended");
+  const resetButton = Array.from(app.container.querySelectorAll("button")).find(
+    (button) => button.textContent?.includes("Return to host/join"),
+  );
+
+  act(() => {
+    resetButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(mocks.resetSession).toHaveBeenCalledTimes(1);
 
   app.unmount();
 });

@@ -1,4 +1,13 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import PropTypes from "prop-types";
 import "./App.css";
 import { usePoolSelection } from "./hooks/usePoolSelection.js";
 import { useStrainTracker } from "./hooks/useStrainTracker.js";
@@ -23,7 +32,10 @@ import {
   isJoinSessionPath,
   parseJoinTokenFromHash,
 } from "./lib/join-session-route.js";
-import { setSessionAuth } from "./lib/session-auth.js";
+import {
+  getSessionAuth,
+  setSessionAuth,
+} from "./lib/session-auth.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import JoinSessionView from "./components/JoinSessionView.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
@@ -314,12 +326,80 @@ function DiceRollerApp() {
   );
 }
 
+const resolveMultiplayerMode = ({
+  isJoinRoute,
+  sessionStatus,
+  hasSessionToken,
+}) => {
+  if (isJoinRoute) {
+    return "join";
+  }
+
+  if (sessionStatus === "auth_lost") {
+    return "auth_lost";
+  }
+
+  if (hasSessionToken) {
+    return "session";
+  }
+
+  return "host";
+};
+
+function MultiplayerHostView() {
+  return (
+    <main className="app-shell join-shell" data-mode="host">
+      <section className="panel join-panel" aria-label="Host multiplayer session">
+        <header className="join-header">
+          <p className="eyebrow">Multiplayer</p>
+          <h1>Host Game</h1>
+        </header>
+        <p className="panel-copy">
+          Multiplayer host controls are next. Session creation UI will be added in
+          Task 2.
+        </p>
+      </section>
+    </main>
+  );
+}
+
+function MultiplayerAuthLostView({ onReset }) {
+  return (
+    <main className="app-shell join-shell" data-mode="auth_lost">
+      <section className="panel join-panel" aria-label="Session ended">
+        <header className="join-header">
+          <p className="eyebrow">Multiplayer</p>
+          <h1>Session Ended</h1>
+        </header>
+        <p className="panel-copy">
+          Your session token is no longer valid. Rejoin with a current invite link.
+        </p>
+        <button type="button" className="pool-action-button" onClick={onReset}>
+          Return to host/join
+        </button>
+      </section>
+    </main>
+  );
+}
+
+MultiplayerAuthLostView.propTypes = {
+  onReset: PropTypes.func.isRequired,
+};
+
 function App() {
   const [pathname, setPathname] = useState(getBrowserPathname);
   const [hash, setHash] = useState(getBrowserHash);
+  const [authVersion, setAuthVersion] = useState(0);
   const isJoinRoute = isJoinSessionPath(pathname);
   const joinToken = parseJoinTokenFromHash(hash);
-  const { bootstrapFromAuth } = useMultiplayerSession();
+  const { sessionState, bootstrapFromAuth, resetSession } = useMultiplayerSession();
+  const sessionAuth = useMemo(() => getSessionAuth(), [authVersion]);
+  const hasSessionToken = Boolean(sessionAuth?.sessionToken?.trim());
+  const mode = resolveMultiplayerMode({
+    isJoinRoute,
+    sessionStatus: sessionState?.status,
+    hasSessionToken,
+  });
 
   const syncLocation = useCallback(() => {
     setPathname(getBrowserPathname());
@@ -360,14 +440,29 @@ function App() {
   const handleJoinSuccess = useCallback(
     (authState) => {
       setSessionAuth(authState);
-      void bootstrapFromAuth();
+      setAuthVersion((current) => current + 1);
       clearLocationHash(window);
       navigateToPath(getSessionPathFromJoinPath(pathname));
     },
-    [bootstrapFromAuth, navigateToPath, pathname],
+    [navigateToPath, pathname],
   );
 
-  if (isJoinRoute) {
+  const handleResetAfterAuthLost = useCallback(() => {
+    resetSession();
+    setAuthVersion((current) => current + 1);
+    clearLocationHash(window);
+    navigateToPath(getSessionPathFromJoinPath(pathname));
+  }, [navigateToPath, pathname, resetSession]);
+
+  useEffect(() => {
+    if (mode !== "session" || sessionState?.status !== "idle") {
+      return;
+    }
+
+    void bootstrapFromAuth();
+  }, [bootstrapFromAuth, mode, sessionState?.status]);
+
+  if (mode === "join") {
     return (
       <JoinSessionView
         joinToken={joinToken}
@@ -375,6 +470,14 @@ function App() {
         onExitJoin={exitJoinRoute}
       />
     );
+  }
+
+  if (mode === "auth_lost") {
+    return <MultiplayerAuthLostView onReset={handleResetAfterAuthLost} />;
+  }
+
+  if (mode === "host") {
+    return <MultiplayerHostView />;
   }
 
   return <DiceRollerApp />;
