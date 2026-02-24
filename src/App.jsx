@@ -390,18 +390,12 @@ function DiceRollerApp({
   const ignoreBaneIncrement = useCallback(() => {}, []);
   const resolvedSessionName = normalizeSessionText(sessionSummary?.sessionName, "Dice Roller");
   const resolvedRoleLabel = normalizeSessionText(sessionSummary?.roleLabel, "Unknown");
-  const roleIndicatorTone =
+  const rolePillTone =
     resolvedRoleLabel === "GM"
       ? "gm"
       : resolvedRoleLabel === "Player"
         ? "player"
         : "unknown";
-  const roleIndicatorSymbol =
-    resolvedRoleLabel === "GM"
-      ? "GM"
-      : resolvedRoleLabel === "Player"
-        ? "P"
-        : "?";
 
   const {
     currentRoll,
@@ -870,13 +864,14 @@ function DiceRollerApp({
             </label>
             <div className="strain-status-group">
               {sessionSummary ? (
-                <span
-                  className={`role-indicator role-indicator-${roleIndicatorTone}`}
+                <output
+                  className={`role-pill role-pill-${rolePillTone}`}
                   aria-label={`Session role: ${resolvedRoleLabel}`}
                   data-testid="session-role-indicator"
                 >
-                  {roleIndicatorSymbol}
-                </span>
+                  <span className="role-pill-head">Role</span>
+                  <strong>{resolvedRoleLabel}</strong>
+                </output>
               ) : null}
               <output className="strain-pill" aria-label="Current strain points">
                 <div className="strain-pill-head">

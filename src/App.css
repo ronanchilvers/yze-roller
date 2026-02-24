@@ -312,34 +312,39 @@
   margin: 0;
 }
 
-.role-indicator {
-  width: 2rem;
-  height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.role-pill {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 110px;
+  padding: 0.65rem 0.75rem;
   border: 1px solid var(--line);
-  border-radius: 0.6rem;
+  border-radius: 0.75rem;
   background: var(--summary-pill-bg);
   color: var(--ink-700);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  line-height: 1;
-  cursor: default;
 }
 
-.role-indicator-player {
+.role-pill-head {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.role-pill strong {
+  font-size: 1.1rem;
+  line-height: 1.15;
+}
+
+.role-pill-player {
   border-color: #3f8650;
   color: #2a6f3a;
 }
 
-.role-indicator-gm {
+.role-pill-gm {
   border-color: var(--accent-strong);
   color: var(--accent-strong);
 }
 
-.role-indicator-unknown {
+.role-pill-unknown {
   border-color: var(--line);
   color: var(--ink-700);
 }

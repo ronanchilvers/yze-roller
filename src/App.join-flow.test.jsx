@@ -365,7 +365,8 @@ test("session mode renders multiplayer status in the header", () => {
   expect(heading?.textContent).toBe("Streetwise Night");
   expect(connectionBadge?.textContent).toContain("Connected");
   expect(roleIndicator).not.toBeNull();
-  expect(roleIndicator?.getAttribute("aria-label")).toContain("Player");
+  expect(roleIndicator?.textContent).toContain("Role");
+  expect(roleIndicator?.textContent).toContain("Player");
   expect(app.container.querySelector('[data-testid="session-summary"]')).toBeNull();
   expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(0);
 
