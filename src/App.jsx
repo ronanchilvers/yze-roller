@@ -192,12 +192,13 @@ function DiceRollerApp({
   const submitRollAction = sessionActions?.submitRoll;
   const submitPushAction = sessionActions?.submitPush;
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
       isMountedRef.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   const emitRollToastEvent = useCallback(
     (eventInput) => {

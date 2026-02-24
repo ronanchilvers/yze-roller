@@ -161,3 +161,9 @@
   - **Decision:** In `DiceRollerApp`, derive contract payloads from resolved local outcomes and call `submitRoll`/`submitPush` once per local action id, disable action controls while submit is pending, and render action-level submit errors without forcing session teardown.
   - **Consequences:** Local gameplay outcomes now sync to the session event stream, duplicate submits are suppressed for rerenders, and users receive actionable failure feedback while remaining in-session.
   - **Alternatives considered:** Submit directly inside `useRollSession` (rejected to keep multiplayer transport concerns out of local dice-state hook), or silently ignore submit errors (rejected due to poor operator visibility).
+
+- **2026-02-24 — Keep mounted guard StrictMode-safe for action-submit pending transitions**
+  - **Context:** Development StrictMode triggers effect cleanup/re-run cycles that can leave mount flags false if they are only set in cleanup handlers.
+  - **Decision:** Ensure `isMountedRef` is set to `true` on effect mount and `false` on cleanup in `DiceRollerApp`.
+  - **Consequences:** Pending-submit state can reliably transition back to idle after resolved requests in both StrictMode and non-StrictMode environments.
+  - **Alternatives considered:** Remove mount guard entirely (rejected because async submit completion could update state after unmount).
