@@ -50,6 +50,7 @@ test("renders host game form", () => {
 
   expect(container.textContent).toContain("Host Game");
   expect(container.querySelector("#sessionName")).not.toBeNull();
+  expect(container.querySelector("#inviteLinkInput")).not.toBeNull();
   expect(container.querySelector('button[type="submit"]')).not.toBeNull();
 
   unmount();
@@ -124,6 +125,33 @@ test("shows mapped error when session creation fails", async () => {
   expect(container.textContent).toContain(
     "Session name must be between 1 and 128 characters.",
   );
+
+  unmount();
+});
+
+test("host mode invite-link entry emits parsed join token", () => {
+  const onUseInviteLink = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<HostSessionView onUseInviteLink={onUseInviteLink} />);
+  });
+
+  const inviteLinkInput = container.querySelector("#inviteLinkInput");
+  const inviteButton = Array.from(container.querySelectorAll("button")).find(
+    (button) => button.textContent?.trim() === "Use invite link",
+  );
+
+  act(() => {
+    inviteLinkInput.value = "https://app.example.com/join#join=token-123";
+    inviteLinkInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  act(() => {
+    inviteButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(onUseInviteLink).toHaveBeenCalledWith("token-123");
 
   unmount();
 });

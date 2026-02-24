@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { apiPost, isApiClientError } from "../lib/api-client.js";
+import { parseJoinTokenFromInviteInput } from "../lib/join-session-route.js";
 
 const mapJoinErrorCodeToMessage = (code) => {
   switch (code) {
@@ -49,11 +50,28 @@ function JoinSessionView({
   joinToken = null,
   onJoinSuccess = () => {},
   onExitJoin = () => {},
+  onUseInviteLink = () => {},
 }) {
   const [displayName, setDisplayName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inviteLinkInput, setInviteLinkInput] = useState("");
+  const [inviteErrorMessage, setInviteErrorMessage] = useState("");
   const hasJoinToken = typeof joinToken === "string" && joinToken.trim().length > 0;
+
+  const handleInviteLinkSubmit = (event) => {
+    event.preventDefault();
+
+    const parsedJoinToken = parseJoinTokenFromInviteInput(inviteLinkInput);
+
+    if (!parsedJoinToken) {
+      setInviteErrorMessage("Paste a valid invite link or join token.");
+      return;
+    }
+
+    setInviteErrorMessage("");
+    onUseInviteLink(parsedJoinToken);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -113,12 +131,38 @@ function JoinSessionView({
           <div className="join-error-block" role="alert">
             <p className="join-error-title">Invalid join link</p>
             <p className="panel-copy">
-              This URL is missing a join token. Open the invite link from your GM and
-              try again.
+              This URL is missing a join token. Paste your invite link below, or
+              open the full invite link from your GM.
             </p>
-            <button type="button" className="join-secondary" onClick={onExitJoin}>
-              Back to app
-            </button>
+            <form className="join-form" onSubmit={handleInviteLinkSubmit}>
+              <label htmlFor="inviteLinkInput" className="join-label">
+                Invite Link
+              </label>
+              <input
+                id="inviteLinkInput"
+                name="inviteLinkInput"
+                type="text"
+                value={inviteLinkInput}
+                onInput={(event) => setInviteLinkInput(event.target.value)}
+                autoComplete="off"
+                className="join-input"
+              />
+
+              {inviteErrorMessage ? (
+                <p className="panel-copy join-error-message" role="alert">
+                  {inviteErrorMessage}
+                </p>
+              ) : null}
+
+              <div className="join-actions">
+                <button type="submit" className="pool-action-button">
+                  Use invite link
+                </button>
+                <button type="button" className="join-secondary" onClick={onExitJoin}>
+                  Back to app
+                </button>
+              </div>
+            </form>
           </div>
         ) : (
           <form className="join-form" onSubmit={handleSubmit}>
@@ -166,6 +210,7 @@ JoinSessionView.propTypes = {
   joinToken: PropTypes.string,
   onJoinSuccess: PropTypes.func,
   onExitJoin: PropTypes.func,
+  onUseInviteLink: PropTypes.func,
 };
 
 export default JoinSessionView;

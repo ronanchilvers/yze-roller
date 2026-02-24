@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { apiPost, isApiClientError } from "../lib/api-client.js";
+import { parseJoinTokenFromInviteInput } from "../lib/join-session-route.js";
 
 const mapCreateSessionErrorCodeToMessage = (code) => {
   switch (code) {
@@ -34,10 +35,15 @@ const normalizeCreateSessionSuccessData = (payload) => {
   };
 };
 
-function HostSessionView({ onHostSuccess = () => {} }) {
+function HostSessionView({
+  onHostSuccess = () => {},
+  onUseInviteLink = () => {},
+}) {
   const [sessionName, setSessionName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inviteLinkInput, setInviteLinkInput] = useState("");
+  const [inviteErrorMessage, setInviteErrorMessage] = useState("");
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -79,6 +85,19 @@ function HostSessionView({ onHostSuccess = () => {} }) {
     }
   };
 
+  const handleInviteLinkSubmit = (event) => {
+    event.preventDefault();
+
+    const parsedJoinToken = parseJoinTokenFromInviteInput(inviteLinkInput);
+    if (!parsedJoinToken) {
+      setInviteErrorMessage("Paste a valid invite link or join token.");
+      return;
+    }
+
+    setInviteErrorMessage("");
+    onUseInviteLink(parsedJoinToken);
+  };
+
   return (
     <main className="app-shell join-shell" data-mode="host">
       <section className="panel join-panel" aria-label="Host multiplayer session">
@@ -112,6 +131,34 @@ function HostSessionView({ onHostSuccess = () => {} }) {
             {isSubmitting ? "Creating…" : "Create session"}
           </button>
         </form>
+
+        <p className="panel-copy">
+          Already have an invite link? Paste it to join as a player.
+        </p>
+        <form className="join-form" onSubmit={handleInviteLinkSubmit}>
+          <label htmlFor="inviteLinkInput" className="join-label">
+            Invite Link
+          </label>
+          <input
+            id="inviteLinkInput"
+            name="inviteLinkInput"
+            type="text"
+            value={inviteLinkInput}
+            onInput={(event) => setInviteLinkInput(event.target.value)}
+            autoComplete="off"
+            className="join-input"
+          />
+
+          {inviteErrorMessage ? (
+            <p className="panel-copy join-error-message" role="alert">
+              {inviteErrorMessage}
+            </p>
+          ) : null}
+
+          <button type="submit" className="join-secondary">
+            Use invite link
+          </button>
+        </form>
       </section>
     </main>
   );
@@ -119,6 +166,7 @@ function HostSessionView({ onHostSuccess = () => {} }) {
 
 HostSessionView.propTypes = {
   onHostSuccess: PropTypes.func,
+  onUseInviteLink: PropTypes.func,
 };
 
 export default HostSessionView;

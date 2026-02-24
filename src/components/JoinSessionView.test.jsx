@@ -54,8 +54,59 @@ test("renders a blocking error state when join token is missing", () => {
   });
 
   expect(container.textContent).toContain("Invalid join link");
-  expect(container.querySelector("form")).toBeNull();
+  expect(container.querySelector("#inviteLinkInput")).not.toBeNull();
   expect(getButtonByText(container, "Back to app")).toBeDefined();
+
+  unmount();
+});
+
+test("missing-token state accepts pasted invite links", () => {
+  const onUseInviteLink = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<JoinSessionView joinToken={null} onUseInviteLink={onUseInviteLink} />);
+  });
+
+  const inviteInput = container.querySelector("#inviteLinkInput");
+  const useInviteButton = getButtonByText(container, "Use invite link");
+
+  act(() => {
+    inviteInput.value = "https://app.example.com/join#join=token-123";
+    inviteInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  act(() => {
+    useInviteButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(onUseInviteLink).toHaveBeenCalledWith("token-123");
+
+  unmount();
+});
+
+test("missing-token state shows validation error for invalid invite input", () => {
+  const onUseInviteLink = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<JoinSessionView joinToken={null} onUseInviteLink={onUseInviteLink} />);
+  });
+
+  const inviteInput = container.querySelector("#inviteLinkInput");
+  const useInviteButton = getButtonByText(container, "Use invite link");
+
+  act(() => {
+    inviteInput.value = "https://app.example.com/join";
+    inviteInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  act(() => {
+    useInviteButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(container.textContent).toContain("Paste a valid invite link or join token.");
+  expect(onUseInviteLink).not.toHaveBeenCalled();
 
   unmount();
 });

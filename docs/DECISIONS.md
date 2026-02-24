@@ -143,3 +143,9 @@
   - **Decision:** Parameterize CSP connect sources in `index.html` using `%VITE_CSP_CONNECT_SRC%`, keep `'self'` as default baseline, and define `VITE_CSP_CONNECT_SRC` in each environment file next to `VITE_API_BASE_URL`.
   - **Consequences:** Cross-origin API calls can be allowed per environment without weakening CSP globally; deployments must keep API base URL and CSP connect sources in sync.
   - **Alternatives considered:** Loosen CSP globally (`https:`/`*`) (rejected due to reduced exfiltration protection), or move CSP generation to Vite config (deferred to avoid config changes during current task flow).
+
+- **2026-02-24 — Add invite-link parsing fallback while keeping canonical `/join#join=` intake**
+  - **Context:** Players previously had only one intake path (`/join#join=<token>`), and missing-token states blocked progress unless users manually edited the URL.
+  - **Decision:** Add invite-input parsing utilities for full links/hash/token strings and route all resolved tokens back through canonical `/join#join=<token>` from both host mode and join missing-token fallback.
+  - **Consequences:** Player onboarding is more resilient to malformed/partial links while preserving one join API submission path and existing route semantics.
+  - **Alternatives considered:** Introduce a separate non-route join endpoint in UI state (rejected to avoid duplicating join logic outside the canonical route flow).

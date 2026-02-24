@@ -27,6 +27,7 @@ import {
   normalizeRollToastEvent,
 } from "./lib/roll-toast-event.js";
 import {
+  buildJoinPathWithToken,
   clearLocationHash,
   getSessionPathFromJoinPath,
   isJoinSessionPath,
@@ -443,6 +444,19 @@ function App() {
     navigateToPath(getSessionPathFromJoinPath(pathname));
   }, [navigateToPath, pathname, resetSession]);
 
+  const handleUseInviteLink = useCallback(
+    (resolvedJoinToken) => {
+      const nextPath = buildJoinPathWithToken(pathname, resolvedJoinToken);
+
+      if (!nextPath) {
+        return;
+      }
+
+      navigateToPath(nextPath);
+    },
+    [navigateToPath, pathname],
+  );
+
   useEffect(() => {
     if (mode !== "session" || sessionState?.status !== "idle") {
       return;
@@ -457,6 +471,7 @@ function App() {
         joinToken={joinToken}
         onJoinSuccess={handleJoinSuccess}
         onExitJoin={exitJoinRoute}
+        onUseInviteLink={handleUseInviteLink}
       />
     );
   }
@@ -466,7 +481,12 @@ function App() {
   }
 
   if (mode === "host") {
-    return <HostSessionView onHostSuccess={handleHostSuccess} />;
+    return (
+      <HostSessionView
+        onHostSuccess={handleHostSuccess}
+        onUseInviteLink={handleUseInviteLink}
+      />
+    );
   }
 
   return <DiceRollerApp />;

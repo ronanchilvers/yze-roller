@@ -1,4 +1,8 @@
 const trimSlashes = (value) => value.replace(/\/+$/, "");
+const hasWhitespace = (value) => /\s/.test(value);
+const isUrlLikeInput = (value) =>
+  /^(https?:)?\/\//i.test(value) || value.startsWith("/") || value.includes("#") ||
+  value.includes("?");
 
 export const normalizePathname = (pathname) => {
   if (typeof pathname !== "string") {
@@ -37,6 +41,67 @@ export const parseJoinTokenFromHash = (hashValue) => {
   return trimmed || null;
 };
 
+export const parseJoinTokenFromInviteInput = (value) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const directHashToken = parseJoinTokenFromHash(trimmed);
+  if (directHashToken) {
+    return directHashToken;
+  }
+
+  const hashIndex = trimmed.indexOf("#");
+  if (hashIndex >= 0) {
+    const tokenFromHash = parseJoinTokenFromHash(trimmed.slice(hashIndex));
+    if (tokenFromHash) {
+      return tokenFromHash;
+    }
+  }
+
+  const parseFromUrl = (nextValue) => {
+    try {
+      const url = new URL(nextValue);
+      const hashToken = parseJoinTokenFromHash(url.hash);
+      if (hashToken) {
+        return hashToken;
+      }
+
+      const queryToken = url.searchParams.get("join");
+      if (typeof queryToken !== "string") {
+        return null;
+      }
+
+      const normalized = queryToken.trim();
+      return normalized || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const absoluteUrlToken = parseFromUrl(trimmed);
+  if (absoluteUrlToken) {
+    return absoluteUrlToken;
+  }
+
+  const relativeUrlToken = parseFromUrl(`https://join-token.invalid${trimmed}`);
+  if (relativeUrlToken) {
+    return relativeUrlToken;
+  }
+
+  if (isUrlLikeInput(trimmed) || hasWhitespace(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
+};
+
 export const getSessionPathFromJoinPath = (pathname) => {
   const normalizedPath = normalizePathname(pathname);
 
@@ -46,6 +111,23 @@ export const getSessionPathFromJoinPath = (pathname) => {
 
   const withoutJoin = normalizedPath.replace(/\/join$/, "");
   return withoutJoin || "/";
+};
+
+export const buildJoinPathWithToken = (pathname, joinToken) => {
+  if (typeof joinToken !== "string") {
+    return null;
+  }
+
+  const normalizedToken = joinToken.trim();
+  if (!normalizedToken) {
+    return null;
+  }
+
+  const sessionPath = getSessionPathFromJoinPath(pathname);
+  const joinPath = sessionPath === "/" ? "/join" : `${sessionPath}/join`;
+  const encodedToken = encodeURIComponent(normalizedToken);
+
+  return `${joinPath}#join=${encodedToken}`;
 };
 
 export const clearLocationHash = (windowLike = window) => {

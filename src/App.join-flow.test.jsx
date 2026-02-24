@@ -159,6 +159,23 @@ test("renders host mode when not on join route and no auth token is present", ()
   app.unmount();
 });
 
+test("host mode invite handoff navigates to join route with hash token", () => {
+  const app = createContainer();
+
+  app.render(<App />);
+
+  act(() => {
+    mocks.latestHostProps.onUseInviteLink("invite-token-1");
+  });
+
+  expect(window.location.pathname).toBe("/join");
+  expect(window.location.hash).toBe("#join=invite-token-1");
+  expect(app.container.querySelector('[data-testid="join-view"]')).not.toBeNull();
+  expect(mocks.latestJoinProps.joinToken).toBe("invite-token-1");
+
+  app.unmount();
+});
+
 test("join route parses #join token and passes it to JoinSessionView", () => {
   window.history.replaceState({}, "", "/join#join=token-123");
   const app = createContainer();
@@ -167,6 +184,23 @@ test("join route parses #join token and passes it to JoinSessionView", () => {
 
   expect(app.container.querySelector('[data-testid="join-view"]')).not.toBeNull();
   expect(mocks.latestJoinProps.joinToken).toBe("token-123");
+
+  app.unmount();
+});
+
+test("join route fallback updates hash token when invite input is resolved", () => {
+  window.history.replaceState({}, "", "/join");
+  const app = createContainer();
+
+  app.render(<App />);
+
+  act(() => {
+    mocks.latestJoinProps.onUseInviteLink("invite-token-2");
+  });
+
+  expect(window.location.pathname).toBe("/join");
+  expect(window.location.hash).toBe("#join=invite-token-2");
+  expect(mocks.latestJoinProps.joinToken).toBe("invite-token-2");
 
   app.unmount();
 });
