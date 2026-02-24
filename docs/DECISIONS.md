@@ -191,3 +191,9 @@
   - **Decision:** Add a GM-only controls panel in `App` session mode with buttons for join-link rotation, joining enable/disable, scene strain reset, player refresh, and per-player revoke actions; centralize async feedback handling via one `runGmAction` helper.
   - **Consequences:** GM operational endpoints are now reachable from UI with deterministic role gating and action feedback, while non-GM players never see host controls.
   - **Alternatives considered:** Build a separate dedicated GM route/view (deferred to keep current integration incremental and reuse existing session layout).
+
+- **2026-02-24 — Add explicit copy action for rotated GM join links**
+  - **Context:** Rotated join links were visible in the GM panel but required manual selection/copy, which slowed host workflows and increased formatting mistakes.
+  - **Decision:** Add a `Copy Join Link` control that uses `navigator.clipboard.writeText` when available and falls back to a hidden textarea + `document.execCommand("copy")` path when clipboard APIs are unavailable or denied.
+  - **Consequences:** Hosts can copy shareable links in one action across modern and constrained environments; the panel now surfaces deterministic success/error feedback for clipboard failures.
+  - **Alternatives considered:** Depend on Clipboard API only (rejected because permission/context constraints can fail in some deployment environments).

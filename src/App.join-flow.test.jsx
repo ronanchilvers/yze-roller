@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   latestDicePoolProps: null,
   latestHostProps: null,
   latestJoinProps: null,
+  originalClipboard: globalThis.navigator?.clipboard,
+  clipboardWriteText: vi.fn(),
   sessionAuth: null,
   rollSessionState: null,
   multiplayerSessionState: {
@@ -191,6 +193,17 @@ afterEach(() => {
   mocks.refreshPlayers.mockReset();
   mocks.revokePlayer.mockReset();
   mocks.resetSession.mockReset();
+  mocks.clipboardWriteText.mockReset();
+  if (typeof navigator !== "undefined") {
+    if (typeof mocks.originalClipboard === "undefined") {
+      delete navigator.clipboard;
+    } else {
+      Object.defineProperty(navigator, "clipboard", {
+        value: mocks.originalClipboard,
+        configurable: true,
+      });
+    }
+  }
   window.history.replaceState({}, "", "/");
   document.body.innerHTML = "";
 });
@@ -527,6 +540,13 @@ test("session mode wires gm control actions and revoke player action", async () 
     ok: true,
     revokedTokenId: 31,
   });
+  mocks.clipboardWriteText.mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", {
+    value: {
+      writeText: mocks.clipboardWriteText,
+    },
+    configurable: true,
+  });
 
   app.render(<App />);
 
@@ -541,6 +561,18 @@ test("session mode wires gm control actions and revoke player action", async () 
   });
   expect(mocks.rotateJoinLink).toHaveBeenCalledTimes(1);
   expect(app.container.textContent).toContain("Join link rotated.");
+  expect(app.container.querySelector('[data-testid="gm-copy-link-button"]')).not.toBeNull();
+
+  await act(async () => {
+    app.container
+      .querySelector('[data-testid="gm-copy-link-button"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+  expect(mocks.clipboardWriteText).toHaveBeenCalledWith(
+    "https://api.example.com/join#join=abc123",
+  );
+  expect(app.container.textContent).toContain("Join link copied.");
 
   await act(async () => {
     app.container

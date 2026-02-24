@@ -346,6 +346,22 @@
   margin: 0.7rem 0 0;
 }
 
+.gm-controls-link-row {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 0.6rem;
+}
+
+.gm-controls-link-row .gm-controls-link {
+  margin: 0;
+}
+
+.gm-controls-link-row .join-secondary {
+  white-space: nowrap;
+}
+
 .gm-controls-link code {
   font-size: 0.85rem;
   overflow-wrap: anywhere;
@@ -901,6 +917,14 @@ h2 {
 
   .gm-controls-actions {
     grid-template-columns: 1fr;
+  }
+
+  .gm-controls-link-row {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-controls-link-row .join-secondary {
+    width: 100%;
   }
 
   .gm-player-item {

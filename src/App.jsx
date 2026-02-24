@@ -159,6 +159,51 @@ const normalizeSessionEventCount = (value) => {
   return Math.floor(numeric);
 };
 
+const copyTextToClipboard = async (text) => {
+  const normalizedText = typeof text === "string" ? text.trim() : "";
+
+  if (!normalizedText) {
+    return false;
+  }
+
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === "function"
+  ) {
+    try {
+      await navigator.clipboard.writeText(normalizedText);
+      return true;
+    } catch {
+      // Fallback path below handles environments without clipboard permission.
+    }
+  }
+
+  if (typeof document === "undefined" || typeof document.createElement !== "function") {
+    return false;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = normalizedText;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  textarea.style.top = "-1000px";
+  textarea.style.left = "-1000px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  try {
+    return Boolean(document.execCommand?.("copy"));
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
+};
+
 const normalizeSessionPlayerTokenId = (value) => {
   const numeric = Number(value);
 
@@ -664,6 +709,29 @@ function DiceRollerApp({
     [gmControls, runGmAction],
   );
 
+  const handleCopyJoinLink = useCallback(async () => {
+    const joinLink = typeof rotatedJoinLink === "string" ? rotatedJoinLink.trim() : "";
+
+    if (!joinLink) {
+      return;
+    }
+
+    setGmActionError("");
+    setGmActionMessage("");
+
+    const copied = await copyTextToClipboard(joinLink);
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    if (!copied) {
+      setGmActionError("Unable to copy join link. Copy it manually from the link text.");
+      return;
+    }
+
+    setGmActionMessage("Join link copied.");
+  }, [rotatedJoinLink]);
+
   return (
     <main className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -852,9 +920,22 @@ function DiceRollerApp({
               </button>
             </div>
             {rotatedJoinLink ? (
-              <p className="panel-copy gm-controls-link" data-testid="gm-join-link">
-                Latest join link: <code>{rotatedJoinLink}</code>
-              </p>
+              <div className="gm-controls-link-row" data-testid="gm-join-link-row">
+                <p className="panel-copy gm-controls-link" data-testid="gm-join-link">
+                  Latest join link: <code>{rotatedJoinLink}</code>
+                </p>
+                <button
+                  type="button"
+                  className="join-secondary"
+                  data-testid="gm-copy-link-button"
+                  onClick={() => {
+                    void handleCopyJoinLink();
+                  }}
+                  disabled={Boolean(gmPendingAction)}
+                >
+                  Copy Join Link
+                </button>
+              </div>
             ) : null}
             {gmActionError ? (
               <p
