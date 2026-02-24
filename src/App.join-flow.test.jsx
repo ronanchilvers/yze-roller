@@ -17,6 +17,11 @@ const mocks = vi.hoisted(() => ({
   bootstrapFromAuth: vi.fn(),
   submitRoll: vi.fn(),
   submitPush: vi.fn(),
+  rotateJoinLink: vi.fn(),
+  setJoiningEnabled: vi.fn(),
+  resetSceneStrain: vi.fn(),
+  refreshPlayers: vi.fn(),
+  revokePlayer: vi.fn(),
   resetSession: vi.fn(),
   noop: vi.fn(),
 }));
@@ -120,6 +125,11 @@ vi.mock("./hooks/useMultiplayerSession.js", () => ({
     bootstrapFromAuth: mocks.bootstrapFromAuth,
     submitRoll: mocks.submitRoll,
     submitPush: mocks.submitPush,
+    rotateJoinLink: mocks.rotateJoinLink,
+    setJoiningEnabled: mocks.setJoiningEnabled,
+    resetSceneStrain: mocks.resetSceneStrain,
+    refreshPlayers: mocks.refreshPlayers,
+    revokePlayer: mocks.revokePlayer,
     resetSession: mocks.resetSession,
   }),
 }));
@@ -175,6 +185,11 @@ afterEach(() => {
   mocks.bootstrapFromAuth.mockReset();
   mocks.submitRoll.mockReset();
   mocks.submitPush.mockReset();
+  mocks.rotateJoinLink.mockReset();
+  mocks.setJoiningEnabled.mockReset();
+  mocks.resetSceneStrain.mockReset();
+  mocks.refreshPlayers.mockReset();
+  mocks.revokePlayer.mockReset();
   mocks.resetSession.mockReset();
   window.history.replaceState({}, "", "/");
   document.body.innerHTML = "";
@@ -401,6 +416,115 @@ test("session mode renders ordered multiplayer event feed entries", () => {
   expect(items[1].textContent).toContain("rolled 2 successes, 1 banes");
   expect(items[2].textContent).toContain("#13");
   expect(items[2].textContent).toContain("Scene strain was reset");
+
+  app.unmount();
+});
+
+test("session mode only renders GM controls for gm role", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1, role: "gm", displayName: "GM" }],
+  };
+
+  app.render(<App />);
+
+  expect(app.container.querySelector('[data-testid="gm-controls-panel"]')).toBeNull();
+
+  app.unmount();
+});
+
+test("session mode wires gm control actions and revoke player action", async () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "gm-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "gm",
+    sessionId: 7,
+    sessionName: "Streetwise Night",
+    joiningEnabled: true,
+    sceneStrain: 4,
+    players: [
+      { tokenId: 1, role: "gm", displayName: "GM" },
+      { tokenId: 31, role: "player", displayName: "Alice" },
+    ],
+  };
+  mocks.rotateJoinLink.mockResolvedValue({
+    ok: true,
+    joinLink: "https://api.example.com/join#join=abc123",
+  });
+  mocks.setJoiningEnabled.mockResolvedValue({
+    ok: true,
+    joiningEnabled: false,
+  });
+  mocks.resetSceneStrain.mockResolvedValue({
+    ok: true,
+    sceneStrain: 0,
+  });
+  mocks.refreshPlayers.mockResolvedValue({
+    ok: true,
+    players: [{ tokenId: 1, role: "gm", displayName: "GM" }],
+  });
+  mocks.revokePlayer.mockResolvedValue({
+    ok: true,
+    revokedTokenId: 31,
+  });
+
+  app.render(<App />);
+
+  expect(app.container.querySelector('[data-testid="gm-controls-panel"]')).not.toBeNull();
+  expect(app.container.textContent).toContain("Disable Joining");
+
+  await act(async () => {
+    app.container
+      .querySelector('[data-testid="gm-rotate-link-button"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+  expect(mocks.rotateJoinLink).toHaveBeenCalledTimes(1);
+  expect(app.container.textContent).toContain("Join link rotated.");
+
+  await act(async () => {
+    app.container
+      .querySelector('[data-testid="gm-joining-toggle-button"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+  expect(mocks.setJoiningEnabled).toHaveBeenCalledWith(false);
+
+  await act(async () => {
+    app.container
+      .querySelector('[data-testid="gm-reset-strain-button"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+  expect(mocks.resetSceneStrain).toHaveBeenCalledTimes(1);
+
+  await act(async () => {
+    app.container
+      .querySelector('[data-testid="gm-refresh-players-button"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+  expect(mocks.refreshPlayers).toHaveBeenCalledTimes(1);
+
+  await act(async () => {
+    app.container
+      .querySelector('[data-testid="gm-revoke-player-31"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+  expect(mocks.revokePlayer).toHaveBeenCalledWith(31);
 
   app.unmount();
 });

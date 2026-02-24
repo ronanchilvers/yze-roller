@@ -308,6 +308,107 @@
   margin: 0;
 }
 
+.gm-controls-panel {
+  margin-bottom: 1rem;
+}
+
+.gm-controls-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.gm-controls-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.16rem 0.52rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-700);
+  background: var(--summary-pill-bg);
+}
+
+.gm-controls-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.gm-controls-link,
+.gm-controls-error,
+.gm-controls-message {
+  margin: 0.7rem 0 0;
+}
+
+.gm-controls-link code {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.gm-controls-error {
+  color: var(--strain-line);
+  font-weight: 600;
+}
+
+.gm-controls-message {
+  color: var(--ink-700);
+  font-weight: 600;
+}
+
+.gm-player-roster {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.gm-player-roster h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.gm-player-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.gm-player-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.55rem;
+  background: var(--summary-pill-bg);
+}
+
+.gm-player-details {
+  display: grid;
+  gap: 0.14rem;
+}
+
+.gm-player-details strong {
+  font-size: 0.92rem;
+}
+
+.gm-player-details span {
+  font-size: 0.74rem;
+  color: var(--ink-700);
+}
+
+.gm-player-empty {
+  margin: 0;
+}
+
 .theme-select {
   display: grid;
   gap: 0.3rem;
@@ -796,6 +897,19 @@ h2 {
 
   .session-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .gm-controls-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-player-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gm-player-item .join-secondary {
+    width: 100%;
   }
 
   .import-controls .pool-action-button {

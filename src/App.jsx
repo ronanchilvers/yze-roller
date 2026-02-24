@@ -159,6 +159,50 @@ const normalizeSessionEventCount = (value) => {
   return Math.floor(numeric);
 };
 
+const normalizeSessionPlayerTokenId = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null;
+  }
+
+  return Math.floor(numeric);
+};
+
+const normalizeSessionPlayerDisplayName = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
+};
+
+const normalizeSessionPlayersForGmPanel = (playersInput) => {
+  if (!Array.isArray(playersInput)) {
+    return [];
+  }
+
+  return playersInput
+    .map((player) => {
+      const tokenId = normalizeSessionPlayerTokenId(player?.tokenId);
+      const displayName = normalizeSessionPlayerDisplayName(player?.displayName);
+      const role = player?.role === "gm" || player?.role === "player"
+        ? player.role
+        : "player";
+
+      if (tokenId === null || !displayName) {
+        return null;
+      }
+
+      return {
+        tokenId,
+        displayName,
+        role,
+      };
+    })
+    .filter(Boolean);
+};
+
 const normalizeSessionEventActorLabel = (event) => {
   const displayName = event?.actor?.display_name;
   if (typeof displayName === "string" && displayName.trim()) {
@@ -241,6 +285,7 @@ function DiceRollerApp({
   sessionSummary = null,
   sessionActions = null,
   sessionEvents = [],
+  gmControls = null,
 }) {
   const {
     attributeDice,
@@ -267,9 +312,17 @@ function DiceRollerApp({
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
   const [isActionSubmitPending, setIsActionSubmitPending] = useState(false);
   const [sessionActionError, setSessionActionError] = useState("");
+  const [gmActionError, setGmActionError] = useState("");
+  const [gmActionMessage, setGmActionMessage] = useState("");
+  const [gmPendingAction, setGmPendingAction] = useState("");
+  const [rotatedJoinLink, setRotatedJoinLink] = useState("");
   const visibleSessionEvents = useMemo(
     () => normalizeSessionEventsForFeed(sessionEvents),
     [sessionEvents],
+  );
+  const gmPlayers = useMemo(
+    () => normalizeSessionPlayersForGmPanel(gmControls?.players),
+    [gmControls?.players],
   );
 
   const effectiveAttributeDice = overrideCounts?.attributeDice ?? attributeDice;
@@ -496,6 +549,121 @@ function DiceRollerApp({
     };
   }, [emitRollToastEvent]);
 
+  const runGmAction = useCallback(
+    async (actionId, action, successMessage, onSuccess = null) => {
+      if (typeof action !== "function") {
+        return;
+      }
+
+      setGmPendingAction(actionId);
+      setGmActionError("");
+      setGmActionMessage("");
+
+      try {
+        const result = await action();
+
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        if (!result?.ok) {
+          setGmActionError(
+            normalizeActionErrorMessage(result?.errorMessage) ||
+              "Unable to complete GM action.",
+          );
+          return;
+        }
+
+        if (typeof onSuccess === "function") {
+          onSuccess(result);
+        }
+
+        setGmActionMessage(successMessage);
+      } catch {
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        setGmActionError("Unable to complete GM action.");
+      } finally {
+        if (isMountedRef.current) {
+          setGmPendingAction("");
+        }
+      }
+    },
+    [],
+  );
+
+  const handleRotateJoinLink = useCallback(() => {
+    if (!gmControls) {
+      return;
+    }
+
+    void runGmAction(
+      "rotate_join_link",
+      gmControls.rotateJoinLink,
+      "Join link rotated.",
+      (result) => {
+        setRotatedJoinLink(
+          typeof result?.joinLink === "string" ? result.joinLink.trim() : "",
+        );
+      },
+    );
+  }, [gmControls, runGmAction]);
+
+  const handleToggleJoining = useCallback(() => {
+    if (!gmControls) {
+      return;
+    }
+
+    const nextJoiningEnabled = !Boolean(gmControls.joiningEnabled);
+
+    void runGmAction(
+      "toggle_joining",
+      () => gmControls.setJoiningEnabled?.(nextJoiningEnabled),
+      nextJoiningEnabled ? "Player joining enabled." : "Player joining disabled.",
+    );
+  }, [gmControls, runGmAction]);
+
+  const handleResetSceneStrain = useCallback(() => {
+    if (!gmControls) {
+      return;
+    }
+
+    void runGmAction(
+      "reset_scene_strain",
+      gmControls.resetSceneStrain,
+      "Scene strain reset.",
+    );
+  }, [gmControls, runGmAction]);
+
+  const handleRefreshPlayers = useCallback(() => {
+    if (!gmControls) {
+      return;
+    }
+
+    void runGmAction(
+      "refresh_players",
+      gmControls.refreshPlayers,
+      "Player list refreshed.",
+    );
+  }, [gmControls, runGmAction]);
+
+  const handleRevokePlayer = useCallback(
+    (tokenId, displayName) => {
+      if (!gmControls) {
+        return;
+      }
+
+      void runGmAction(
+        `revoke_player_${tokenId}`,
+        () => gmControls.revokePlayer?.(tokenId),
+        `${displayName} revoked.`,
+      );
+    },
+    [gmControls, runGmAction],
+  );
+
   return (
     <main className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -635,6 +803,109 @@ function DiceRollerApp({
           </section>
         ) : null}
 
+        {gmControls ? (
+          <section
+            className="panel gm-controls-panel"
+            aria-label="GM controls"
+            data-testid="gm-controls-panel"
+          >
+            <div className="gm-controls-head">
+              <h2>GM Controls</h2>
+              <span className="gm-controls-pill">Host Tools</span>
+            </div>
+            <div className="gm-controls-actions">
+              <button
+                type="button"
+                className="join-secondary"
+                data-testid="gm-rotate-link-button"
+                onClick={handleRotateJoinLink}
+                disabled={Boolean(gmPendingAction)}
+              >
+                Rotate Join Link
+              </button>
+              <button
+                type="button"
+                className="join-secondary"
+                data-testid="gm-joining-toggle-button"
+                onClick={handleToggleJoining}
+                disabled={Boolean(gmPendingAction)}
+              >
+                {gmControls.joiningEnabled ? "Disable Joining" : "Enable Joining"}
+              </button>
+              <button
+                type="button"
+                className="join-secondary"
+                data-testid="gm-reset-strain-button"
+                onClick={handleResetSceneStrain}
+                disabled={Boolean(gmPendingAction)}
+              >
+                Reset Scene Strain
+              </button>
+              <button
+                type="button"
+                className="join-secondary"
+                data-testid="gm-refresh-players-button"
+                onClick={handleRefreshPlayers}
+                disabled={Boolean(gmPendingAction)}
+              >
+                Refresh Players
+              </button>
+            </div>
+            {rotatedJoinLink ? (
+              <p className="panel-copy gm-controls-link" data-testid="gm-join-link">
+                Latest join link: <code>{rotatedJoinLink}</code>
+              </p>
+            ) : null}
+            {gmActionError ? (
+              <p
+                className="panel-copy gm-controls-error"
+                role="alert"
+                data-testid="gm-action-error"
+              >
+                {gmActionError}
+              </p>
+            ) : null}
+            {gmActionMessage ? (
+              <p className="panel-copy gm-controls-message" data-testid="gm-action-message">
+                {gmActionMessage}
+              </p>
+            ) : null}
+            <div className="gm-player-roster">
+              <h3>Player Roster</h3>
+              {gmPlayers.length > 0 ? (
+                <ul className="gm-player-list" data-testid="gm-player-list">
+                  {gmPlayers.map((player) => {
+                    const canRevoke = player.role !== "gm";
+                    return (
+                      <li key={player.tokenId} className="gm-player-item">
+                        <div className="gm-player-details">
+                          <strong>{player.displayName}</strong>
+                          <span>
+                            #{player.tokenId} • {player.role.toUpperCase()}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="join-secondary"
+                          data-testid={`gm-revoke-player-${player.tokenId}`}
+                          onClick={() =>
+                            handleRevokePlayer(player.tokenId, player.displayName)
+                          }
+                          disabled={!canRevoke || Boolean(gmPendingAction)}
+                        >
+                          Revoke
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="panel-copy gm-player-empty">No players are connected.</p>
+              )}
+            </div>
+          </section>
+        ) : null}
+
         <div className="content-grid">
           <DicePoolPanel
             attributeDice={attributeDice}
@@ -679,6 +950,15 @@ DiceRollerApp.propTypes = {
     submitPush: PropTypes.func,
   }),
   sessionEvents: PropTypes.arrayOf(PropTypes.object),
+  gmControls: PropTypes.shape({
+    joiningEnabled: PropTypes.bool.isRequired,
+    players: PropTypes.arrayOf(PropTypes.object).isRequired,
+    rotateJoinLink: PropTypes.func,
+    setJoiningEnabled: PropTypes.func,
+    resetSceneStrain: PropTypes.func,
+    refreshPlayers: PropTypes.func,
+    revokePlayer: PropTypes.func,
+  }),
 };
 
 const resolveMultiplayerMode = ({
@@ -784,6 +1064,11 @@ function SessionView({
   bootstrapFromAuth,
   submitRoll,
   submitPush,
+  rotateJoinLink,
+  setJoiningEnabled,
+  resetSceneStrain,
+  refreshPlayers,
+  revokePlayer,
 }) {
   useEffect(() => {
     if (!hasSessionToken || sessionState?.status !== "idle") {
@@ -820,6 +1105,30 @@ function SessionView({
       submitPush,
     };
   }, [submitPush, submitRoll]);
+  const resolvedGmControls = useMemo(() => {
+    if (sessionState?.role !== "gm") {
+      return null;
+    }
+
+    return {
+      joiningEnabled: Boolean(sessionState?.joiningEnabled),
+      players: Array.isArray(sessionState?.players) ? sessionState.players : [],
+      rotateJoinLink,
+      setJoiningEnabled,
+      resetSceneStrain,
+      refreshPlayers,
+      revokePlayer,
+    };
+  }, [
+    refreshPlayers,
+    resetSceneStrain,
+    revokePlayer,
+    rotateJoinLink,
+    sessionState?.joiningEnabled,
+    sessionState?.players,
+    sessionState?.role,
+    setJoiningEnabled,
+  ]);
 
   return (
     <DiceRollerApp
@@ -833,6 +1142,7 @@ function SessionView({
       }}
       sessionActions={resolvedSessionActions}
       sessionEvents={Array.isArray(sessionState?.events) ? sessionState.events : []}
+      gmControls={resolvedGmControls}
     />
   );
 }
@@ -851,6 +1161,11 @@ SessionView.propTypes = {
   bootstrapFromAuth: PropTypes.func.isRequired,
   submitRoll: PropTypes.func,
   submitPush: PropTypes.func,
+  rotateJoinLink: PropTypes.func,
+  setJoiningEnabled: PropTypes.func,
+  resetSceneStrain: PropTypes.func,
+  refreshPlayers: PropTypes.func,
+  revokePlayer: PropTypes.func,
 };
 
 function App() {
@@ -864,6 +1179,11 @@ function App() {
     bootstrapFromAuth,
     submitRoll,
     submitPush,
+    rotateJoinLink,
+    setJoiningEnabled,
+    resetSceneStrain,
+    refreshPlayers,
+    revokePlayer,
     resetSession,
   } = useMultiplayerSession();
   const sessionAuth = useMemo(() => getSessionAuth(), [authVersion]);
@@ -976,6 +1296,11 @@ function App() {
       bootstrapFromAuth={bootstrapFromAuth}
       submitRoll={submitRoll}
       submitPush={submitPush}
+      rotateJoinLink={rotateJoinLink}
+      setJoiningEnabled={setJoiningEnabled}
+      resetSceneStrain={resetSceneStrain}
+      refreshPlayers={refreshPlayers}
+      revokePlayer={revokePlayer}
     />
   );
 }

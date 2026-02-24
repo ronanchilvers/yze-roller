@@ -185,3 +185,9 @@
   - **Decision:** Render a compact event feed panel in session mode from `sessionState.events`, normalize entries to stable summaries, and key list items by `event.id` while preserving server order.
   - **Consequences:** Session activity is visible in UI with minimal overhead; feed remains deterministic and resilient to duplicate event ids.
   - **Alternatives considered:** Defer feed to a later dedicated timeline view (rejected because basic observability was needed now for multiplayer UX and debugging).
+
+- **2026-02-24 — Surface GM endpoint actions through a role-gated session panel**
+  - **Context:** GM API actions were already implemented in `useMultiplayerSession`, but there was no in-session UI to invoke them or manage player revocation.
+  - **Decision:** Add a GM-only controls panel in `App` session mode with buttons for join-link rotation, joining enable/disable, scene strain reset, player refresh, and per-player revoke actions; centralize async feedback handling via one `runGmAction` helper.
+  - **Consequences:** GM operational endpoints are now reachable from UI with deterministic role gating and action feedback, while non-GM players never see host controls.
+  - **Alternatives considered:** Build a separate dedicated GM route/view (deferred to keep current integration incremental and reuse existing session layout).
