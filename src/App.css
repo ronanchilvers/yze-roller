@@ -208,28 +208,28 @@
 }
 
 .session-connection-dot {
-  width: 5px;
-  height: 5px;
-  min-width: 5px;
-  min-height: 5px;
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  min-height: 10px;
   border-radius: 999px;
   align-self: center;
   background: var(--ink-700);
 }
 
 .session-connection-dot.is-online {
-  background: #2a6f3a;
-  box-shadow: 0 0 6px rgba(42, 111, 58, 0.65);
+  background: #1fd46b;
+  box-shadow: 0 0 8px rgba(31, 212, 107, 0.85);
 }
 
 .session-connection-dot.is-pending {
-  background: #7d6728;
-  box-shadow: 0 0 6px rgba(125, 103, 40, 0.65);
+  background: #f0b429;
+  box-shadow: 0 0 8px rgba(240, 180, 41, 0.85);
 }
 
 .session-connection-dot.is-error {
-  background: var(--strain-line);
-  box-shadow: 0 0 6px rgba(114, 30, 27, 0.65);
+  background: #ef4b3f;
+  box-shadow: 0 0 8px rgba(239, 75, 63, 0.85);
 }
 
 .session-status-strip {
