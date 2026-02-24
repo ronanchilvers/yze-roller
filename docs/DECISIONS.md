@@ -149,3 +149,9 @@
   - **Decision:** Add invite-input parsing utilities for full links/hash/token strings and route all resolved tokens back through canonical `/join#join=<token>` from both host mode and join missing-token fallback.
   - **Consequences:** Player onboarding is more resilient to malformed/partial links while preserving one join API submission path and existing route semantics.
   - **Alternatives considered:** Introduce a separate non-route join endpoint in UI state (rejected to avoid duplicating join logic outside the canonical route flow).
+
+- **2026-02-24 — Introduce a dedicated session-mode wrapper with normalized connection summary**
+  - **Context:** Session mode previously rendered the dice UI directly, leaving multiplayer state (connection/polling status, role, session metadata) implicit and not visible in the interface.
+  - **Decision:** Add `SessionView` as the session-mode boundary in `App`: run `bootstrapFromAuth` when token is present and state is `idle`, derive normalized connection summary text/tone, and pass a concise session summary model into `DiceRollerApp` for rendering.
+  - **Consequences:** Session lifecycle is now explicit in one mode-specific wrapper, and users get immediate visibility into multiplayer status without changing existing dice mechanics.
+  - **Alternatives considered:** Keep bootstrap and status rendering scattered in `App` and ad hoc UI fragments (rejected due to weaker separation and harder evolution for later event/GM panels).

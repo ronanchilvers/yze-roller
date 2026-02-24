@@ -62,7 +62,7 @@ const getBrowserHash = () => {
   return window.location.hash || "";
 };
 
-function DiceRollerApp() {
+function DiceRollerApp({ sessionSummary = null }) {
   const {
     attributeDice,
     skillDice,
@@ -299,6 +299,41 @@ function DiceRollerApp() {
           </div>
         </header>
 
+        {sessionSummary ? (
+          <section
+            className="panel session-summary-panel"
+            aria-label="Multiplayer session status"
+            data-testid="session-summary"
+          >
+            <div className="session-summary-head">
+              <p className="eyebrow">Multiplayer Session</p>
+              <span
+                className={`session-connection-badge is-${sessionSummary.connectionTone}`}
+              >
+                {sessionSummary.connectionStatus}
+              </span>
+            </div>
+            <div className="session-summary-grid">
+              <p className="session-summary-item">
+                <span>Role</span>
+                <strong>{sessionSummary.roleLabel}</strong>
+              </p>
+              <p className="session-summary-item">
+                <span>Session</span>
+                <strong>{sessionSummary.sessionName}</strong>
+              </p>
+              <p className="session-summary-item">
+                <span>Scene Strain</span>
+                <strong>{sessionSummary.sceneStrain}</strong>
+              </p>
+              <p className="session-summary-item">
+                <span>Players</span>
+                <strong>{sessionSummary.playerCount}</strong>
+              </p>
+            </div>
+          </section>
+        ) : null}
+
         <div className="content-grid">
           <DicePoolPanel
             attributeDice={attributeDice}
@@ -327,6 +362,17 @@ function DiceRollerApp() {
     </main>
   );
 }
+
+DiceRollerApp.propTypes = {
+  sessionSummary: PropTypes.shape({
+    connectionStatus: PropTypes.string.isRequired,
+    connectionTone: PropTypes.oneOf(["online", "pending", "error"]).isRequired,
+    roleLabel: PropTypes.string.isRequired,
+    sessionName: PropTypes.string.isRequired,
+    sceneStrain: PropTypes.number.isRequired,
+    playerCount: PropTypes.number.isRequired,
+  }),
+};
 
 const resolveMultiplayerMode = ({
   isJoinRoute,
@@ -369,6 +415,119 @@ function MultiplayerAuthLostView({ onReset }) {
 
 MultiplayerAuthLostView.propTypes = {
   onReset: PropTypes.func.isRequired,
+};
+
+const normalizeSessionText = (value, fallback) => {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue || fallback;
+};
+
+const normalizeSessionCount = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+
+  return Math.floor(numeric);
+};
+
+const buildConnectionSummary = (sessionState) => {
+  if (sessionState?.status === "error" || sessionState?.status === "auth_lost") {
+    return {
+      label: "Connection Error",
+      tone: "error",
+    };
+  }
+
+  if (sessionState?.status === "loading") {
+    return {
+      label: "Connecting",
+      tone: "pending",
+    };
+  }
+
+  if (sessionState?.pollingStatus === "backoff") {
+    return {
+      label: "Reconnecting",
+      tone: "pending",
+    };
+  }
+
+  if (sessionState?.pollingStatus === "running" || sessionState?.status === "ready") {
+    return {
+      label: "Connected",
+      tone: "online",
+    };
+  }
+
+  return {
+    label: "Initializing",
+    tone: "pending",
+  };
+};
+
+function SessionView({
+  hasSessionToken,
+  sessionState,
+  bootstrapFromAuth,
+}) {
+  useEffect(() => {
+    if (!hasSessionToken || sessionState?.status !== "idle") {
+      return;
+    }
+
+    void bootstrapFromAuth();
+  }, [bootstrapFromAuth, hasSessionToken, sessionState?.status]);
+
+  const connectionSummary = buildConnectionSummary(sessionState);
+  const roleLabel =
+    sessionState?.role === "gm"
+      ? "GM"
+      : sessionState?.role === "player"
+        ? "Player"
+        : "Unknown";
+  const sessionName = normalizeSessionText(
+    sessionState?.sessionName,
+    normalizeSessionCount(sessionState?.sessionId) > 0
+      ? `Session ${normalizeSessionCount(sessionState?.sessionId)}`
+      : "Session",
+  );
+  const sceneStrain = normalizeSessionCount(sessionState?.sceneStrain);
+  const playerCount = Array.isArray(sessionState?.players)
+    ? sessionState.players.length
+    : 0;
+
+  return (
+    <DiceRollerApp
+      sessionSummary={{
+        connectionStatus: connectionSummary.label,
+        connectionTone: connectionSummary.tone,
+        roleLabel,
+        sessionName,
+        sceneStrain,
+        playerCount,
+      }}
+    />
+  );
+}
+
+SessionView.propTypes = {
+  hasSessionToken: PropTypes.bool.isRequired,
+  sessionState: PropTypes.shape({
+    status: PropTypes.string,
+    pollingStatus: PropTypes.string,
+    role: PropTypes.string,
+    sessionId: PropTypes.number,
+    sessionName: PropTypes.string,
+    sceneStrain: PropTypes.number,
+    players: PropTypes.arrayOf(PropTypes.object),
+  }),
+  bootstrapFromAuth: PropTypes.func.isRequired,
 };
 
 function App() {
@@ -457,14 +616,6 @@ function App() {
     [navigateToPath, pathname],
   );
 
-  useEffect(() => {
-    if (mode !== "session" || sessionState?.status !== "idle") {
-      return;
-    }
-
-    void bootstrapFromAuth();
-  }, [bootstrapFromAuth, mode, sessionState?.status]);
-
   if (mode === "join") {
     return (
       <JoinSessionView
@@ -489,7 +640,13 @@ function App() {
     );
   }
 
-  return <DiceRollerApp />;
+  return (
+    <SessionView
+      hasSessionToken={hasSessionToken}
+      sessionState={sessionState}
+      bootstrapFromAuth={bootstrapFromAuth}
+    />
+  );
 }
 
 export default App;

@@ -273,6 +273,35 @@ test("renders session mode and bootstraps when in-memory auth exists", () => {
   app.unmount();
 });
 
+test("session mode renders multiplayer session summary details", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+  };
+
+  app.render(<App />);
+
+  const summary = app.container.querySelector('[data-testid="session-summary"]');
+
+  expect(summary).not.toBeNull();
+  expect(summary?.textContent).toContain("Connected");
+  expect(summary?.textContent).toContain("Player");
+  expect(summary?.textContent).toContain("Streetwise Night");
+  expect(summary?.textContent).toContain("4");
+  expect(summary?.textContent).toContain("2");
+  expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(0);
+
+  app.unmount();
+});
+
 test("renders auth-lost mode and supports reset action", () => {
   const app = createContainer();
   mocks.multiplayerSessionState = {
