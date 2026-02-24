@@ -362,6 +362,7 @@ function DiceRollerApp({
   const [gmActionMessage, setGmActionMessage] = useState("");
   const [gmPendingAction, setGmPendingAction] = useState("");
   const [rotatedJoinLink, setRotatedJoinLink] = useState("");
+  const [isRetryPending, setIsRetryPending] = useState(false);
   const visibleSessionEvents = useMemo(
     () => normalizeSessionEventsForFeed(sessionEvents),
     [sessionEvents],
@@ -401,6 +402,7 @@ function DiceRollerApp({
   const emittedToastKeysRef = useRef(new Map());
   const submittedSessionActionsRef = useRef(new Map());
   const isMountedRef = useRef(true);
+  const retryPendingRef = useRef(false);
   const submitRollAction = sessionActions?.submitRoll;
   const submitPushAction = sessionActions?.submitPush;
 
@@ -733,6 +735,30 @@ function DiceRollerApp({
     setGmActionMessage("Join link copied.");
   }, [rotatedJoinLink]);
 
+  const handleRetryConnection = useCallback(() => {
+    const onRetry = sessionConnectionMeta?.onRetry;
+
+    if (retryPendingRef.current || typeof onRetry !== "function") {
+      return;
+    }
+
+    retryPendingRef.current = true;
+    setIsRetryPending(true);
+
+    const runRetry = async () => {
+      try {
+        await onRetry();
+      } finally {
+        retryPendingRef.current = false;
+        if (isMountedRef.current) {
+          setIsRetryPending(false);
+        }
+      }
+    };
+
+    void runRetry();
+  }, [sessionConnectionMeta]);
+
   return (
     <main className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -840,7 +866,7 @@ function DiceRollerApp({
               </p>
             ) : null}
             {sessionConnectionMeta?.status === "error" ? (
-              <div className="session-connection-error-row">
+              <div className="session-connection-error-row" aria-busy={isRetryPending}>
                 <p
                   className="panel-copy session-connection-error-copy"
                   role="alert"
@@ -855,10 +881,8 @@ function DiceRollerApp({
                   type="button"
                   className="join-secondary"
                   data-testid="session-retry-button"
-                  onClick={() => {
-                    void sessionConnectionMeta?.onRetry?.();
-                  }}
-                  disabled={sessionConnectionMeta?.status === "loading"}
+                  onClick={handleRetryConnection}
+                  disabled={sessionConnectionMeta?.status === "loading" || isRetryPending}
                 >
                   Retry Connection
                 </button>

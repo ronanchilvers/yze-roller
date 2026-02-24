@@ -417,8 +417,9 @@ test("session mode shows connection error label when session state is error", ()
   app.unmount();
 });
 
-test("session mode retry button re-runs bootstrap when session status is error", () => {
+test("session mode retry button re-runs bootstrap once while request is pending", async () => {
   const app = createContainer();
+  const retryDeferred = createDeferred();
   mocks.sessionAuth = {
     sessionToken: "player-token-1",
   };
@@ -431,16 +432,27 @@ test("session mode retry button re-runs bootstrap when session status is error",
     players: [{ tokenId: 1 }, { tokenId: 2 }],
     errorMessage: "Unable to reach session service.",
   };
+  mocks.bootstrapFromAuth.mockReturnValue(retryDeferred.promise);
 
   app.render(<App />);
 
   const retryButton = app.container.querySelector('[data-testid="session-retry-button"]');
 
-  act(() => {
+  await act(async () => {
     retryButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    retryButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
   });
 
   expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(1);
+  expect(retryButton?.hasAttribute("disabled")).toBe(true);
+
+  await act(async () => {
+    retryDeferred.resolve(null);
+    await retryDeferred.promise;
+  });
+
+  expect(retryButton?.hasAttribute("disabled")).toBe(false);
 
   app.unmount();
 });
