@@ -5,6 +5,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import App from "./App.jsx";
 
 const mocks = vi.hoisted(() => ({
+  latestHostProps: null,
   latestJoinProps: null,
   sessionAuth: null,
   multiplayerSessionState: {
@@ -20,6 +21,13 @@ vi.mock("./components/JoinSessionView.jsx", () => ({
   default: (props) => {
     mocks.latestJoinProps = props;
     return <div data-testid="join-view">Join Route</div>;
+  },
+}));
+
+vi.mock("./components/HostSessionView.jsx", () => ({
+  default: (props) => {
+    mocks.latestHostProps = props;
+    return <div data-testid="host-view">Host Route</div>;
   },
 }));
 
@@ -127,6 +135,7 @@ const createContainer = () => {
 };
 
 afterEach(() => {
+  mocks.latestHostProps = null;
   mocks.latestJoinProps = null;
   mocks.sessionAuth = null;
   mocks.multiplayerSessionState = {
@@ -144,7 +153,7 @@ test("renders host mode when not on join route and no auth token is present", ()
 
   app.render(<App />);
 
-  expect(app.container.textContent).toContain("Host Game");
+  expect(app.container.querySelector('[data-testid="host-view"]')).not.toBeNull();
   expect(app.container.querySelector('[data-testid="dice-pool-panel"]')).toBeNull();
 
   app.unmount();
@@ -187,6 +196,31 @@ test("join success stores in-memory auth, clears hash, and exits join route", ()
   expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(0);
   expect(window.location.pathname).toBe("/");
   expect(window.location.hash).toBe("");
+
+  app.unmount();
+});
+
+test("host success stores in-memory auth and triggers session bootstrap", () => {
+  const app = createContainer();
+  const authState = {
+    sessionToken: "gm-token-1",
+    sessionId: 7,
+    role: "gm",
+    self: null,
+  };
+
+  mocks.setSessionAuth.mockImplementation((nextAuth) => {
+    mocks.sessionAuth = nextAuth;
+  });
+
+  app.render(<App />);
+
+  act(() => {
+    mocks.latestHostProps.onHostSuccess(authState);
+  });
+
+  expect(mocks.setSessionAuth).toHaveBeenCalledWith(authState);
+  expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(1);
 
   app.unmount();
 });

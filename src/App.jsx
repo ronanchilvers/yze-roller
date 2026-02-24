@@ -37,6 +37,7 @@ import {
   setSessionAuth,
 } from "./lib/session-auth.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
+import HostSessionView from "./components/HostSessionView.jsx";
 import JoinSessionView from "./components/JoinSessionView.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
@@ -346,23 +347,6 @@ const resolveMultiplayerMode = ({
   return "host";
 };
 
-function MultiplayerHostView() {
-  return (
-    <main className="app-shell join-shell" data-mode="host">
-      <section className="panel join-panel" aria-label="Host multiplayer session">
-        <header className="join-header">
-          <p className="eyebrow">Multiplayer</p>
-          <h1>Host Game</h1>
-        </header>
-        <p className="panel-copy">
-          Multiplayer host controls are next. Session creation UI will be added in
-          Task 2.
-        </p>
-      </section>
-    </main>
-  );
-}
-
 function MultiplayerAuthLostView({ onReset }) {
   return (
     <main className="app-shell join-shell" data-mode="auth_lost">
@@ -447,6 +431,11 @@ function App() {
     [navigateToPath, pathname],
   );
 
+  const handleHostSuccess = useCallback((authState) => {
+    setSessionAuth(authState);
+    setAuthVersion((current) => current + 1);
+  }, []);
+
   const handleResetAfterAuthLost = useCallback(() => {
     resetSession();
     setAuthVersion((current) => current + 1);
@@ -477,7 +466,7 @@ function App() {
   }
 
   if (mode === "host") {
-    return <MultiplayerHostView />;
+    return <HostSessionView onHostSuccess={handleHostSuccess} />;
   }
 
   return <DiceRollerApp />;

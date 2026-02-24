@@ -131,3 +131,9 @@
   - **Decision:** Add mode resolution in `App` across `host`, `join`, `session`, and `auth_lost`, driven by route (`/join`), in-memory auth presence, and `useMultiplayerSession().sessionState.status`; bootstrap is triggered only in `session` mode when status is `idle`.
   - **Consequences:** Host and auth-lost states now have dedicated UI shells and deterministic transitions, making subsequent Task 2+ UI work additive rather than cross-cutting.
   - **Alternatives considered:** Keep mode inference scattered across route handlers and join callbacks (rejected due to coupling and inconsistent transitions).
+
+- **2026-02-24 — Implement host session creation as dedicated host-mode form**
+  - **Context:** Task 2 required a concrete GM initialization path; host mode previously rendered only a placeholder shell with no API integration.
+  - **Decision:** Add `HostSessionView` to submit `POST /api/sessions` with `session_name`, map creation errors to user-facing messages, normalize success payload (`gm_token`, `session_id`) to in-memory auth, and transition via existing mode/bootstrap logic in `App`.
+  - **Consequences:** GMs can now initialize a multiplayer session from UI without manual API calls; host-to-session handoff remains centralized in `App`.
+  - **Alternatives considered:** Build session creation directly inside `App` (rejected to keep host-flow concerns isolated and testable).
