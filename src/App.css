@@ -315,8 +315,8 @@
 .role-pill {
   display: grid;
   gap: 0.08rem;
-  min-width: 110px;
-  padding: 0.65rem 0.75rem;
+  min-width: 150px;
+  padding: 0.65rem 0.8rem;
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   background: var(--summary-pill-bg);
@@ -324,14 +324,16 @@
 }
 
 .role-pill-head {
+  display: flex;
+  align-items: center;
+  min-height: 1.5rem;
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
 .role-pill strong {
-  font-size: 1.1rem;
-  line-height: 1.15;
+  font-size: 1.35rem;
 }
 
 .role-pill-player {
