@@ -5,17 +5,34 @@ import { afterEach, expect, test, vi } from "vitest";
 import App from "./App.jsx";
 
 const mocks = vi.hoisted(() => ({
+  latestDicePoolProps: null,
   latestHostProps: null,
   latestJoinProps: null,
   sessionAuth: null,
+  rollSessionState: null,
   multiplayerSessionState: {
     status: "idle",
   },
   setSessionAuth: vi.fn(),
   bootstrapFromAuth: vi.fn(),
+  submitRoll: vi.fn(),
+  submitPush: vi.fn(),
   resetSession: vi.fn(),
   noop: vi.fn(),
 }));
+
+const createRollSessionState = (overrides = {}) => ({
+  currentRoll: null,
+  rollRequest: null,
+  recentResults: [],
+  isRolling: false,
+  canPush: false,
+  onRoll: mocks.noop,
+  onPush: mocks.noop,
+  onClearDice: mocks.noop,
+  onRollResolved: mocks.noop,
+  ...overrides,
+});
 
 vi.mock("./components/JoinSessionView.jsx", () => ({
   default: (props) => {
@@ -37,7 +54,10 @@ vi.mock("./lib/session-auth.js", () => ({
 }));
 
 vi.mock("./components/DicePoolPanel.jsx", () => ({
-  default: () => <div data-testid="dice-pool-panel" />,
+  default: (props) => {
+    mocks.latestDicePoolProps = props;
+    return <div data-testid="dice-pool-panel" />;
+  },
 }));
 
 vi.mock("./components/ErrorBoundary.jsx", () => ({
@@ -83,17 +103,7 @@ vi.mock("./hooks/useCharacterImport.js", () => ({
 }));
 
 vi.mock("./hooks/useRollSession.js", () => ({
-  useRollSession: () => ({
-    currentRoll: null,
-    rollRequest: null,
-    recentResults: [],
-    isRolling: false,
-    canPush: false,
-    onRoll: mocks.noop,
-    onPush: mocks.noop,
-    onClearDice: mocks.noop,
-    onRollResolved: mocks.noop,
-  }),
+  useRollSession: () => mocks.rollSessionState ?? createRollSessionState(),
 }));
 
 vi.mock("./hooks/useToast.js", () => ({
@@ -108,9 +118,27 @@ vi.mock("./hooks/useMultiplayerSession.js", () => ({
   useMultiplayerSession: () => ({
     sessionState: mocks.multiplayerSessionState,
     bootstrapFromAuth: mocks.bootstrapFromAuth,
+    submitRoll: mocks.submitRoll,
+    submitPush: mocks.submitPush,
     resetSession: mocks.resetSession,
   }),
 }));
+
+const createDeferred = () => {
+  let resolve;
+  let reject;
+
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return {
+    promise,
+    resolve,
+    reject,
+  };
+};
 
 const createContainer = () => {
   const container = document.createElement("div");
@@ -135,14 +163,18 @@ const createContainer = () => {
 };
 
 afterEach(() => {
+  mocks.latestDicePoolProps = null;
   mocks.latestHostProps = null;
   mocks.latestJoinProps = null;
   mocks.sessionAuth = null;
+  mocks.rollSessionState = createRollSessionState();
   mocks.multiplayerSessionState = {
     status: "idle",
   };
   mocks.setSessionAuth.mockReset();
   mocks.bootstrapFromAuth.mockReset();
+  mocks.submitRoll.mockReset();
+  mocks.submitPush.mockReset();
   mocks.resetSession.mockReset();
   window.history.replaceState({}, "", "/");
   document.body.innerHTML = "";
@@ -298,6 +330,122 @@ test("session mode renders multiplayer session summary details", () => {
   expect(summary?.textContent).toContain("4");
   expect(summary?.textContent).toContain("2");
   expect(mocks.bootstrapFromAuth).toHaveBeenCalledTimes(0);
+
+  app.unmount();
+});
+
+test("session mode submits roll outcomes once and disables controls while pending", async () => {
+  const app = createContainer();
+  const submitDeferred = createDeferred();
+
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+  };
+  mocks.rollSessionState = createRollSessionState({
+    currentRoll: {
+      action: "roll",
+      rolledAt: 1710000000000,
+      outcomes: {
+        successes: 2,
+        banes: 1,
+        hasStrain: false,
+      },
+      pushableDiceIds: ["die-1"],
+      dice: [],
+    },
+    recentResults: [{ id: "roll-1710000000000", summary: "2 successes, 1 banes" }],
+    canPush: true,
+  });
+  mocks.submitRoll.mockReturnValue(submitDeferred.promise);
+
+  app.render(<App />);
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(mocks.submitRoll).toHaveBeenCalledTimes(1);
+  expect(mocks.submitRoll).toHaveBeenCalledWith({
+    successes: 2,
+    banes: 1,
+  });
+  expect(mocks.latestDicePoolProps.isActionSubmitPending).toBe(true);
+  expect(mocks.latestDicePoolProps.isPrimaryActionDisabled).toBe(true);
+  expect(mocks.latestDicePoolProps.isPushDisabled).toBe(true);
+
+  app.render(<App />);
+  expect(mocks.submitRoll).toHaveBeenCalledTimes(1);
+
+  await act(async () => {
+    submitDeferred.resolve({ ok: true });
+    await submitDeferred.promise;
+  });
+
+  expect(mocks.latestDicePoolProps.isActionSubmitPending).toBe(false);
+  expect(mocks.latestDicePoolProps.isPrimaryActionDisabled).toBe(false);
+  expect(mocks.latestDicePoolProps.isPushDisabled).toBe(false);
+
+  app.unmount();
+});
+
+test("session mode submits push outcomes and shows non-fatal action errors", async () => {
+  const app = createContainer();
+
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+  };
+  mocks.rollSessionState = createRollSessionState({
+    currentRoll: {
+      action: "push",
+      rolledAt: 1710000001000,
+      outcomes: {
+        successes: 3,
+        banes: 2,
+        hasStrain: true,
+      },
+      pushableDiceIds: [],
+      dice: [],
+    },
+    recentResults: [
+      { id: "push-1710000001000", summary: "3 successes, 2 banes (with Strain)" },
+    ],
+    canPush: false,
+  });
+  mocks.submitPush.mockResolvedValue({
+    ok: false,
+    errorCode: "VALIDATION_ERROR",
+    errorMessage: "Unable to submit push event.",
+  });
+
+  app.render(<App />);
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(mocks.submitPush).toHaveBeenCalledTimes(1);
+  expect(mocks.submitPush).toHaveBeenCalledWith({
+    successes: 3,
+    banes: 2,
+    strain: true,
+  });
+  expect(app.container.textContent).toContain("Unable to submit push event.");
 
   app.unmount();
 });

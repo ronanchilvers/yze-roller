@@ -155,3 +155,9 @@
   - **Decision:** Add `SessionView` as the session-mode boundary in `App`: run `bootstrapFromAuth` when token is present and state is `idle`, derive normalized connection summary text/tone, and pass a concise session summary model into `DiceRollerApp` for rendering.
   - **Consequences:** Session lifecycle is now explicit in one mode-specific wrapper, and users get immediate visibility into multiplayer status without changing existing dice mechanics.
   - **Alternatives considered:** Keep bootstrap and status rendering scattered in `App` and ad hoc UI fragments (rejected due to weaker separation and harder evolution for later event/GM panels).
+
+- **2026-02-24 — Submit local roll/push outcomes through multiplayer APIs with UI lockout and non-fatal errors**
+  - **Context:** Session mode had local dice resolution but did not yet push resulting outcomes (`roll`/`push`) into multiplayer API events, allowing local state to diverge from shared session state.
+  - **Decision:** In `DiceRollerApp`, derive contract payloads from resolved local outcomes and call `submitRoll`/`submitPush` once per local action id, disable action controls while submit is pending, and render action-level submit errors without forcing session teardown.
+  - **Consequences:** Local gameplay outcomes now sync to the session event stream, duplicate submits are suppressed for rerenders, and users receive actionable failure feedback while remaining in-session.
+  - **Alternatives considered:** Submit directly inside `useRollSession` (rejected to keep multiplayer transport concerns out of local dice-state hook), or silently ignore submit errors (rejected due to poor operator visibility).

@@ -33,6 +33,7 @@ const DicePoolPanel = ({
   primaryActionLabel,
   isPrimaryActionDisabled,
   isRolling,
+  isActionSubmitPending = false,
   setAttributeDice,
   setSkillDice,
   onRoll,
@@ -222,7 +223,7 @@ const DicePoolPanel = ({
               max={20}
               inputMode="numeric"
               value={manualAttributeInput}
-              onChange={(event) => setManualAttributeInput(event.target.value)}
+              onInput={(event) => setManualAttributeInput(event.target.value)}
             />
           </label>
 
@@ -236,7 +237,7 @@ const DicePoolPanel = ({
               max={20}
               inputMode="numeric"
               value={manualSkillInput}
-              onChange={(event) => setManualSkillInput(event.target.value)}
+              onInput={(event) => setManualSkillInput(event.target.value)}
             />
           </label>
 
@@ -246,7 +247,11 @@ const DicePoolPanel = ({
             onClick={handleManualPrimaryAction}
             disabled={isPrimaryActionDisabled}
           >
-            {isRolling ? "Rolling..." : primaryActionLabel}
+            {isRolling
+              ? "Rolling..."
+              : isActionSubmitPending
+                ? "Submitting..."
+                : primaryActionLabel}
           </button>
         </div>
       ) : (
@@ -308,7 +313,9 @@ const DicePoolPanel = ({
                                   skillKey: null,
                                 })
                               }
-                              disabled={isRolling || status === "loading"}
+                              disabled={
+                                isRolling || isActionSubmitPending || status === "loading"
+                              }
                               aria-label={`Roll ${buildAttributeLabel(attributeKey)} dice`}
                             >
                               {attributeValue}
@@ -333,7 +340,10 @@ const DicePoolPanel = ({
                         const attributeLabel =
                           character?.skillAttributes?.[skill] ?? null;
                         const isDisabled =
-                          isRolling || status === "loading" || !attributeKey;
+                          isRolling ||
+                          isActionSubmitPending ||
+                          status === "loading" ||
+                          !attributeKey;
                         const labelSuffix = attributeLabel
                           ? ` (${attributeLabel})`
                           : "";
@@ -374,7 +384,10 @@ const DicePoolPanel = ({
                         const attributeLabel =
                           character?.skillAttributes?.[skill] ?? null;
                         const isDisabled =
-                          isRolling || status === "loading" || !attributeKey;
+                          isRolling ||
+                          isActionSubmitPending ||
+                          status === "loading" ||
+                          !attributeKey;
                         const labelSuffix = attributeLabel
                           ? ` (${attributeLabel})`
                           : "";
@@ -434,7 +447,7 @@ const DicePoolPanel = ({
           type="button"
           className="pool-action-button secondary-action-button"
           onClick={onClearDice}
-          disabled={isClearDisabled}
+          disabled={isClearDisabled || isActionSubmitPending}
         >
           Clear Dice
         </button>
@@ -450,6 +463,7 @@ DicePoolPanel.propTypes = {
   primaryActionLabel: PropTypes.string.isRequired,
   isPrimaryActionDisabled: PropTypes.bool.isRequired,
   isRolling: PropTypes.bool.isRequired,
+  isActionSubmitPending: PropTypes.bool,
   setAttributeDice: PropTypes.func.isRequired,
   setSkillDice: PropTypes.func.isRequired,
   onRoll: PropTypes.func.isRequired,

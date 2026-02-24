@@ -44,6 +44,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 export const REMOTE_ROLL_EVENT_BRIDGE_KEY = "__YEAR_ZERO_REMOTE_ROLL_EVENT__";
 const DEDUPE_TTL_MS = ROLL_TOAST_DEDUPE_BUCKET_MS * 2;
+const MAX_SUBMITTED_SESSION_ACTIONS = 100;
 const DiceTray3D = lazy(() => import("./components/DiceTray3D.jsx"));
 
 const getBrowserPathname = () => {
@@ -62,7 +63,76 @@ const getBrowserHash = () => {
   return window.location.hash || "";
 };
 
-function DiceRollerApp({ sessionSummary = null }) {
+const normalizeOutcomeCount = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isInteger(numeric) || numeric < 0 || numeric > 99) {
+    return null;
+  }
+
+  return numeric;
+};
+
+const buildSessionActionRequest = (roll) => {
+  if (!roll || typeof roll !== "object") {
+    return null;
+  }
+
+  const successes = normalizeOutcomeCount(roll?.outcomes?.successes);
+  const banes = normalizeOutcomeCount(roll?.outcomes?.banes);
+
+  if (successes === null || banes === null) {
+    return null;
+  }
+
+  if (roll.action === "push") {
+    return {
+      action: "push",
+      payload: {
+        successes,
+        banes,
+        strain: Boolean(roll?.outcomes?.hasStrain),
+      },
+    };
+  }
+
+  return {
+    action: "roll",
+    payload: {
+      successes,
+      banes,
+    },
+  };
+};
+
+const getCurrentRollActionId = (currentRoll, recentResults) => {
+  if (!currentRoll) {
+    return null;
+  }
+
+  if (typeof recentResults?.[0]?.id === "string" && recentResults[0].id.trim()) {
+    return recentResults[0].id.trim();
+  }
+
+  if (Number.isFinite(currentRoll.rolledAt)) {
+    return `${currentRoll.action ?? "roll"}-${currentRoll.rolledAt}`;
+  }
+
+  return null;
+};
+
+const normalizeActionErrorMessage = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
+};
+
+function DiceRollerApp({
+  sessionSummary = null,
+  sessionActions = null,
+}) {
   const {
     attributeDice,
     skillDice,
@@ -86,6 +156,8 @@ function DiceRollerApp({ sessionSummary = null }) {
 
   const [overrideCounts, setOverrideCounts] = useState(null);
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
+  const [isActionSubmitPending, setIsActionSubmitPending] = useState(false);
+  const [sessionActionError, setSessionActionError] = useState("");
 
   const effectiveAttributeDice = overrideCounts?.attributeDice ?? attributeDice;
   const effectiveSkillDice = overrideCounts?.skillDice ?? skillDice;
@@ -112,9 +184,20 @@ function DiceRollerApp({ sessionSummary = null }) {
     isRolling || activeDice.length > 0 || recentResults.length > 0;
   const hasRolled = Boolean(currentRoll);
   const primaryActionLabel = "Roll Dice";
-  const isPrimaryActionDisabled = isRolling;
+  const isPrimaryActionDisabled = isRolling || isActionSubmitPending;
 
   const emittedToastKeysRef = useRef(new Map());
+  const submittedSessionActionsRef = useRef(new Map());
+  const isMountedRef = useRef(true);
+  const submitRollAction = sessionActions?.submitRoll;
+  const submitPushAction = sessionActions?.submitPush;
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+    },
+    [],
+  );
 
   const emitRollToastEvent = useCallback(
     (eventInput) => {
@@ -212,6 +295,71 @@ function DiceRollerApp({ sessionSummary = null }) {
       occurredAt: currentRoll?.rolledAt,
     });
   }, [currentRoll, emitRollToastEvent, recentResults]);
+
+  useEffect(() => {
+    const actionRequest = buildSessionActionRequest(currentRoll);
+    const actionId = getCurrentRollActionId(currentRoll, recentResults);
+
+    if (!actionRequest || !actionId) {
+      return;
+    }
+
+    const submitAction =
+      actionRequest.action === "push" ? submitPushAction : submitRollAction;
+
+    if (typeof submitAction !== "function") {
+      return;
+    }
+
+    const submittedMap = submittedSessionActionsRef.current;
+    if (submittedMap.has(actionId)) {
+      return;
+    }
+
+    submittedMap.set(actionId, Date.now());
+    while (submittedMap.size > MAX_SUBMITTED_SESSION_ACTIONS) {
+      const oldestKey = submittedMap.keys().next().value;
+      if (!oldestKey) {
+        break;
+      }
+      submittedMap.delete(oldestKey);
+    }
+
+    const syncAction = async () => {
+      setIsActionSubmitPending(true);
+      setSessionActionError("");
+
+      try {
+        const result = await submitAction(actionRequest.payload);
+
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        if (!result?.ok) {
+          setSessionActionError(
+            normalizeActionErrorMessage(result?.errorMessage) ||
+              "Unable to sync action with multiplayer session.",
+          );
+          return;
+        }
+
+        setSessionActionError("");
+      } catch {
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        setSessionActionError("Unable to sync action with multiplayer session.");
+      } finally {
+        if (isMountedRef.current) {
+          setIsActionSubmitPending(false);
+        }
+      }
+    };
+
+    void syncAction();
+  }, [currentRoll, recentResults, submitPushAction, submitRollAction]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -331,6 +479,15 @@ function DiceRollerApp({ sessionSummary = null }) {
                 <strong>{sessionSummary.playerCount}</strong>
               </p>
             </div>
+            {sessionActionError ? (
+              <p
+                className="panel-copy session-action-error"
+                role="alert"
+                data-testid="session-action-error"
+              >
+                {sessionActionError}
+              </p>
+            ) : null}
           </section>
         ) : null}
 
@@ -342,6 +499,7 @@ function DiceRollerApp({ sessionSummary = null }) {
             primaryActionLabel={primaryActionLabel}
             isPrimaryActionDisabled={isPrimaryActionDisabled}
             isRolling={isRolling}
+            isActionSubmitPending={isActionSubmitPending}
             setAttributeDice={setAttributeDice}
             setSkillDice={setSkillDice}
             onRoll={onRoll}
@@ -353,7 +511,7 @@ function DiceRollerApp({ sessionSummary = null }) {
             onSelectSkill={setSelectedSkill}
             onPush={onPush}
             pushActionLabel={`Push ${pushableDiceCount} Dice`}
-            isPushDisabled={isRolling || !hasRolled || !canPush}
+            isPushDisabled={isRolling || !hasRolled || !canPush || isActionSubmitPending}
             onClearDice={onClearDice}
             isClearDisabled={!canClearDice}
           />
@@ -371,6 +529,10 @@ DiceRollerApp.propTypes = {
     sessionName: PropTypes.string.isRequired,
     sceneStrain: PropTypes.number.isRequired,
     playerCount: PropTypes.number.isRequired,
+  }),
+  sessionActions: PropTypes.shape({
+    submitRoll: PropTypes.func,
+    submitPush: PropTypes.func,
   }),
 };
 
@@ -475,6 +637,8 @@ function SessionView({
   hasSessionToken,
   sessionState,
   bootstrapFromAuth,
+  submitRoll,
+  submitPush,
 }) {
   useEffect(() => {
     if (!hasSessionToken || sessionState?.status !== "idle") {
@@ -501,6 +665,16 @@ function SessionView({
   const playerCount = Array.isArray(sessionState?.players)
     ? sessionState.players.length
     : 0;
+  const resolvedSessionActions = useMemo(() => {
+    if (typeof submitRoll !== "function" && typeof submitPush !== "function") {
+      return null;
+    }
+
+    return {
+      submitRoll,
+      submitPush,
+    };
+  }, [submitPush, submitRoll]);
 
   return (
     <DiceRollerApp
@@ -512,6 +686,7 @@ function SessionView({
         sceneStrain,
         playerCount,
       }}
+      sessionActions={resolvedSessionActions}
     />
   );
 }
@@ -528,6 +703,8 @@ SessionView.propTypes = {
     players: PropTypes.arrayOf(PropTypes.object),
   }),
   bootstrapFromAuth: PropTypes.func.isRequired,
+  submitRoll: PropTypes.func,
+  submitPush: PropTypes.func,
 };
 
 function App() {
@@ -536,7 +713,13 @@ function App() {
   const [authVersion, setAuthVersion] = useState(0);
   const isJoinRoute = isJoinSessionPath(pathname);
   const joinToken = parseJoinTokenFromHash(hash);
-  const { sessionState, bootstrapFromAuth, resetSession } = useMultiplayerSession();
+  const {
+    sessionState,
+    bootstrapFromAuth,
+    submitRoll,
+    submitPush,
+    resetSession,
+  } = useMultiplayerSession();
   const sessionAuth = useMemo(() => getSessionAuth(), [authVersion]);
   const hasSessionToken = Boolean(sessionAuth?.sessionToken?.trim());
   const mode = resolveMultiplayerMode({
@@ -645,6 +828,8 @@ function App() {
       hasSessionToken={hasSessionToken}
       sessionState={sessionState}
       bootstrapFromAuth={bootstrapFromAuth}
+      submitRoll={submitRoll}
+      submitPush={submitPush}
     />
   );
 }

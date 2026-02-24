@@ -260,6 +260,12 @@
   color: var(--ink-900);
 }
 
+.session-action-error {
+  margin: 0.7rem 0 0;
+  color: var(--strain-line);
+  font-weight: 600;
+}
+
 .theme-select {
   display: grid;
   gap: 0.3rem;

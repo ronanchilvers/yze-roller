@@ -65,6 +65,7 @@ const TestHarness = ({
   setAttributeDice = vi.fn(),
   setSkillDice = vi.fn(),
   primaryActionLabel = "Roll Dice",
+  isActionSubmitPending = false,
   onImportFile = vi.fn(),
   onResetImport = vi.fn(),
   onRoll = vi.fn(),
@@ -81,6 +82,7 @@ const TestHarness = ({
     setAttributeDice: PropTypes.func,
     setSkillDice: PropTypes.func,
     primaryActionLabel: PropTypes.string,
+    isActionSubmitPending: PropTypes.bool,
     attributeDice: PropTypes.number,
     skillDice: PropTypes.number,
     onImportFile: PropTypes.func,
@@ -111,6 +113,7 @@ const TestHarness = ({
       primaryActionLabel={primaryActionLabel}
       isPrimaryActionDisabled={false}
       isRolling={false}
+      isActionSubmitPending={isActionSubmitPending}
       setAttributeDice={setAttributeDice}
       setSkillDice={setSkillDice}
       onRoll={onRoll}
@@ -236,6 +239,27 @@ test("renders panel action row with push and clear controls", () => {
   expect(panelActionRow).not.toBeNull();
   expect(getButtonByText(container, "Push 4 Dice")).toBeDefined();
   expect(getButtonByText(container, "Clear Dice")).toBeDefined();
+
+  unmount();
+});
+
+test("shows submitting state while action submit is pending", () => {
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(
+      <TestHarness
+        isActionSubmitPending
+        pushActionLabel="Push 4 Dice"
+        isPushDisabled={true}
+      />,
+    );
+  });
+
+  const manualButton = getButtonByText(container, "Submitting...");
+  const clearButton = getButtonByText(container, "Clear Dice");
+  expect(manualButton).toBeDefined();
+  expect(clearButton?.disabled).toBe(true);
 
   unmount();
 });
