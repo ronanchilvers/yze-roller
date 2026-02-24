@@ -209,3 +209,9 @@
   - **Decision:** Include `.join-secondary:focus-visible` in the shared focus-visible selector group in `App.css`.
   - **Consequences:** Keyboard users now get consistent, high-contrast focus affordances across primary and secondary controls.
   - **Alternatives considered:** Rely on browser default focus styles for secondary buttons (rejected for inconsistent visual contrast with the existing tokenized focus system).
+
+- **2026-02-24 — Use multiplayer scene strain as the sole strain authority in session mode**
+  - **Context:** Session mode displayed multiplayer `sceneStrain` in the summary, but top-bar `Strain Points` and roll strain dice were still driven by local `useStrainTracker`, causing diverging metrics and incorrect strain dice.
+  - **Decision:** In session mode, resolve strain points from authoritative session state and pass that value into `useRollSession`; disable local bane-increment strain accumulation in session mode; route top-bar reset through GM reset action when role permits and disable it for non-GM players.
+  - **Consequences:** Strain metric and dice behavior are now consistent with server-authoritative multiplayer state, and reset behavior matches role permissions.
+  - **Alternatives considered:** Keep dual local/session strain paths and reconcile opportunistically (rejected due to persistent drift risk and unclear UX).

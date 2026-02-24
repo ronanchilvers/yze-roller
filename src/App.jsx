@@ -293,7 +293,7 @@ const buildSessionEventSummary = (event) => {
   }
 
   if (eventType === "strain_reset") {
-    return "Scene strain was reset.";
+    return "Strain points were reset.";
   }
 
   return "Session event received.";
@@ -375,6 +375,19 @@ function DiceRollerApp({
 
   const effectiveAttributeDice = overrideCounts?.attributeDice ?? attributeDice;
   const effectiveSkillDice = overrideCounts?.skillDice ?? skillDice;
+  const shouldUseAuthoritativeSessionStrain =
+    Boolean(sessionSummary) && Number.isFinite(sessionSummary?.sceneStrain);
+  const resolvedStrainPoints = shouldUseAuthoritativeSessionStrain
+    ? normalizeSessionCount(sessionSummary?.sceneStrain)
+    : normalizedStrainPoints;
+  const canResetStrainLocally = !shouldUseAuthoritativeSessionStrain;
+  const canResetStrainAsGm =
+    shouldUseAuthoritativeSessionStrain &&
+    Boolean(gmControls?.resetSceneStrain) &&
+    !gmPendingAction;
+  const canResetStrain =
+    resolvedStrainPoints > 0 && (canResetStrainLocally || canResetStrainAsGm);
+  const ignoreBaneIncrement = useCallback(() => {}, []);
 
   const {
     currentRoll,
@@ -390,8 +403,10 @@ function DiceRollerApp({
     attributeDice: effectiveAttributeDice,
     skillDice: effectiveSkillDice,
     rollModifier,
-    normalizedStrainPoints,
-    onBaneIncrement: applyBaneIncrement,
+    normalizedStrainPoints: resolvedStrainPoints,
+    onBaneIncrement: shouldUseAuthoritativeSessionStrain
+      ? ignoreBaneIncrement
+      : applyBaneIncrement,
   });
   const activeDice = rollRequest?.dice ?? currentRoll?.dice ?? [];
   const pushableDiceCount = Number(currentRoll?.pushableDiceIds?.length ?? 0);
@@ -688,9 +703,25 @@ function DiceRollerApp({
     void runGmAction(
       "reset_scene_strain",
       gmControls.resetSceneStrain,
-      "Scene strain reset.",
+      "Strain points reset.",
     );
   }, [gmControls, runGmAction]);
+
+  const handleTopBarStrainReset = useCallback(() => {
+    if (canResetStrainLocally) {
+      onResetStrain();
+      return;
+    }
+
+    if (canResetStrainAsGm) {
+      handleResetSceneStrain();
+    }
+  }, [
+    canResetStrainAsGm,
+    canResetStrainLocally,
+    handleResetSceneStrain,
+    onResetStrain,
+  ]);
 
   const handleRefreshPlayers = useCallback(() => {
     if (!gmControls) {
@@ -820,13 +851,13 @@ function DiceRollerApp({
                   type="button"
                   className="strain-reset-button"
                   aria-label="Reset strain points"
-                  onClick={onResetStrain}
-                  disabled={normalizedStrainPoints === 0}
+                  onClick={handleTopBarStrainReset}
+                  disabled={!canResetStrain}
                 >
                   ↺
                 </button>
               </div>
-              <strong>{normalizedStrainPoints}</strong>
+              <strong>{resolvedStrainPoints}</strong>
             </output>
           </div>
         </header>
@@ -855,7 +886,7 @@ function DiceRollerApp({
                 <strong>{sessionSummary.sessionName}</strong>
               </p>
               <p className="session-summary-item">
-                <span>Scene Strain</span>
+                <span>Strain Points</span>
                 <strong>{sessionSummary.sceneStrain}</strong>
               </p>
               <p className="session-summary-item">
@@ -974,7 +1005,7 @@ function DiceRollerApp({
                 onClick={handleResetSceneStrain}
                 disabled={Boolean(gmPendingAction)}
               >
-                Reset Scene Strain
+                Reset Strain Points
               </button>
               <button
                 type="button"

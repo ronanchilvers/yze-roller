@@ -6,6 +6,7 @@ import App from "./App.jsx";
 
 const mocks = vi.hoisted(() => ({
   latestDicePoolProps: null,
+  latestRollSessionOptions: null,
   latestHostProps: null,
   latestJoinProps: null,
   originalClipboard: globalThis.navigator?.clipboard,
@@ -110,7 +111,10 @@ vi.mock("./hooks/useCharacterImport.js", () => ({
 }));
 
 vi.mock("./hooks/useRollSession.js", () => ({
-  useRollSession: () => mocks.rollSessionState ?? createRollSessionState(),
+  useRollSession: (options) => {
+    mocks.latestRollSessionOptions = options;
+    return mocks.rollSessionState ?? createRollSessionState();
+  },
 }));
 
 vi.mock("./hooks/useToast.js", () => ({
@@ -176,6 +180,7 @@ const createContainer = () => {
 
 afterEach(() => {
   mocks.latestDicePoolProps = null;
+  mocks.latestRollSessionOptions = null;
   mocks.latestHostProps = null;
   mocks.latestJoinProps = null;
   mocks.sessionAuth = null;
@@ -362,6 +367,90 @@ test("session mode renders multiplayer session summary details", () => {
   app.unmount();
 });
 
+test("session mode uses authoritative strain points for roll state and top pill", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+  };
+
+  app.render(<App />);
+
+  const strainPillValue = app.container.querySelector(".strain-pill strong");
+
+  expect(strainPillValue?.textContent).toBe("4");
+  expect(mocks.latestRollSessionOptions?.normalizedStrainPoints).toBe(4);
+
+  app.unmount();
+});
+
+test("session mode disables top-bar strain reset for non-GM players", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+  };
+
+  app.render(<App />);
+
+  const topResetButton = app.container.querySelector('[aria-label="Reset strain points"]');
+
+  expect(topResetButton?.hasAttribute("disabled")).toBe(true);
+
+  app.unmount();
+});
+
+test("session mode allows GM top-bar strain reset and routes to multiplayer API", async () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "gm-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "gm",
+    sessionId: 7,
+    sessionName: "Streetwise Night",
+    joiningEnabled: true,
+    sceneStrain: 4,
+    players: [
+      { tokenId: 1, role: "gm", displayName: "GM" },
+      { tokenId: 31, role: "player", displayName: "Alice" },
+    ],
+  };
+  mocks.resetSceneStrain.mockResolvedValue({
+    ok: true,
+    sceneStrain: 0,
+  });
+
+  app.render(<App />);
+
+  const topResetButton = app.container.querySelector('[aria-label="Reset strain points"]');
+
+  await act(async () => {
+    topResetButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(mocks.resetSceneStrain).toHaveBeenCalledTimes(1);
+
+  app.unmount();
+});
+
 test("session mode shows reconnecting label while polling is in backoff", () => {
   const app = createContainer();
   mocks.sessionAuth = {
@@ -525,7 +614,7 @@ test("session mode renders ordered multiplayer event feed entries", () => {
   expect(items[1].textContent).toContain("#12");
   expect(items[1].textContent).toContain("rolled 2 successes, 1 banes");
   expect(items[2].textContent).toContain("#13");
-  expect(items[2].textContent).toContain("Scene strain was reset");
+  expect(items[2].textContent).toContain("Strain points were reset");
 
   app.unmount();
 });

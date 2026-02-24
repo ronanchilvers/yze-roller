@@ -11,3 +11,7 @@
 - **Question:** What policy should handle high-volume remote roll events (queue cap/collapse/priority)?
   - **Best lead(s):** `docs/plans/2026-02-18 Toast Alert Integration Plan.md` (risks + open decisions), planned provider queue logic in `src/components/toast/ToastProvider.jsx`.
   - **Status:** answered — use a pending buffer of 20 and drop oldest on overflow.
+
+- **Question:** In multiplayer session mode, should strain be sourced from local tracker state or authoritative session `sceneStrain`?
+  - **Best lead(s):** `src/App.jsx` (`DiceRollerApp` strain pill + `useRollSession` props, `SessionView` summary mapping), `src/hooks/useStrainTracker.js`, `src/hooks/useMultiplayerSession.js`, `src/lib/multiplayer-event-reducer.js`, and `src/hooks/useRollSession.js`.
+  - **Status:** answered — session mode now uses authoritative `sceneStrain` for both metric display and strain dice, and local strain accumulation is disabled in multiplayer mode.
