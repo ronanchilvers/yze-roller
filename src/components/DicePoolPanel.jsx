@@ -247,11 +247,7 @@ const DicePoolPanel = ({
             onClick={handleManualPrimaryAction}
             disabled={isPrimaryActionDisabled}
           >
-            {isRolling
-              ? "Rolling..."
-              : isActionSubmitPending
-                ? "Submitting..."
-                : primaryActionLabel}
+            {isRolling ? "Rolling..." : primaryActionLabel}
           </button>
         </div>
       ) : (

@@ -167,3 +167,9 @@
   - **Decision:** Ensure `isMountedRef` is set to `true` on effect mount and `false` on cleanup in `DiceRollerApp`.
   - **Consequences:** Pending-submit state can reliably transition back to idle after resolved requests in both StrictMode and non-StrictMode environments.
   - **Alternatives considered:** Remove mount guard entirely (rejected because async submit completion could update state after unmount).
+
+- **2026-02-24 — Keep primary action label stable during submit lockout**
+  - **Context:** The prior submit-lock UX changed the primary action text to `Submitting...`, which reduced clarity for your preferred interaction model.
+  - **Decision:** Keep the manual action label unchanged (`Roll Dice`) while the submit lock is active and rely on disabled state plus session-level feedback for pending/error status.
+  - **Consequences:** Button semantics stay stable while still preventing duplicate actions during in-flight submit calls.
+  - **Alternatives considered:** Continue swapping button text during submit (rejected by UX preference).
