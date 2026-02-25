@@ -21,7 +21,7 @@ const LucideIcon = ({
   className = "",
   ...rest
 }) => {
-  if (typeof IconComponent !== "function") {
+  if (!IconComponent) {
     return null;
   }
 
