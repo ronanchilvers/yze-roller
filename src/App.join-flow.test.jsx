@@ -673,7 +673,7 @@ test("session mode emits remote roll and push toasts with actor names", () => {
         payload: {
           successes: 3,
           banes: 2,
-          strain: true,
+          has_strain: true,
         },
         actor: {
           token_id: 45,

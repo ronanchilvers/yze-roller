@@ -284,6 +284,17 @@ const normalizeSessionEventActorDisplayName = (event) => {
   return "";
 };
 
+const normalizeSessionEventHasStrain = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  const resolvedValue =
+    payload.strain ?? payload.has_strain ?? payload.hasStrain ?? false;
+
+  return Boolean(resolvedValue);
+};
+
 const isSessionRollEventFromSelf = (event, selfTokenId, selfDisplayName) => {
   const actorTokenId = normalizeSessionEventId(event?.actor?.token_id);
 
@@ -634,7 +645,7 @@ function DiceRollerApp({
         action: eventType,
         successes: normalizeSessionEventCount(payload.successes),
         banes: normalizeSessionEventCount(payload.banes),
-        hasStrain: Boolean(payload.strain),
+        hasStrain: normalizeSessionEventHasStrain(payload),
       });
     }
   }, [
