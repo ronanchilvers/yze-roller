@@ -126,15 +126,14 @@ export const buildRollToastPayload = (event) => {
   const normalized = normalizeRollToastEvent(event);
   const withStrain = normalized.hasStrain ? " (with Strain)" : "";
   const summary = `${normalized.successes} successes, ${normalized.banes} banes${withStrain}`;
+  const actionTitle = normalized.action === "push" ? "Push Result" : "Roll Result";
+  const remoteActorLabel =
+    normalized.actorName || normalized.actorId || "Another player";
 
   const title =
     normalized.source === "remote"
-      ? `${normalized.actorId || "Another player"} ${
-          normalized.action === "push" ? "pushed" : "rolled"
-        }`
-      : normalized.action === "push"
-        ? "Push Result"
-        : "Roll Result";
+      ? `${actionTitle} - ${remoteActorLabel}`
+      : actionTitle;
 
   return {
     title,
@@ -147,4 +146,3 @@ export const buildRollToastPayload = (event) => {
     occurredAt: normalized.occurredAt,
   };
 };
-

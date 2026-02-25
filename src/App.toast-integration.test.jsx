@@ -375,7 +375,7 @@ test("exposes remote roll ingestion seam and emits remote actor toast payload", 
 
   expect(mocks.diceResult).toHaveBeenCalledTimes(1);
   expect(mocks.diceResult).toHaveBeenCalledWith({
-    title: "Watcher pushed",
+    title: "Push Result - Watcher",
     message: "3 successes, 2 banes (with Strain)",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });

@@ -132,6 +132,7 @@ const normalizeActionErrorMessage = (value) => {
 };
 
 const MAX_VISIBLE_SESSION_EVENTS = 20;
+const MAX_TRACKED_SESSION_ROLL_TOAST_EVENTS = 200;
 
 const normalizeSessionEventId = (value) => {
   const numeric = Number(value);
@@ -269,6 +270,39 @@ const normalizeSessionEventActorLabel = (event) => {
   return "Player";
 };
 
+const normalizeSessionEventActorDisplayName = (event) => {
+  const actorDisplayName = event?.actor?.display_name;
+  if (typeof actorDisplayName === "string" && actorDisplayName.trim()) {
+    return actorDisplayName.trim();
+  }
+
+  const payloadDisplayName = event?.payload?.display_name;
+  if (typeof payloadDisplayName === "string" && payloadDisplayName.trim()) {
+    return payloadDisplayName.trim();
+  }
+
+  return "";
+};
+
+const isSessionRollEventFromSelf = (event, selfTokenId, selfDisplayName) => {
+  const actorTokenId = normalizeSessionEventId(event?.actor?.token_id);
+
+  if (selfTokenId !== null && actorTokenId !== null) {
+    return selfTokenId === actorTokenId;
+  }
+
+  if (!selfDisplayName) {
+    return false;
+  }
+
+  const actorDisplayName = normalizeSessionEventActorDisplayName(event);
+  if (!actorDisplayName) {
+    return false;
+  }
+
+  return actorDisplayName.toLowerCase() === selfDisplayName.toLowerCase();
+};
+
 const buildSessionEventSummary = (event) => {
   const eventType = normalizeSessionEventType(event?.type);
   const payload = event && typeof event.payload === "object" && event.payload
@@ -395,6 +429,10 @@ function DiceRollerApp({
   const ignoreBaneIncrement = useCallback(() => {}, []);
   const resolvedSessionName = normalizeSessionText(sessionSummary?.sessionName, "Dice Roller");
   const resolvedRoleLabel = normalizeSessionText(sessionSummary?.roleLabel, "Unknown");
+  const sessionSelfTokenId = normalizeSessionPlayerTokenId(sessionSummary?.selfTokenId);
+  const sessionSelfDisplayName = normalizeSessionPlayerDisplayName(
+    sessionSummary?.selfDisplayName,
+  );
   const rolePillTone =
     resolvedRoleLabel === "GM"
       ? "gm"
@@ -430,6 +468,7 @@ function DiceRollerApp({
   const isPrimaryActionDisabled = isRolling || isActionSubmitPending;
 
   const emittedToastKeysRef = useRef(new Map());
+  const emittedSessionRollEventIdsRef = useRef(new Set());
   const submittedSessionActionsRef = useRef(new Map());
   const isMountedRef = useRef(true);
   const retryPendingRef = useRef(false);
@@ -545,6 +584,65 @@ function DiceRollerApp({
       occurredAt: currentRoll?.rolledAt,
     });
   }, [currentRoll, emitRollToastEvent, recentResults]);
+
+  useEffect(() => {
+    emittedSessionRollEventIdsRef.current.clear();
+  }, [sessionSummary?.sessionId]);
+
+  useEffect(() => {
+    if (!Array.isArray(sessionEvents) || sessionEvents.length === 0) {
+      return;
+    }
+
+    const emittedSessionRollEventIds = emittedSessionRollEventIdsRef.current;
+
+    for (const event of sessionEvents) {
+      const eventId = normalizeSessionEventId(event?.id);
+      if (eventId === null || emittedSessionRollEventIds.has(eventId)) {
+        continue;
+      }
+
+      emittedSessionRollEventIds.add(eventId);
+      while (emittedSessionRollEventIds.size > MAX_TRACKED_SESSION_ROLL_TOAST_EVENTS) {
+        const oldestEventId = emittedSessionRollEventIds.values().next().value;
+        if (typeof oldestEventId === "undefined") {
+          break;
+        }
+        emittedSessionRollEventIds.delete(oldestEventId);
+      }
+
+      const eventType = normalizeSessionEventType(event?.type);
+      if (eventType !== "roll" && eventType !== "push") {
+        continue;
+      }
+
+      if (isSessionRollEventFromSelf(event, sessionSelfTokenId, sessionSelfDisplayName)) {
+        continue;
+      }
+
+      const payload =
+        event && typeof event.payload === "object" && event.payload
+          ? event.payload
+          : {};
+      const actorTokenId = normalizeSessionEventId(event?.actor?.token_id);
+
+      emitRollToastEvent({
+        eventId: `session-event-${eventId}`,
+        source: "remote",
+        actorId: actorTokenId === null ? "" : String(actorTokenId),
+        actorName: normalizeSessionEventActorLabel(event),
+        action: eventType,
+        successes: normalizeSessionEventCount(payload.successes),
+        banes: normalizeSessionEventCount(payload.banes),
+        hasStrain: Boolean(payload.strain),
+      });
+    }
+  }, [
+    emitRollToastEvent,
+    sessionEvents,
+    sessionSelfDisplayName,
+    sessionSelfTokenId,
+  ]);
 
   useEffect(() => {
     const actionRequest = buildSessionActionRequest(currentRoll);
@@ -1155,6 +1253,9 @@ DiceRollerApp.propTypes = {
     roleLabel: PropTypes.string.isRequired,
     sessionName: PropTypes.string.isRequired,
     sceneStrain: PropTypes.number.isRequired,
+    sessionId: PropTypes.number,
+    selfTokenId: PropTypes.number,
+    selfDisplayName: PropTypes.string,
   }),
   sessionActions: PropTypes.shape({
     submitRoll: PropTypes.func,
@@ -1346,11 +1447,17 @@ function SessionView({
   return (
     <DiceRollerApp
       sessionSummary={{
+        sessionId: normalizeSessionCount(sessionState?.sessionId),
         connectionStatus: connectionSummary.label,
         connectionTone: connectionSummary.tone,
         roleLabel,
         sessionName,
         sceneStrain,
+        selfTokenId:
+          normalizeSessionPlayerTokenId(sessionState?.self?.tokenId) ?? undefined,
+        selfDisplayName: normalizeSessionPlayerDisplayName(
+          sessionState?.self?.displayName,
+        ),
       }}
       sessionActions={resolvedSessionActions}
       sessionEvents={Array.isArray(sessionState?.events) ? sessionState.events : []}

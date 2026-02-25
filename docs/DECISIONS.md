@@ -221,3 +221,9 @@
   - **Decision:** Add a poll request timeout watchdog at `5000ms` using timeout-race semantics (with `AbortController` cancellation when available), and cap both idle and error poll intervals at `5000ms`.
   - **Consequences:** Hung polls now fail fast into controlled backoff/retry flow instead of stalling; maximum wait between poll attempts is bounded at 5s.
   - **Alternatives considered:** Keep unbounded request duration and rely on browser/network timeouts (rejected due to indefinite stall risk).
+
+- **2026-02-25 — Route session roll/push events through toast emission with self-event suppression**
+  - **Context:** Multiplayer session events were rendered in the event feed but did not trigger dice-result toasts, while local roll/push actions already emitted toasts; this created inconsistent feedback and omitted remote activity visibility.
+  - **Decision:** Emit toasts for incoming session `roll`/`push` events using remote-source roll toast payloads with result-style titles plus actor names (`Roll Result - Fred`), and suppress toast emission when event actor identity matches the current session `self` identity.
+  - **Consequences:** Players and GMs see remote roll outcomes in real time without duplicate notifications for their own actions; remote toast titles are now aligned with local result labels.
+  - **Alternatives considered:** Keep event-feed-only visibility (rejected due to weaker live feedback), or rely solely on generic dedupe keys without actor-based self suppression (rejected due to duplicate self toasts).

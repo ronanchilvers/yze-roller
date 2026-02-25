@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 import App from "./App.jsx";
+import { DEFAULT_DICE_RESULT_DURATION_MS } from "./components/toast/constants.js";
 
 const mocks = vi.hoisted(() => ({
   latestDicePoolProps: null,
@@ -11,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   latestJoinProps: null,
   originalClipboard: globalThis.navigator?.clipboard,
   clipboardWriteText: vi.fn(),
+  diceResult: vi.fn(),
   sessionAuth: null,
   rollSessionState: null,
   multiplayerSessionState: {
@@ -121,7 +123,7 @@ vi.mock("./hooks/useToast.js", () => ({
   useToast: () => ({
     alert: mocks.noop,
     confirm: () => Promise.resolve(false),
-    diceResult: mocks.noop,
+    diceResult: mocks.diceResult,
   }),
 }));
 
@@ -199,6 +201,7 @@ afterEach(() => {
   mocks.revokePlayer.mockReset();
   mocks.resetSession.mockReset();
   mocks.clipboardWriteText.mockReset();
+  mocks.diceResult.mockReset();
   if (typeof navigator !== "undefined") {
     if (typeof mocks.originalClipboard === "undefined") {
       delete navigator.clipboard;
@@ -629,6 +632,129 @@ test("session mode renders ordered multiplayer event feed entries", () => {
   expect(items[1].textContent).toContain("rolled 2 successes, 1 banes");
   expect(items[2].textContent).toContain("#13");
   expect(items[2].textContent).toContain("Strain points were reset");
+
+  app.unmount();
+});
+
+test("session mode emits remote roll and push toasts with actor names", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    self: {
+      tokenId: 31,
+      role: "player",
+      displayName: "Alice",
+    },
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+    events: [
+      {
+        id: 21,
+        type: "roll",
+        payload: {
+          successes: 2,
+          banes: 1,
+        },
+        actor: {
+          token_id: 44,
+          display_name: "Fred",
+          role: "player",
+        },
+      },
+      {
+        id: 22,
+        type: "push",
+        payload: {
+          successes: 3,
+          banes: 2,
+          strain: true,
+        },
+        actor: {
+          token_id: 45,
+          display_name: "Jane",
+          role: "player",
+        },
+      },
+    ],
+  };
+
+  app.render(<App />);
+
+  expect(mocks.diceResult).toHaveBeenCalledTimes(2);
+  expect(mocks.diceResult).toHaveBeenNthCalledWith(1, {
+    title: "Roll Result - Fred",
+    message: "2 successes, 1 banes",
+    duration: DEFAULT_DICE_RESULT_DURATION_MS,
+  });
+  expect(mocks.diceResult).toHaveBeenNthCalledWith(2, {
+    title: "Push Result - Jane",
+    message: "3 successes, 2 banes (with Strain)",
+    duration: DEFAULT_DICE_RESULT_DURATION_MS,
+  });
+
+  app.render(<App />);
+  expect(mocks.diceResult).toHaveBeenCalledTimes(2);
+
+  app.unmount();
+});
+
+test("session mode skips remote roll toasts for self-authored events", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    self: {
+      tokenId: 31,
+      role: "player",
+      displayName: "Alice",
+    },
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+    events: [
+      {
+        id: 31,
+        type: "roll",
+        payload: {
+          successes: 1,
+          banes: 0,
+        },
+        actor: {
+          token_id: 31,
+          display_name: "Alice",
+          role: "player",
+        },
+      },
+      {
+        id: 32,
+        type: "push",
+        payload: {
+          successes: 2,
+          banes: 1,
+          strain: true,
+        },
+        actor: {
+          token_id: 31,
+          display_name: "Alice",
+          role: "player",
+        },
+      },
+    ],
+  };
+
+  app.render(<App />);
+
+  expect(mocks.diceResult).not.toHaveBeenCalled();
 
   app.unmount();
 });
