@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import PropTypes from "prop-types";
+import { RotateCcw } from "lucide-react";
 import "./App.css";
 import { usePoolSelection } from "./hooks/usePoolSelection.js";
 import { useStrainTracker } from "./hooks/useStrainTracker.js";
@@ -41,6 +42,7 @@ import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import HostSessionView from "./components/HostSessionView.jsx";
 import JoinSessionView from "./components/JoinSessionView.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import LucideIcon from "./components/LucideIcon.jsx";
 
 export const REMOTE_ROLL_EVENT_BRIDGE_KEY = "__YEAR_ZERO_REMOTE_ROLL_EVENT__";
 const DEDUPE_TTL_MS = ROLL_TOAST_DEDUPE_BUCKET_MS * 2;
@@ -883,7 +885,12 @@ function DiceRollerApp({
                     onClick={handleTopBarStrainReset}
                     disabled={!canResetStrain}
                   >
-                    ↺
+                    <LucideIcon
+                      icon={RotateCcw}
+                      className="strain-reset-icon"
+                      size={14}
+                      strokeWidth={2.2}
+                    />
                   </button>
                 </div>
                 <strong>{resolvedStrainPoints}</strong>

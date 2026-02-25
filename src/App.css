@@ -535,6 +535,8 @@ h2 {
 }
 
 .strain-reset-button {
+  display: grid;
+  place-items: center;
   border: 1px solid var(--strain-line);
   background: var(--summary-pill-bg);
   color: var(--strain-line);
@@ -544,6 +546,10 @@ h2 {
   line-height: 1;
   padding: 0;
   cursor: pointer;
+}
+
+.strain-reset-icon {
+  display: block;
 }
 
 .strain-reset-button:disabled {
