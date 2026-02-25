@@ -1,7 +1,7 @@
 # Project Tasks
 
-- [ ] Code clean up
-- [ ] Shrink bandwidth usage
+- [ ] !! Code clean up
+- [ ] !! Reduce page weight
 - [x] Speed up polling
 - [x] Make sure polling has a minimum check in interval cap
 - [x] Remove Multiplayer Session panel
