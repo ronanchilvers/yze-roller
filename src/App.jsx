@@ -875,7 +875,7 @@ function DiceRollerApp({
               ) : null}
               <output className="strain-pill" aria-label="Current strain points">
                 <div className="strain-pill-head">
-                  <span>Strain Points</span>
+                  <span>Strain</span>
                   <button
                     type="button"
                     className="strain-reset-button"
