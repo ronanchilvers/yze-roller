@@ -387,6 +387,9 @@ function DiceRollerApp({
     shouldUseAuthoritativeSessionStrain &&
     Boolean(gmControls?.resetSceneStrain) &&
     !gmPendingAction;
+  const shouldShowTopBarStrainReset =
+    canResetStrainLocally ||
+    (shouldUseAuthoritativeSessionStrain && Boolean(gmControls?.resetSceneStrain));
   const canResetStrain =
     resolvedStrainPoints > 0 && (canResetStrainLocally || canResetStrainAsGm);
   const ignoreBaneIncrement = useCallback(() => {}, []);
@@ -878,20 +881,22 @@ function DiceRollerApp({
               <output className="strain-pill" aria-label="Current strain points">
                 <div className="strain-pill-head">
                   <span>Strain</span>
-                  <button
-                    type="button"
-                    className="strain-reset-button"
-                    aria-label="Reset strain points"
-                    onClick={handleTopBarStrainReset}
-                    disabled={!canResetStrain}
-                  >
-                    <LucideIcon
-                      icon={RotateCcw}
-                      className="strain-reset-icon"
-                      size={14}
-                      strokeWidth={2.2}
-                    />
-                  </button>
+                  {shouldShowTopBarStrainReset ? (
+                    <button
+                      type="button"
+                      className="strain-reset-button"
+                      aria-label="Reset strain points"
+                      onClick={handleTopBarStrainReset}
+                      disabled={!canResetStrain}
+                    >
+                      <LucideIcon
+                        icon={RotateCcw}
+                        className="strain-reset-icon"
+                        size={14}
+                        strokeWidth={2.2}
+                      />
+                    </button>
+                  ) : null}
                 </div>
                 <strong>{resolvedStrainPoints}</strong>
               </output>

@@ -399,7 +399,7 @@ test("session mode uses authoritative strain points for roll state and top pill"
   app.unmount();
 });
 
-test("session mode disables top-bar strain reset for non-GM players", () => {
+test("session mode hides top-bar strain reset for non-GM players", () => {
   const app = createContainer();
   mocks.sessionAuth = {
     sessionToken: "player-token-1",
@@ -417,7 +417,7 @@ test("session mode disables top-bar strain reset for non-GM players", () => {
 
   const topResetButton = app.container.querySelector('[aria-label="Reset strain points"]');
 
-  expect(topResetButton?.hasAttribute("disabled")).toBe(true);
+  expect(topResetButton).toBeNull();
 
   app.unmount();
 });
