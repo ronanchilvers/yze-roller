@@ -962,6 +962,110 @@ test("session mode submits roll outcomes once and disables controls while pendin
   app.unmount();
 });
 
+test("session mode suppresses server-echo roll toast for GM when self identity is missing", async () => {
+  const app = createContainer();
+
+  mocks.sessionAuth = {
+    sessionToken: "gm-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "gm",
+    sessionId: 7,
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+    events: [],
+  };
+  mocks.rollSessionState = createRollSessionState({
+    currentRoll: {
+      action: "roll",
+      rolledAt: 1710000000000,
+      outcomes: {
+        successes: 2,
+        banes: 1,
+        hasStrain: false,
+      },
+      pushableDiceIds: ["die-1"],
+      dice: [],
+    },
+    recentResults: [{ id: "roll-1710000000000", summary: "2 successes, 1 banes" }],
+    canPush: true,
+  });
+  mocks.submitRoll.mockResolvedValue({
+    ok: true,
+    event: {
+      id: 91,
+    },
+  });
+
+  app.render(<App />);
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(mocks.diceResult).toHaveBeenCalledTimes(1);
+  expect(mocks.diceResult).toHaveBeenLastCalledWith({
+    title: "Roll Result",
+    message: "2 successes, 1 banes",
+    duration: DEFAULT_DICE_RESULT_DURATION_MS,
+  });
+
+  mocks.multiplayerSessionState = {
+    ...mocks.multiplayerSessionState,
+    events: [
+      {
+        id: 91,
+        type: "roll",
+        payload: {
+          successes: 2,
+          banes: 1,
+        },
+        actor: {
+          token_id: 1,
+          display_name: "GM",
+          role: "gm",
+        },
+      },
+    ],
+  };
+  app.render(<App />);
+
+  expect(mocks.diceResult).toHaveBeenCalledTimes(1);
+
+  mocks.multiplayerSessionState = {
+    ...mocks.multiplayerSessionState,
+    events: [
+      ...mocks.multiplayerSessionState.events,
+      {
+        id: 92,
+        type: "roll",
+        payload: {
+          successes: 1,
+          banes: 0,
+        },
+        actor: {
+          token_id: 31,
+          display_name: "Alice",
+          role: "player",
+        },
+      },
+    ],
+  };
+  app.render(<App />);
+
+  expect(mocks.diceResult).toHaveBeenCalledTimes(2);
+  expect(mocks.diceResult).toHaveBeenLastCalledWith({
+    title: "Roll Result - Alice",
+    message: "1 successes, 0 banes",
+    duration: DEFAULT_DICE_RESULT_DURATION_MS,
+  });
+
+  app.unmount();
+});
+
 test("session mode submits push outcomes and shows non-fatal action errors", async () => {
   const app = createContainer();
 

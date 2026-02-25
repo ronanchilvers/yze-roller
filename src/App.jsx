@@ -480,6 +480,7 @@ function DiceRollerApp({
 
   const emittedToastKeysRef = useRef(new Map());
   const emittedSessionRollEventIdsRef = useRef(new Set());
+  const suppressedSessionRollEventIdsRef = useRef(new Set());
   const submittedSessionActionsRef = useRef(new Map());
   const isMountedRef = useRef(true);
   const retryPendingRef = useRef(false);
@@ -598,6 +599,7 @@ function DiceRollerApp({
 
   useEffect(() => {
     emittedSessionRollEventIdsRef.current.clear();
+    suppressedSessionRollEventIdsRef.current.clear();
   }, [sessionSummary?.sessionId]);
 
   useEffect(() => {
@@ -606,6 +608,7 @@ function DiceRollerApp({
     }
 
     const emittedSessionRollEventIds = emittedSessionRollEventIdsRef.current;
+    const suppressedSessionRollEventIds = suppressedSessionRollEventIdsRef.current;
 
     for (const event of sessionEvents) {
       const eventId = normalizeSessionEventId(event?.id);
@@ -620,6 +623,11 @@ function DiceRollerApp({
           break;
         }
         emittedSessionRollEventIds.delete(oldestEventId);
+      }
+
+      if (suppressedSessionRollEventIds.has(eventId)) {
+        suppressedSessionRollEventIds.delete(eventId);
+        continue;
       }
 
       const eventType = normalizeSessionEventType(event?.type);
@@ -701,6 +709,19 @@ function DiceRollerApp({
               "Unable to sync action with multiplayer session.",
           );
           return;
+        }
+
+        const responseEventId = normalizeSessionEventId(result?.event?.id);
+        if (responseEventId !== null) {
+          const suppressedSessionRollEventIds = suppressedSessionRollEventIdsRef.current;
+          suppressedSessionRollEventIds.add(responseEventId);
+          while (suppressedSessionRollEventIds.size > MAX_TRACKED_SESSION_ROLL_TOAST_EVENTS) {
+            const oldestEventId = suppressedSessionRollEventIds.values().next().value;
+            if (typeof oldestEventId === "undefined") {
+              break;
+            }
+            suppressedSessionRollEventIds.delete(oldestEventId);
+          }
         }
 
         setSessionActionError("");
