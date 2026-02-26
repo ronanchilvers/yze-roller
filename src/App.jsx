@@ -284,15 +284,60 @@ const normalizeSessionEventActorDisplayName = (event) => {
   return "";
 };
 
+const normalizeSessionEventBoolean = (value) => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1" || normalized === "yes") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0" || normalized === "no") {
+    return false;
+  }
+
+  return null;
+};
+
 const normalizeSessionEventHasStrain = (payload) => {
   if (!payload || typeof payload !== "object") {
     return false;
   }
 
-  const resolvedValue =
-    payload.strain ?? payload.has_strain ?? payload.hasStrain ?? false;
+  const explicitCandidates = [
+    payload.strain,
+    payload.has_strain,
+    payload.hasStrain,
+    payload.with_strain,
+    payload.withStrain,
+    payload?.outcomes?.strain,
+    payload?.outcomes?.has_strain,
+    payload?.outcomes?.hasStrain,
+  ];
 
-  return Boolean(resolvedValue);
+  for (const candidate of explicitCandidates) {
+    const normalized = normalizeSessionEventBoolean(candidate);
+    if (normalized !== null) {
+      return normalized;
+    }
+  }
+
+  return normalizeSessionEventCount(payload.scene_strain) > 0;
 };
 
 const isSessionRollEventFromSelf = (event, selfTokenId, selfDisplayName) => {

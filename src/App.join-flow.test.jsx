@@ -759,6 +759,53 @@ test("session mode skips remote roll toasts for self-authored events", () => {
   app.unmount();
 });
 
+test("session mode infers remote strain marker from scene_strain when explicit flag is absent", () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    self: {
+      tokenId: 31,
+      role: "player",
+      displayName: "Alice",
+    },
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+    events: [
+      {
+        id: 41,
+        type: "roll",
+        payload: {
+          successes: 2,
+          banes: 1,
+          scene_strain: 4,
+        },
+        actor: {
+          token_id: 44,
+          display_name: "Fred",
+          role: "player",
+        },
+      },
+    ],
+  };
+
+  app.render(<App />);
+
+  expect(mocks.diceResult).toHaveBeenCalledTimes(1);
+  expect(mocks.diceResult).toHaveBeenCalledWith({
+    title: "Roll Result - Fred",
+    message: "2 successes, 1 banes (with Strain)",
+    duration: DEFAULT_DICE_RESULT_DURATION_MS,
+  });
+
+  app.unmount();
+});
+
 test("session mode only renders GM controls for gm role", () => {
   const app = createContainer();
   mocks.sessionAuth = {
