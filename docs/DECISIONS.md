@@ -1,5 +1,11 @@
 # Decisions
 
+- **2026-02-27 — Decompose `App.jsx` phase-1 concerns into focused modules/hooks/components**
+  - **Context:** `App.jsx` accumulated multiplayer normalization, toast ingestion, action submission, GM action orchestration, and session/auth-lost view concerns in one file, making iterative changes risky.
+  - **Decision:** Extract pure normalizers/action helpers into `src/lib/*`, side-effect flows into `src/hooks/*`, and multiplayer shell/panel views into `src/components/*`, while keeping `DiceRollerApp` in `App.jsx` for Phase 1.
+  - **Consequences:** Behavior remains stable with passing tests/build/lint, and remaining Phase 2+ decomposition can proceed with smaller, isolated units.
+  - **Alternatives considered:** Keep all logic in `App.jsx` until a single large rewrite (rejected due to higher regression risk and harder review checkpoints).
+
 - **2026-02-14 — Character import schema and validation**
   - **Context:** Importing character JSON with `attribute_*` and `skill_*` fields, canonical skills defined by mapping file. Attributes are required and must be integers ≥ 1; skills default to 0 if missing or empty.
   - **Decision:** Enforce required attributes and integer-only dice values. Treat missing/empty skill values as 0 without failing import. Ignore non-canonical skills.

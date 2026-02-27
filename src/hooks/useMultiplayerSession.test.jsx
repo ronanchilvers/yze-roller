@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, useEffect } from "react";
+import PropTypes from "prop-types";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 import { ApiClientError } from "../lib/api-client.js";
@@ -60,6 +61,10 @@ function CaptureMultiplayerSession({ onCapture }) {
 
   return null;
 }
+
+CaptureMultiplayerSession.propTypes = {
+  onCapture: PropTypes.func.isRequired,
+};
 
 const getLatestHookValue = (capture) => capture.mock.calls.at(-1)?.[0];
 
