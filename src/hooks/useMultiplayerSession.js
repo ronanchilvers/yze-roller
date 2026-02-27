@@ -3,287 +3,36 @@ import { apiGet, apiPost, isApiClientError } from "../lib/api-client.js";
 import { clearSessionAuth, getSessionAuth } from "../lib/session-auth.js";
 import { normalizeSessionSnapshot } from "../lib/session-snapshot.js";
 import { applySessionEvents } from "../lib/multiplayer-event-reducer.js";
+import { useEventPolling } from "./useEventPolling.js";
+import {
+  buildAuthLostState,
+  buildErrorBackoffIntervalMs,
+  DEFAULT_POLL_INTERVAL_MS,
+  IDLE_BACKOFF_MULTIPLIER,
+  IDLE_BACKOFF_START_AFTER_POLLS,
+  getGmContext,
+  INITIAL_MULTIPLAYER_SESSION_STATE,
+  isAuthFailure,
+  isObjectLike,
+  MAX_ERROR_POLL_INTERVAL_MS,
+  MAX_IDLE_POLL_INTERVAL_MS,
+  normalizeGmPlayers,
+  normalizeNonNegativeInteger,
+  POLL_REQUEST_TIMEOUT_MS,
+  validatePushPayload,
+  validateRollPayload,
+  EVENTS_POLL_LIMIT,
+} from "../lib/multiplayer-normalize.js";
 
-export const EVENTS_POLL_LIMIT = 10;
-export const DEFAULT_POLL_INTERVAL_MS = 500;
-export const MAX_IDLE_POLL_INTERVAL_MS = 5000;
-export const MAX_ERROR_POLL_INTERVAL_MS = 5000;
-export const POLL_REQUEST_TIMEOUT_MS = 5000;
-export const IDLE_BACKOFF_START_AFTER_POLLS = 3;
-export const IDLE_BACKOFF_MULTIPLIER = 1.25;
-
-const INITIAL_MULTIPLAYER_SESSION_STATE = Object.freeze({
-  status: "idle",
-  sessionId: null,
-  sessionName: "",
-  joiningEnabled: false,
-  role: null,
-  self: null,
-  sceneStrain: 0,
-  latestEventId: 0,
-  sinceId: 0,
-  players: [],
-  events: [],
-  pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
-  pollingStatus: "idle",
-  errorCode: null,
-  errorMessage: "",
-});
-
-const isObjectLike = (value) =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-const normalizeNonNegativeInteger = (value, fallback = 0) => {
-  const numeric = Number(value);
-
-  if (!Number.isFinite(numeric) || numeric < 0) {
-    return fallback;
-  }
-
-  return Math.floor(numeric);
-};
-
-const normalizeEventList = (value) =>
-  Array.isArray(value) ? value.filter(isObjectLike) : [];
-
-const normalizeRole = (value) =>
-  value === "gm" || value === "player" ? value : null;
-
-const normalizeDisplayName = (value) => {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  return value.trim();
-};
-
-const normalizePlayerSummary = (value) => {
-  if (!isObjectLike(value)) {
-    return null;
-  }
-
-  const tokenId = normalizeNonNegativeInteger(value.token_id, -1);
-  const role = normalizeRole(value.role);
-  const displayName = normalizeDisplayName(value.display_name);
-
-  if (tokenId < 0 || !role || !displayName) {
-    return null;
-  }
-
-  return {
-    tokenId,
-    role,
-    displayName,
-  };
-};
-
-const normalizeGmPlayers = (value) => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter((player) => !player?.revoked)
-    .map(normalizePlayerSummary)
-    .filter(Boolean);
-};
-
-const normalizeOutcomeCount = (value) => {
-  const numeric = Number(value);
-
-  if (!Number.isInteger(numeric) || numeric < 0 || numeric > 99) {
-    return null;
-  }
-
-  return numeric;
-};
-
-const validateRollPayload = (payload) => {
-  if (!isObjectLike(payload)) {
-    return null;
-  }
-
-  const successes = normalizeOutcomeCount(payload.successes);
-  const banes = normalizeOutcomeCount(payload.banes);
-
-  if (successes === null || banes === null) {
-    return null;
-  }
-
-  return {
-    successes,
-    banes,
-  };
-};
-
-const validatePushPayload = (payload) => {
-  if (!isObjectLike(payload)) {
-    return null;
-  }
-
-  const normalizedRollPayload = validateRollPayload(payload);
-
-  if (!normalizedRollPayload || typeof payload.strain !== "boolean") {
-    return null;
-  }
-
-  return {
-    ...normalizedRollPayload,
-    strain: payload.strain,
-  };
-};
-
-const isAuthFailure = (error) => {
-  if (!isApiClientError(error)) {
-    return false;
-  }
-
-  if (error.status === 401 || error.status === 403) {
-    return true;
-  }
-
-  return (
-    error.code === "TOKEN_MISSING" ||
-    error.code === "TOKEN_INVALID" ||
-    error.code === "TOKEN_REVOKED"
-  );
-};
-
-const buildEventsPath = (sinceId) =>
-  `/events?since_id=${normalizeNonNegativeInteger(sinceId, 0)}&limit=${EVENTS_POLL_LIMIT}`;
-
-const requestEventsWithTimeout = async (path, token) => {
-  const timeoutMs = normalizeNonNegativeInteger(POLL_REQUEST_TIMEOUT_MS, 0);
-  const controller =
-    typeof AbortController === "function" ? new AbortController() : null;
-  const requestOptions = controller
-    ? {
-        token,
-        signal: controller.signal,
-      }
-    : { token };
-  const requestPromise = apiGet(path, requestOptions);
-
-  if (timeoutMs <= 0) {
-    return requestPromise;
-  }
-
-  let timeoutId = null;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
-      if (controller) {
-        try {
-          controller.abort();
-        } catch {
-          // Ignore abort errors and rely on timeout rejection path.
-        }
-      }
-
-      reject(new Error("Polling request timed out."));
-    }, timeoutMs);
-  });
-
-  try {
-    return await Promise.race([requestPromise, timeoutPromise]);
-  } finally {
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId);
-    }
-  }
-};
-
-const scaleIdleInterval = (currentIntervalMs) =>
-  Math.min(
-    MAX_IDLE_POLL_INTERVAL_MS,
-    Math.max(
-      DEFAULT_POLL_INTERVAL_MS,
-      Math.round(
-        normalizeNonNegativeInteger(currentIntervalMs, DEFAULT_POLL_INTERVAL_MS) *
-          IDLE_BACKOFF_MULTIPLIER,
-      ),
-    ),
-  );
-
-export const buildErrorBackoffIntervalMs = (
-  currentIntervalMs,
-  randomValue = Math.random(),
-) => {
-  const numericRandom = Number.isFinite(randomValue) ? randomValue : 0.5;
-  const clampedRandom = Math.min(1, Math.max(0, numericRandom));
-  const nextBase = Math.min(
-    MAX_ERROR_POLL_INTERVAL_MS,
-    Math.max(
-      DEFAULT_POLL_INTERVAL_MS,
-      normalizeNonNegativeInteger(currentIntervalMs, DEFAULT_POLL_INTERVAL_MS) * 2,
-    ),
-  );
-  const jitterFactor = 0.8 + clampedRandom * 0.4;
-
-  return Math.min(
-    MAX_ERROR_POLL_INTERVAL_MS,
-    Math.max(DEFAULT_POLL_INTERVAL_MS, Math.round(nextBase * jitterFactor)),
-  );
-};
-
-const extractNextSinceId = (currentSinceId, eventsPayload, nextSinceIdValue) => {
-  const parsedNextSinceId = normalizeNonNegativeInteger(nextSinceIdValue, -1);
-
-  if (parsedNextSinceId >= 0) {
-    return parsedNextSinceId;
-  }
-
-  const lastEvent = eventsPayload.at(-1);
-  const lastEventId = normalizeNonNegativeInteger(lastEvent?.id, -1);
-
-  if (lastEventId >= 0) {
-    return lastEventId;
-  }
-
-  return normalizeNonNegativeInteger(currentSinceId, 0);
-};
-
-const buildAuthLostState = (error) => ({
-  ...INITIAL_MULTIPLAYER_SESSION_STATE,
-  status: "auth_lost",
-  pollingStatus: "stopped",
-  errorCode: isApiClientError(error) ? error.code : "TOKEN_INVALID",
-  errorMessage: isApiClientError(error)
-    ? error.message
-    : "Session authorization is no longer valid.",
-});
-
-const getGmContext = (sessionState, sessionToken) => {
-  const sessionId = normalizeNonNegativeInteger(sessionState?.sessionId, -1);
-  const role = sessionState?.role;
-
-  if (!sessionToken) {
-    return {
-      ok: false,
-      errorCode: "TOKEN_MISSING",
-      errorMessage: "Session token is missing.",
-    };
-  }
-
-  if (role !== "gm") {
-    return {
-      ok: false,
-      errorCode: "ROLE_FORBIDDEN",
-      errorMessage: "GM role is required for this action.",
-    };
-  }
-
-  if (sessionId < 0) {
-    return {
-      ok: false,
-      errorCode: "SESSION_NOT_FOUND",
-      errorMessage: "Session id is unavailable.",
-    };
-  }
-
-  return {
-    ok: true,
-    sessionId,
-  };
+export {
+  buildErrorBackoffIntervalMs,
+  DEFAULT_POLL_INTERVAL_MS,
+  EVENTS_POLL_LIMIT,
+  IDLE_BACKOFF_MULTIPLIER,
+  IDLE_BACKOFF_START_AFTER_POLLS,
+  MAX_ERROR_POLL_INTERVAL_MS,
+  MAX_IDLE_POLL_INTERVAL_MS,
+  POLL_REQUEST_TIMEOUT_MS,
 };
 
 export const useMultiplayerSession = () => {
@@ -292,168 +41,41 @@ export const useMultiplayerSession = () => {
   );
   const sessionStateRef = useRef(INITIAL_MULTIPLAYER_SESSION_STATE);
 
-  const pollTimerRef = useRef(null);
-  const pollIntervalRef = useRef(DEFAULT_POLL_INTERVAL_MS);
-  const sinceIdRef = useRef(0);
-  const sessionTokenRef = useRef("");
-  const pollingActiveRef = useRef(false);
-  const idlePollStreakRef = useRef(0);
-
   useEffect(() => {
     sessionStateRef.current = sessionState;
   }, [sessionState]);
 
-  const clearPollTimer = useCallback(() => {
-    if (pollTimerRef.current !== null) {
-      clearTimeout(pollTimerRef.current);
-      pollTimerRef.current = null;
-    }
-  }, []);
+  const onPollEventsReceived = useCallback((nextEvents, nextSinceId) => {
+    setSessionState((current) => {
+      const reducedState = applySessionEvents(current, nextEvents);
 
-  const stopPolling = useCallback(() => {
-    pollingActiveRef.current = false;
-    sessionTokenRef.current = "";
-    pollIntervalRef.current = DEFAULT_POLL_INTERVAL_MS;
-    idlePollStreakRef.current = 0;
-    clearPollTimer();
-
-    setSessionState((current) => ({
-      ...current,
-      pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
-      pollingStatus: "stopped",
-    }));
-  }, [clearPollTimer]);
-
-  const runPollCycle = useCallback(async () => {
-    if (!pollingActiveRef.current || !sessionTokenRef.current) {
-      return;
-    }
-
-    try {
-      const response = await requestEventsWithTimeout(
-        buildEventsPath(sinceIdRef.current),
-        sessionTokenRef.current,
-      );
-
-      if (!pollingActiveRef.current) {
-        return;
-      }
-
-      if (response.status === 204) {
-        idlePollStreakRef.current += 1;
-        const shouldApplyIdleBackoff =
-          idlePollStreakRef.current > IDLE_BACKOFF_START_AFTER_POLLS;
-        const nextInterval = shouldApplyIdleBackoff
-          ? scaleIdleInterval(pollIntervalRef.current)
-          : DEFAULT_POLL_INTERVAL_MS;
-        pollIntervalRef.current = nextInterval;
-
-        setSessionState((current) => ({
-          ...current,
-          pollIntervalMs: nextInterval,
-          pollingStatus: "running",
-          errorCode: null,
-          errorMessage: "",
-        }));
-
-        pollTimerRef.current = setTimeout(() => {
-          void runPollCycle();
-        }, nextInterval);
-        return;
-      }
-
-      const payload = isObjectLike(response.data) ? response.data : {};
-      const nextEvents = normalizeEventList(payload.events);
-      idlePollStreakRef.current = 0;
-      const nextSinceId = extractNextSinceId(
-        sinceIdRef.current,
-        nextEvents,
-        payload.next_since_id,
-      );
-
-      sinceIdRef.current = nextSinceId;
-      pollIntervalRef.current = DEFAULT_POLL_INTERVAL_MS;
-
-      setSessionState((current) => {
-        const reducedState = applySessionEvents(current, nextEvents);
-
-        return {
-          ...reducedState,
-          sinceId: nextSinceId,
-          latestEventId: Math.max(reducedState.latestEventId, nextSinceId),
-          pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
-          pollingStatus: "running",
-          errorCode: null,
-          errorMessage: "",
-        };
-      });
-
-      pollTimerRef.current = setTimeout(() => {
-        void runPollCycle();
-      }, DEFAULT_POLL_INTERVAL_MS);
-    } catch (error) {
-      if (!pollingActiveRef.current) {
-        return;
-      }
-
-      if (isAuthFailure(error)) {
-        clearSessionAuth();
-        pollingActiveRef.current = false;
-        sessionTokenRef.current = "";
-        clearPollTimer();
-        setSessionState(buildAuthLostState(error));
-        return;
-      }
-
-      const nextInterval = buildErrorBackoffIntervalMs(pollIntervalRef.current);
-      pollIntervalRef.current = nextInterval;
-      idlePollStreakRef.current = 0;
-
-      setSessionState((current) => ({
-        ...current,
-        pollIntervalMs: nextInterval,
-        pollingStatus: "backoff",
-        errorCode: isApiClientError(error) ? error.code : "NETWORK_ERROR",
-        errorMessage: isApiClientError(error)
-          ? error.message
-          : "Unable to fetch session events.",
-      }));
-
-      pollTimerRef.current = setTimeout(() => {
-        void runPollCycle();
-      }, nextInterval);
-    }
-  }, [clearPollTimer]);
-
-  const startPolling = useCallback(
-    (sessionToken, sinceId) => {
-      const normalizedToken =
-        typeof sessionToken === "string" ? sessionToken.trim() : "";
-
-      if (!normalizedToken) {
-        return;
-      }
-
-      clearPollTimer();
-      pollingActiveRef.current = true;
-      sessionTokenRef.current = normalizedToken;
-      sinceIdRef.current = normalizeNonNegativeInteger(sinceId, 0);
-      pollIntervalRef.current = DEFAULT_POLL_INTERVAL_MS;
-      idlePollStreakRef.current = 0;
-
-      setSessionState((current) => ({
-        ...current,
-        sinceId: sinceIdRef.current,
+      return {
+        ...reducedState,
+        sinceId: nextSinceId,
+        latestEventId: Math.max(reducedState.latestEventId, nextSinceId),
         pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
         pollingStatus: "running",
-      }));
+        errorCode: null,
+        errorMessage: "",
+      };
+    });
+  }, []);
 
-      pollTimerRef.current = setTimeout(() => {
-        void runPollCycle();
-      }, DEFAULT_POLL_INTERVAL_MS);
-    },
-    [clearPollTimer, runPollCycle],
-  );
+  const onPollAuthFailure = useCallback((error) => {
+    clearSessionAuth();
+    setSessionState(buildAuthLostState(error));
+  }, []);
+
+  const {
+    startPolling,
+    stopPolling,
+    sinceIdRef,
+    sessionTokenRef,
+  } = useEventPolling({
+    setSessionState,
+    onEventsReceived: onPollEventsReceived,
+    onAuthFailure: onPollAuthFailure,
+  });
 
   const bootstrapFromAuth = useCallback(async () => {
     const authState = getSessionAuth();
@@ -510,7 +132,7 @@ export const useMultiplayerSession = () => {
 
       return null;
     }
-  }, [startPolling, stopPolling]);
+  }, [sinceIdRef, startPolling, stopPolling]);
 
   const submitRoll = useCallback(
     async (payloadInput) => {
@@ -591,7 +213,7 @@ export const useMultiplayerSession = () => {
         };
       }
     },
-    [stopPolling],
+    [sessionTokenRef, sinceIdRef, stopPolling],
   );
 
   const submitPush = useCallback(
@@ -683,7 +305,7 @@ export const useMultiplayerSession = () => {
         };
       }
     },
-    [stopPolling],
+    [sessionTokenRef, sinceIdRef, stopPolling],
   );
 
   const rotateJoinLink = useCallback(async () => {
@@ -726,7 +348,7 @@ export const useMultiplayerSession = () => {
           : "Unable to rotate join link.",
       };
     }
-  }, [stopPolling]);
+  }, [sessionTokenRef, stopPolling]);
 
   const setJoiningEnabled = useCallback(
     async (joiningEnabled) => {
@@ -788,7 +410,7 @@ export const useMultiplayerSession = () => {
         };
       }
     },
-    [stopPolling],
+    [sessionTokenRef, stopPolling],
   );
 
   const resetSceneStrain = useCallback(async () => {
@@ -847,7 +469,7 @@ export const useMultiplayerSession = () => {
           : "Unable to reset scene strain.",
       };
     }
-  }, [stopPolling]);
+  }, [sessionTokenRef, sinceIdRef, stopPolling]);
 
   const refreshPlayers = useCallback(async () => {
     const gmContext = getGmContext(
@@ -890,7 +512,7 @@ export const useMultiplayerSession = () => {
           : "Unable to fetch player list.",
       };
     }
-  }, [stopPolling]);
+  }, [sessionTokenRef, stopPolling]);
 
   const revokePlayer = useCallback(
     async (tokenIdInput) => {
@@ -961,7 +583,7 @@ export const useMultiplayerSession = () => {
         };
       }
     },
-    [stopPolling],
+    [sessionTokenRef, sinceIdRef, stopPolling],
   );
 
   const resetSession = useCallback(() => {
@@ -969,14 +591,6 @@ export const useMultiplayerSession = () => {
     stopPolling();
     setSessionState(INITIAL_MULTIPLAYER_SESSION_STATE);
   }, [stopPolling]);
-
-  useEffect(
-    () => () => {
-      pollingActiveRef.current = false;
-      clearPollTimer();
-    },
-    [clearPollTimer],
-  );
 
   return {
     sessionState,

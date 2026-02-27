@@ -1,5 +1,11 @@
 # Decisions
 
+- **2026-02-27 — Split multiplayer session polling and normalization into dedicated modules**
+  - **Context:** `useMultiplayerSession.js` mixed transport polling loop mechanics, payload normalization/validation helpers, and feature actions in one file.
+  - **Decision:** Move reusable multiplayer helper logic into `src/lib/multiplayer-normalize.js` and isolate timer/ref polling machinery in `src/hooks/useEventPolling.js`, with `useMultiplayerSession` retaining orchestration and public action API.
+  - **Consequences:** Polling behavior remains unchanged with existing tests still passing, while future tuning (timeouts, backoff, cursor handling) can be made in one focused hook/library surface.
+  - **Alternatives considered:** Keep helper/polling code inline in `useMultiplayerSession` until a later rewrite (rejected due to continued file-size and coupling pressure).
+
 - **2026-02-27 — Decompose `App.jsx` phase-1 concerns into focused modules/hooks/components**
   - **Context:** `App.jsx` accumulated multiplayer normalization, toast ingestion, action submission, GM action orchestration, and session/auth-lost view concerns in one file, making iterative changes risky.
   - **Decision:** Extract pure normalizers/action helpers into `src/lib/*`, side-effect flows into `src/hooks/*`, and multiplayer shell/panel views into `src/components/*`, while keeping `DiceRollerApp` in `App.jsx` for Phase 1.
