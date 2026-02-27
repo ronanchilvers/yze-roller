@@ -1,0 +1,77 @@
+/* ── Join route ───────────────────────────────────────────────────── */
+
+.join-shell {
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding-top: clamp(1.5rem, 5vw, 4rem);
+}
+
+.join-panel {
+  width: min(100%, 480px);
+}
+
+.join-header {
+  margin-bottom: 0.75rem;
+}
+
+.join-form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.join-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink-700);
+}
+
+.join-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.58rem 0.65rem;
+  font: inherit;
+  color: var(--ink-900);
+  background: var(--input-bg);
+}
+
+.join-input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.join-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.join-secondary {
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink-900);
+  background: var(--summary-pill-bg);
+  cursor: pointer;
+}
+
+.join-error-block {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.join-error-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.join-error-message {
+  margin: 0;
+  color: var(--strain-line);
+}
+

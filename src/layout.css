@@ -1,0 +1,36 @@
+/* ── Layout shell ──────────────────────────────────────────────────── */
+
+.app-shell {
+  min-width: 400px;
+  min-height: 100dvh;
+  padding: clamp(0.9rem, 1.8vw, 1.5rem);
+  background: radial-gradient(circle at 15% 20%, var(--shell-glow-a) 0%, transparent 38%),
+    radial-gradient(circle at 85% 88%, var(--shell-glow-b) 0%, transparent 42%),
+    linear-gradient(140deg, var(--surface-100), var(--surface-200));
+  color: var(--ink-900);
+}
+
+.dice-layout {
+  position: relative;
+  z-index: 1;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--skip-link-bg);
+  color: var(--ink-900);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  z-index: 20;
+}
+
+.skip-link:focus {
+  left: 0.75rem;
+}
+

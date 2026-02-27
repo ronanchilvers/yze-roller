@@ -1,0 +1,356 @@
+/* ── Content grid & panels ─────────────────────────────────────────── */
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto minmax(340px, 1fr);
+  gap: 1rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: clamp(0.9rem, 1.8vw, 1.2rem);
+  box-shadow: var(--shadow);
+}
+
+.panel-copy {
+  margin: 0.5rem 0 0.8rem;
+  color: var(--ink-700);
+}
+
+.controls-panel {
+  padding: clamp(0.85rem, 1.5vw, 1.05rem);
+}
+
+.panel-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.modifier-control {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+
+.modifier-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 600;
+}
+
+.modifier-control-header output {
+  min-width: 2.4rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-900);
+}
+
+.modifier-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: #7a4cc9;
+}
+
+.modifier-markers {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--ink-700);
+}
+
+.modifier-marker {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.modifier-marker.is-active {
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel-reset-button {
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  padding: 0.25rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--button-text);
+  background: linear-gradient(160deg, var(--accent), var(--accent-strong));
+  cursor: pointer;
+}
+
+/* ── Dice pool controls ────────────────────────────────────────────── */
+
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.number-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.number-field span {
+  font-weight: 600;
+}
+
+.number-field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.6rem;
+  font: inherit;
+  color: var(--ink-900);
+  background: var(--input-bg);
+}
+
+.pool-action-button {
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.95rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--button-text);
+  background: linear-gradient(160deg, var(--accent), var(--accent-strong));
+  cursor: pointer;
+}
+
+.pool-action-button:disabled,
+.panel-reset-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.pool-action-button:focus-visible,
+.panel-reset-button:focus-visible,
+.number-field input:focus-visible,
+.modifier-slider:focus-visible,
+.strain-reset-button:focus-visible,
+.pool-tab:focus-visible,
+.theme-select select:focus-visible,
+.import-summary-item:focus-visible,
+.join-secondary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Dice pool tabs & import panel ─────────────────────────────────── */
+
+.pool-tabs {
+  display: inline-flex;
+  gap: 0.4rem;
+  margin: 0.2rem 0 0.9rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: var(--surface-200);
+}
+
+.pool-tab {
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  padding: 0.35rem 0.8rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink-700);
+  background: transparent;
+  cursor: pointer;
+}
+
+.pool-tab.is-active {
+  color: var(--ink-900);
+  background: var(--tab-active-bg);
+  border-color: var(--line);
+  box-shadow: var(--tab-active-shadow);
+}
+
+.import-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.import-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(160px, 1fr) minmax(160px, 1fr);
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.import-status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.import-clear-button {
+  margin-left: auto;
+  align-self: center;
+}
+
+.import-summary {
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: var(--summary-surface);
+}
+
+.import-summary-content {
+  display: grid;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.import-summary-title {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.import-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+  align-items: start;
+}
+
+.import-summary-content li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--summary-item-row);
+  color: var(--ink-700);
+}
+
+.import-summary-content li span {
+  color: var(--ink-700);
+  flex: 1;
+}
+
+.import-summary-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--summary-pill-bg);
+  color: var(--ink-900);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.import-summary-item:hover {
+  border-color: var(--accent-strong);
+  color: var(--ink-900);
+}
+
+.import-summary-item:focus-visible {
+  border-radius: 0.5rem;
+}
+
+.import-summary-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: var(--line);
+}
+
+.import-summary-empty {
+  margin: 0;
+  color: var(--ink-700);
+}
+
+.file-field,
+.select-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.file-field span,
+.select-field span {
+  font-weight: 600;
+}
+
+.file-field input,
+.select-field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.6rem;
+  font: inherit;
+  color: var(--ink-900);
+  background: var(--input-bg);
+}
+
+.import-status p {
+  margin: 0 0 0.2rem;
+  color: var(--ink-700);
+}
+
+.import-errors,
+.import-warnings {
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--error-bg);
+}
+
+.import-warnings {
+  background: var(--warning-bg);
+}
+
+.import-errors p,
+.import-warnings p {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.import-errors ul,
+.import-warnings ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--ink-700);
+}
+
+.import-selectors {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.import-character-name {
+  margin: 0 0 0 0.75rem;
+  color: var(--ink-900);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.secondary-action-button {
+  white-space: nowrap;
+}
+

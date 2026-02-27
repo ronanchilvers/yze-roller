@@ -1,0 +1,51 @@
+/* ── Dice stage (full-page) ───────────────────────────────────────── */
+
+.dice-stage-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none !important;
+}
+
+/*
+ * react-three/fiber's <Canvas> sets explicit pixel dimensions via inline
+ * styles on the <canvas> element.  !important is required here to override
+ * those inline values so the canvas fills the viewport.
+ */
+.dice-stage-fullscreen canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  pointer-events: none !important;
+}
+
+.dice-stage-fullscreen * {
+  pointer-events: none !important;
+}
+
+.tray-loading {
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  color: var(--ink-700);
+  font-weight: 600;
+}
+
+.tray-spinner {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 3px solid var(--spinner-border);
+  border-top-color: var(--spinner-border-top);
+  animation: tray-spin 0.9s linear infinite;
+}
+
+@keyframes tray-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
