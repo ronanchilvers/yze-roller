@@ -1,4 +1,14 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import PropTypes from "prop-types";
+import { RotateCcw } from "lucide-react";
 import "./App.css";
 import { usePoolSelection } from "./hooks/usePoolSelection.js";
 import { useStrainTracker } from "./hooks/useStrainTracker.js";
@@ -6,6 +16,7 @@ import { useRollSession } from "./hooks/useRollSession.js";
 import { useCharacterImport } from "./hooks/useCharacterImport.js";
 import { useThemePreference } from "./hooks/useThemePreference.js";
 import { useToast } from "./hooks/useToast.js";
+import { useMultiplayerSession } from "./hooks/useMultiplayerSession.js";
 import {
   DEFAULT_DICE_RESULT_DURATION_MS,
   MAX_PENDING_TOASTS,
@@ -16,14 +27,404 @@ import {
   ROLL_TOAST_DEDUPE_BUCKET_MS,
   normalizeRollToastEvent,
 } from "./lib/roll-toast-event.js";
+import {
+  buildJoinPathWithToken,
+  clearLocationHash,
+  getSessionPathFromJoinPath,
+  isJoinSessionPath,
+  parseJoinTokenFromHash,
+} from "./lib/join-session-route.js";
+import {
+  getSessionAuth,
+  setSessionAuth,
+} from "./lib/session-auth.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
+import HostSessionView from "./components/HostSessionView.jsx";
+import JoinSessionView from "./components/JoinSessionView.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import LucideIcon from "./components/LucideIcon.jsx";
 
 export const REMOTE_ROLL_EVENT_BRIDGE_KEY = "__YEAR_ZERO_REMOTE_ROLL_EVENT__";
 const DEDUPE_TTL_MS = ROLL_TOAST_DEDUPE_BUCKET_MS * 2;
+const MAX_SUBMITTED_SESSION_ACTIONS = 100;
 const DiceTray3D = lazy(() => import("./components/DiceTray3D.jsx"));
 
-function App() {
+const getBrowserPathname = () => {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+
+  return window.location.pathname || "/";
+};
+
+const getBrowserHash = () => {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.location.hash || "";
+};
+
+const normalizeOutcomeCount = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isInteger(numeric) || numeric < 0 || numeric > 99) {
+    return null;
+  }
+
+  return numeric;
+};
+
+const buildSessionActionRequest = (roll) => {
+  if (!roll || typeof roll !== "object") {
+    return null;
+  }
+
+  const successes = normalizeOutcomeCount(roll?.outcomes?.successes);
+  const banes = normalizeOutcomeCount(roll?.outcomes?.banes);
+
+  if (successes === null || banes === null) {
+    return null;
+  }
+
+  if (roll.action === "push") {
+    return {
+      action: "push",
+      payload: {
+        successes,
+        banes,
+        strain: Boolean(roll?.outcomes?.hasStrain),
+      },
+    };
+  }
+
+  return {
+    action: "roll",
+    payload: {
+      successes,
+      banes,
+    },
+  };
+};
+
+const getCurrentRollActionId = (currentRoll, recentResults) => {
+  if (!currentRoll) {
+    return null;
+  }
+
+  if (typeof recentResults?.[0]?.id === "string" && recentResults[0].id.trim()) {
+    return recentResults[0].id.trim();
+  }
+
+  if (Number.isFinite(currentRoll.rolledAt)) {
+    return `${currentRoll.action ?? "roll"}-${currentRoll.rolledAt}`;
+  }
+
+  return null;
+};
+
+const normalizeActionErrorMessage = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
+};
+
+const MAX_VISIBLE_SESSION_EVENTS = 20;
+const MAX_TRACKED_SESSION_ROLL_TOAST_EVENTS = 200;
+
+const normalizeSessionEventId = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+
+  return Math.floor(numeric);
+};
+
+const normalizeSessionEventType = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().toLowerCase();
+};
+
+const normalizeSessionEventCount = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+
+  return Math.floor(numeric);
+};
+
+const copyTextToClipboard = async (text) => {
+  const normalizedText = typeof text === "string" ? text.trim() : "";
+
+  if (!normalizedText) {
+    return false;
+  }
+
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === "function"
+  ) {
+    try {
+      await navigator.clipboard.writeText(normalizedText);
+      return true;
+    } catch {
+      // Fallback path below handles environments without clipboard permission.
+    }
+  }
+
+  if (typeof document === "undefined" || typeof document.createElement !== "function") {
+    return false;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = normalizedText;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  textarea.style.top = "-1000px";
+  textarea.style.left = "-1000px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  try {
+    return Boolean(document.execCommand?.("copy"));
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
+};
+
+const normalizeSessionPlayerTokenId = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null;
+  }
+
+  return Math.floor(numeric);
+};
+
+const normalizeSessionPlayerDisplayName = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
+};
+
+const normalizeSessionPlayersForGmPanel = (playersInput) => {
+  if (!Array.isArray(playersInput)) {
+    return [];
+  }
+
+  return playersInput
+    .map((player) => {
+      const tokenId = normalizeSessionPlayerTokenId(player?.tokenId);
+      const displayName = normalizeSessionPlayerDisplayName(player?.displayName);
+      const role = player?.role === "gm" || player?.role === "player"
+        ? player.role
+        : "player";
+
+      if (tokenId === null || !displayName) {
+        return null;
+      }
+
+      return {
+        tokenId,
+        displayName,
+        role,
+      };
+    })
+    .filter(Boolean);
+};
+
+const normalizeSessionEventActorLabel = (event) => {
+  const displayName = event?.actor?.display_name;
+  if (typeof displayName === "string" && displayName.trim()) {
+    return displayName.trim();
+  }
+
+  const tokenId = normalizeSessionEventId(event?.actor?.token_id);
+  if (tokenId !== null) {
+    return `Player ${tokenId}`;
+  }
+
+  const payloadName = event?.payload?.display_name;
+  if (typeof payloadName === "string" && payloadName.trim()) {
+    return payloadName.trim();
+  }
+
+  return "Player";
+};
+
+const normalizeSessionEventActorDisplayName = (event) => {
+  const actorDisplayName = event?.actor?.display_name;
+  if (typeof actorDisplayName === "string" && actorDisplayName.trim()) {
+    return actorDisplayName.trim();
+  }
+
+  const payloadDisplayName = event?.payload?.display_name;
+  if (typeof payloadDisplayName === "string" && payloadDisplayName.trim()) {
+    return payloadDisplayName.trim();
+  }
+
+  return "";
+};
+
+const normalizeSessionEventBoolean = (value) => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1" || normalized === "yes") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0" || normalized === "no") {
+    return false;
+  }
+
+  return null;
+};
+
+const normalizeSessionEventHasStrain = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  const explicitCandidates = [
+    payload.strain,
+    payload.has_strain,
+    payload.hasStrain,
+    payload.with_strain,
+    payload.withStrain,
+    payload?.outcomes?.strain,
+    payload?.outcomes?.has_strain,
+    payload?.outcomes?.hasStrain,
+  ];
+
+  for (const candidate of explicitCandidates) {
+    const normalized = normalizeSessionEventBoolean(candidate);
+    if (normalized !== null) {
+      return normalized;
+    }
+  }
+
+  return normalizeSessionEventCount(payload.scene_strain) > 0;
+};
+
+const isSessionRollEventFromSelf = (event, selfTokenId, selfDisplayName) => {
+  const actorTokenId = normalizeSessionEventId(event?.actor?.token_id);
+
+  if (selfTokenId !== null && actorTokenId !== null) {
+    return selfTokenId === actorTokenId;
+  }
+
+  if (!selfDisplayName) {
+    return false;
+  }
+
+  const actorDisplayName = normalizeSessionEventActorDisplayName(event);
+  if (!actorDisplayName) {
+    return false;
+  }
+
+  return actorDisplayName.toLowerCase() === selfDisplayName.toLowerCase();
+};
+
+const buildSessionEventSummary = (event) => {
+  const eventType = normalizeSessionEventType(event?.type);
+  const payload = event && typeof event.payload === "object" && event.payload
+    ? event.payload
+    : {};
+  const actorLabel = normalizeSessionEventActorLabel(event);
+  const successes = normalizeSessionEventCount(payload.successes);
+  const banes = normalizeSessionEventCount(payload.banes);
+
+  if (eventType === "roll") {
+    return `${actorLabel} rolled ${successes} successes, ${banes} banes.`;
+  }
+
+  if (eventType === "push") {
+    return `${actorLabel} pushed to ${successes} successes, ${banes} banes.`;
+  }
+
+  if (eventType === "join") {
+    return `${actorLabel} joined the session.`;
+  }
+
+  if (eventType === "leave") {
+    return `${actorLabel} left the session.`;
+  }
+
+  if (eventType === "strain_reset") {
+    return "Strain points were reset.";
+  }
+
+  return "Session event received.";
+};
+
+const normalizeSessionEventsForFeed = (eventsInput) => {
+  if (!Array.isArray(eventsInput)) {
+    return [];
+  }
+
+  const eventMap = new Map();
+
+  for (const event of eventsInput) {
+    if (!event || typeof event !== "object") {
+      continue;
+    }
+
+    const eventId = normalizeSessionEventId(event.id);
+    if (eventId === null || eventMap.has(eventId)) {
+      continue;
+    }
+
+    eventMap.set(eventId, {
+      id: eventId,
+      type: normalizeSessionEventType(event.type),
+      summary: buildSessionEventSummary(event),
+    });
+  }
+
+  return Array.from(eventMap.values()).slice(-MAX_VISIBLE_SESSION_EVENTS);
+};
+
+function DiceRollerApp({
+  sessionSummary = null,
+  sessionActions = null,
+  sessionEvents = [],
+  gmControls = null,
+  sessionConnectionMeta = null,
+}) {
   const {
     attributeDice,
     skillDice,
@@ -47,9 +448,53 @@ function App() {
 
   const [overrideCounts, setOverrideCounts] = useState(null);
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
+  const [isActionSubmitPending, setIsActionSubmitPending] = useState(false);
+  const [sessionActionError, setSessionActionError] = useState("");
+  const [gmActionError, setGmActionError] = useState("");
+  const [gmActionMessage, setGmActionMessage] = useState("");
+  const [gmPendingAction, setGmPendingAction] = useState("");
+  const [rotatedJoinLink, setRotatedJoinLink] = useState("");
+  const [isRetryPending, setIsRetryPending] = useState(false);
+  const [rollModifier, setRollModifier] = useState(0);
+  const visibleSessionEvents = useMemo(
+    () => normalizeSessionEventsForFeed(sessionEvents),
+    [sessionEvents],
+  );
+  const gmPlayers = useMemo(
+    () => normalizeSessionPlayersForGmPanel(gmControls?.players),
+    [gmControls?.players],
+  );
 
   const effectiveAttributeDice = overrideCounts?.attributeDice ?? attributeDice;
   const effectiveSkillDice = overrideCounts?.skillDice ?? skillDice;
+  const shouldUseAuthoritativeSessionStrain =
+    Boolean(sessionSummary) && Number.isFinite(sessionSummary?.sceneStrain);
+  const resolvedStrainPoints = shouldUseAuthoritativeSessionStrain
+    ? normalizeSessionCount(sessionSummary?.sceneStrain)
+    : normalizedStrainPoints;
+  const canResetStrainLocally = !shouldUseAuthoritativeSessionStrain;
+  const canResetStrainAsGm =
+    shouldUseAuthoritativeSessionStrain &&
+    Boolean(gmControls?.resetSceneStrain) &&
+    !gmPendingAction;
+  const shouldShowTopBarStrainReset =
+    canResetStrainLocally ||
+    (shouldUseAuthoritativeSessionStrain && Boolean(gmControls?.resetSceneStrain));
+  const canResetStrain =
+    resolvedStrainPoints > 0 && (canResetStrainLocally || canResetStrainAsGm);
+  const ignoreBaneIncrement = useCallback(() => {}, []);
+  const resolvedSessionName = normalizeSessionText(sessionSummary?.sessionName, "Dice Roller");
+  const resolvedRoleLabel = normalizeSessionText(sessionSummary?.roleLabel, "Unknown");
+  const sessionSelfTokenId = normalizeSessionPlayerTokenId(sessionSummary?.selfTokenId);
+  const sessionSelfDisplayName = normalizeSessionPlayerDisplayName(
+    sessionSummary?.selfDisplayName,
+  );
+  const rolePillTone =
+    resolvedRoleLabel === "GM"
+      ? "gm"
+      : resolvedRoleLabel === "Player"
+        ? "player"
+        : "unknown";
 
   const {
     currentRoll,
@@ -64,8 +509,11 @@ function App() {
   } = useRollSession({
     attributeDice: effectiveAttributeDice,
     skillDice: effectiveSkillDice,
-    normalizedStrainPoints,
-    onBaneIncrement: applyBaneIncrement,
+    rollModifier,
+    normalizedStrainPoints: resolvedStrainPoints,
+    onBaneIncrement: shouldUseAuthoritativeSessionStrain
+      ? ignoreBaneIncrement
+      : applyBaneIncrement,
   });
   const activeDice = rollRequest?.dice ?? currentRoll?.dice ?? [];
   const pushableDiceCount = Number(currentRoll?.pushableDiceIds?.length ?? 0);
@@ -73,9 +521,24 @@ function App() {
     isRolling || activeDice.length > 0 || recentResults.length > 0;
   const hasRolled = Boolean(currentRoll);
   const primaryActionLabel = "Roll Dice";
-  const isPrimaryActionDisabled = isRolling;
+  const isPrimaryActionDisabled = isRolling || isActionSubmitPending;
 
   const emittedToastKeysRef = useRef(new Map());
+  const emittedSessionRollEventIdsRef = useRef(new Set());
+  const suppressedSessionRollEventIdsRef = useRef(new Set());
+  const submittedSessionActionsRef = useRef(new Map());
+  const isMountedRef = useRef(true);
+  const retryPendingRef = useRef(false);
+  const submitRollAction = sessionActions?.submitRoll;
+  const submitPushAction = sessionActions?.submitPush;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const emitRollToastEvent = useCallback(
     (eventInput) => {
@@ -131,6 +594,11 @@ function App() {
     setPendingRollCounts(counts);
   };
 
+  const handleClearDice = () => {
+    setRollModifier(0);
+    onClearDice();
+  };
+
   useEffect(() => {
     if (typeof document === "undefined") {
       return;
@@ -175,6 +643,150 @@ function App() {
   }, [currentRoll, emitRollToastEvent, recentResults]);
 
   useEffect(() => {
+    emittedSessionRollEventIdsRef.current.clear();
+    suppressedSessionRollEventIdsRef.current.clear();
+  }, [sessionSummary?.sessionId]);
+
+  useEffect(() => {
+    if (!Array.isArray(sessionEvents) || sessionEvents.length === 0) {
+      return;
+    }
+
+    const emittedSessionRollEventIds = emittedSessionRollEventIdsRef.current;
+    const suppressedSessionRollEventIds = suppressedSessionRollEventIdsRef.current;
+
+    for (const event of sessionEvents) {
+      const eventId = normalizeSessionEventId(event?.id);
+      if (eventId === null || emittedSessionRollEventIds.has(eventId)) {
+        continue;
+      }
+
+      emittedSessionRollEventIds.add(eventId);
+      while (emittedSessionRollEventIds.size > MAX_TRACKED_SESSION_ROLL_TOAST_EVENTS) {
+        const oldestEventId = emittedSessionRollEventIds.values().next().value;
+        if (typeof oldestEventId === "undefined") {
+          break;
+        }
+        emittedSessionRollEventIds.delete(oldestEventId);
+      }
+
+      if (suppressedSessionRollEventIds.has(eventId)) {
+        suppressedSessionRollEventIds.delete(eventId);
+        continue;
+      }
+
+      const eventType = normalizeSessionEventType(event?.type);
+      if (eventType !== "roll" && eventType !== "push") {
+        continue;
+      }
+
+      if (isSessionRollEventFromSelf(event, sessionSelfTokenId, sessionSelfDisplayName)) {
+        continue;
+      }
+
+      const payload =
+        event && typeof event.payload === "object" && event.payload
+          ? event.payload
+          : {};
+      const actorTokenId = normalizeSessionEventId(event?.actor?.token_id);
+
+      emitRollToastEvent({
+        eventId: `session-event-${eventId}`,
+        source: "remote",
+        actorId: actorTokenId === null ? "" : String(actorTokenId),
+        actorName: normalizeSessionEventActorLabel(event),
+        action: eventType,
+        successes: normalizeSessionEventCount(payload.successes),
+        banes: normalizeSessionEventCount(payload.banes),
+        hasStrain: normalizeSessionEventHasStrain(payload),
+      });
+    }
+  }, [
+    emitRollToastEvent,
+    sessionEvents,
+    sessionSelfDisplayName,
+    sessionSelfTokenId,
+  ]);
+
+  useEffect(() => {
+    const actionRequest = buildSessionActionRequest(currentRoll);
+    const actionId = getCurrentRollActionId(currentRoll, recentResults);
+
+    if (!actionRequest || !actionId) {
+      return;
+    }
+
+    const submitAction =
+      actionRequest.action === "push" ? submitPushAction : submitRollAction;
+
+    if (typeof submitAction !== "function") {
+      return;
+    }
+
+    const submittedMap = submittedSessionActionsRef.current;
+    if (submittedMap.has(actionId)) {
+      return;
+    }
+
+    submittedMap.set(actionId, Date.now());
+    while (submittedMap.size > MAX_SUBMITTED_SESSION_ACTIONS) {
+      const oldestKey = submittedMap.keys().next().value;
+      if (!oldestKey) {
+        break;
+      }
+      submittedMap.delete(oldestKey);
+    }
+
+    const syncAction = async () => {
+      setIsActionSubmitPending(true);
+      setSessionActionError("");
+
+      try {
+        const result = await submitAction(actionRequest.payload);
+
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        if (!result?.ok) {
+          setSessionActionError(
+            normalizeActionErrorMessage(result?.errorMessage) ||
+              "Unable to sync action with multiplayer session.",
+          );
+          return;
+        }
+
+        const responseEventId = normalizeSessionEventId(result?.event?.id);
+        if (responseEventId !== null) {
+          const suppressedSessionRollEventIds = suppressedSessionRollEventIdsRef.current;
+          suppressedSessionRollEventIds.add(responseEventId);
+          while (suppressedSessionRollEventIds.size > MAX_TRACKED_SESSION_ROLL_TOAST_EVENTS) {
+            const oldestEventId = suppressedSessionRollEventIds.values().next().value;
+            if (typeof oldestEventId === "undefined") {
+              break;
+            }
+            suppressedSessionRollEventIds.delete(oldestEventId);
+          }
+        }
+
+        setSessionActionError("");
+      } catch {
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        setSessionActionError("Unable to sync action with multiplayer session.");
+      } finally {
+        if (isMountedRef.current) {
+          setIsActionSubmitPending(false);
+        }
+      }
+    };
+
+    void syncAction();
+  }, [currentRoll, recentResults, submitPushAction, submitRollAction]);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return undefined;
     }
@@ -194,6 +806,184 @@ function App() {
       }
     };
   }, [emitRollToastEvent]);
+
+  const runGmAction = useCallback(
+    async (actionId, action, successMessage, onSuccess = null) => {
+      if (typeof action !== "function") {
+        return;
+      }
+
+      setGmPendingAction(actionId);
+      setGmActionError("");
+      setGmActionMessage("");
+
+      try {
+        const result = await action();
+
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        if (!result?.ok) {
+          setGmActionError(
+            normalizeActionErrorMessage(result?.errorMessage) ||
+              "Unable to complete GM action.",
+          );
+          return;
+        }
+
+        if (typeof onSuccess === "function") {
+          onSuccess(result);
+        }
+
+        setGmActionMessage(successMessage);
+      } catch {
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        setGmActionError("Unable to complete GM action.");
+      } finally {
+        if (isMountedRef.current) {
+          setGmPendingAction("");
+        }
+      }
+    },
+    [],
+  );
+
+  const handleRotateJoinLink = useCallback(() => {
+    if (!gmControls) {
+      return;
+    }
+
+    void runGmAction(
+      "rotate_join_link",
+      gmControls.rotateJoinLink,
+      "Join link rotated.",
+      (result) => {
+        setRotatedJoinLink(
+          typeof result?.joinLink === "string" ? result.joinLink.trim() : "",
+        );
+      },
+    );
+  }, [gmControls, runGmAction]);
+
+  const handleToggleJoining = useCallback(() => {
+    if (!gmControls) {
+      return;
+    }
+
+    const nextJoiningEnabled = !Boolean(gmControls.joiningEnabled);
+
+    void runGmAction(
+      "toggle_joining",
+      () => gmControls.setJoiningEnabled?.(nextJoiningEnabled),
+      nextJoiningEnabled ? "Player joining enabled." : "Player joining disabled.",
+    );
+  }, [gmControls, runGmAction]);
+
+  const handleResetSceneStrain = useCallback(() => {
+    if (!gmControls) {
+      return;
+    }
+
+    void runGmAction(
+      "reset_scene_strain",
+      gmControls.resetSceneStrain,
+      "Strain points reset.",
+    );
+  }, [gmControls, runGmAction]);
+
+  const handleTopBarStrainReset = useCallback(() => {
+    if (canResetStrainLocally) {
+      onResetStrain();
+      return;
+    }
+
+    if (canResetStrainAsGm) {
+      handleResetSceneStrain();
+    }
+  }, [
+    canResetStrainAsGm,
+    canResetStrainLocally,
+    handleResetSceneStrain,
+    onResetStrain,
+  ]);
+
+  const handleRefreshPlayers = useCallback(() => {
+    if (!gmControls) {
+      return;
+    }
+
+    void runGmAction(
+      "refresh_players",
+      gmControls.refreshPlayers,
+      "Player list refreshed.",
+    );
+  }, [gmControls, runGmAction]);
+
+  const handleRevokePlayer = useCallback(
+    (tokenId, displayName) => {
+      if (!gmControls) {
+        return;
+      }
+
+      void runGmAction(
+        `revoke_player_${tokenId}`,
+        () => gmControls.revokePlayer?.(tokenId),
+        `${displayName} revoked.`,
+      );
+    },
+    [gmControls, runGmAction],
+  );
+
+  const handleCopyJoinLink = useCallback(async () => {
+    const joinLink = typeof rotatedJoinLink === "string" ? rotatedJoinLink.trim() : "";
+
+    if (!joinLink) {
+      return;
+    }
+
+    setGmActionError("");
+    setGmActionMessage("");
+
+    const copied = await copyTextToClipboard(joinLink);
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    if (!copied) {
+      setGmActionError("Unable to copy join link. Copy it manually from the link text.");
+      return;
+    }
+
+    setGmActionMessage("Join link copied.");
+  }, [rotatedJoinLink]);
+
+  const handleRetryConnection = useCallback(() => {
+    const onRetry = sessionConnectionMeta?.onRetry;
+
+    if (retryPendingRef.current || typeof onRetry !== "function") {
+      return;
+    }
+
+    retryPendingRef.current = true;
+    setIsRetryPending(true);
+
+    const runRetry = async () => {
+      try {
+        await onRetry();
+      } finally {
+        retryPendingRef.current = false;
+        if (isMountedRef.current) {
+          setIsRetryPending(false);
+        }
+      }
+    };
+
+    void runRetry();
+  }, [sessionConnectionMeta]);
 
   return (
     <main className="app-shell">
@@ -224,9 +1014,19 @@ function App() {
         aria-label="Year Zero dice roller"
       >
         <header className="top-bar">
-          <div>
+          <div className="top-bar-title">
             <p className="eyebrow">Year Zero Engine</p>
-            <h1>Dice Roller</h1>
+            <div className="session-heading-row">
+              {sessionSummary ? (
+                <span
+                  className={`session-connection-dot is-${sessionSummary.connectionTone}`}
+                  data-testid="session-connection-dot"
+                  aria-label={`Connection status: ${sessionSummary.connectionStatus}`}
+                  title={sessionSummary.connectionStatus}
+                />
+              ) : null}
+              <h1>{resolvedSessionName}</h1>
+            </div>
           </div>
           <div className="top-bar-actions">
             <label className="theme-select" htmlFor="themePreference">
@@ -242,23 +1042,254 @@ function App() {
                 <option value="dark">Dark</option>
               </select>
             </label>
-            <output className="strain-pill" aria-label="Current strain points">
-              <div className="strain-pill-head">
-                <span>Strain Points</span>
-                <button
-                  type="button"
-                  className="strain-reset-button"
-                  aria-label="Reset strain points"
-                  onClick={onResetStrain}
-                  disabled={normalizedStrainPoints === 0}
+            <div className="strain-status-group">
+              {sessionSummary ? (
+                <output
+                  className={`role-pill role-pill-${rolePillTone}`}
+                  aria-label={`Session role: ${resolvedRoleLabel}`}
+                  data-testid="session-role-indicator"
                 >
-                  ↺
-                </button>
-              </div>
-              <strong>{normalizedStrainPoints}</strong>
-            </output>
+                  <span className="role-pill-head">Role</span>
+                  <strong>{resolvedRoleLabel}</strong>
+                </output>
+              ) : null}
+              <output className="strain-pill" aria-label="Current strain points">
+                <div className="strain-pill-head">
+                  <span>Strain</span>
+                  {shouldShowTopBarStrainReset ? (
+                    <button
+                      type="button"
+                      className="strain-reset-button"
+                      aria-label="Reset strain points"
+                      onClick={handleTopBarStrainReset}
+                      disabled={!canResetStrain}
+                    >
+                      <LucideIcon
+                        icon={RotateCcw}
+                        className="strain-reset-icon"
+                        size={14}
+                        strokeWidth={2.2}
+                      />
+                    </button>
+                  ) : null}
+                </div>
+                <strong>{resolvedStrainPoints}</strong>
+              </output>
+            </div>
           </div>
         </header>
+
+        {sessionSummary && (sessionActionError || sessionConnectionMeta?.status === "error") ? (
+          <section
+            className="session-status-strip"
+            aria-label="Multiplayer session status"
+            data-testid="session-status-strip"
+          >
+            {sessionActionError ? (
+              <p
+                className="session-action-error"
+                role="alert"
+                data-testid="session-action-error"
+              >
+                {sessionActionError}
+              </p>
+            ) : null}
+            {sessionConnectionMeta?.status === "error" ? (
+              <div className="session-connection-error-row" aria-busy={isRetryPending}>
+                <p
+                  className="session-connection-error-copy"
+                  role="alert"
+                  data-testid="session-connection-error"
+                >
+                  {normalizeSessionText(
+                    sessionConnectionMeta?.errorMessage,
+                    "Unable to load multiplayer session.",
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className="join-secondary"
+                  data-testid="session-retry-button"
+                  onClick={handleRetryConnection}
+                  disabled={sessionConnectionMeta?.status === "loading" || isRetryPending}
+                >
+                  Retry Connection
+                </button>
+                {isRetryPending ? (
+                  <p
+                    className="session-retry-status"
+                    role="status"
+                    aria-live="polite"
+                    data-testid="session-retry-status"
+                  >
+                    Retrying connection...
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {sessionSummary ? (
+          <section
+            className="panel session-events-panel"
+            aria-label="Multiplayer event feed"
+            data-testid="session-events-feed"
+          >
+            <div className="session-events-head">
+              <h2>Session Events</h2>
+            </div>
+            {visibleSessionEvents.length > 0 ? (
+              <ol className="session-events-list">
+                {visibleSessionEvents.map((event) => (
+                  <li
+                    key={event.id}
+                    className="session-event-item"
+                    data-testid="session-event-item"
+                  >
+                    <span className="session-event-id">#{event.id}</span>
+                    <span>{event.summary}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="panel-copy session-events-empty">
+                No multiplayer events yet.
+              </p>
+            )}
+          </section>
+        ) : null}
+
+        {gmControls ? (
+          <section
+            className="panel gm-controls-panel"
+            aria-label="GM controls"
+            data-testid="gm-controls-panel"
+          >
+            <div className="gm-controls-head">
+              <h2>GM Controls</h2>
+              <span className="gm-controls-pill">Host Tools</span>
+            </div>
+            <div className="gm-controls-actions">
+              <button
+                type="button"
+                className="join-secondary"
+                data-testid="gm-rotate-link-button"
+                onClick={handleRotateJoinLink}
+                disabled={Boolean(gmPendingAction)}
+              >
+                Rotate Join Link
+              </button>
+              <button
+                type="button"
+                className="join-secondary"
+                data-testid="gm-joining-toggle-button"
+                onClick={handleToggleJoining}
+                disabled={Boolean(gmPendingAction)}
+              >
+                {gmControls.joiningEnabled ? "Disable Joining" : "Enable Joining"}
+              </button>
+              <button
+                type="button"
+                className="join-secondary"
+                data-testid="gm-reset-strain-button"
+                onClick={handleResetSceneStrain}
+                disabled={Boolean(gmPendingAction)}
+              >
+                Reset Strain Points
+              </button>
+              <button
+                type="button"
+                className="join-secondary"
+                data-testid="gm-refresh-players-button"
+                onClick={handleRefreshPlayers}
+                disabled={Boolean(gmPendingAction)}
+              >
+                Refresh Players
+              </button>
+            </div>
+            {rotatedJoinLink ? (
+              <div className="gm-controls-link-row" data-testid="gm-join-link-row">
+                <p className="panel-copy gm-controls-link" data-testid="gm-join-link">
+                  Latest join link: <code>{rotatedJoinLink}</code>
+                </p>
+                <button
+                  type="button"
+                  className="join-secondary"
+                  data-testid="gm-copy-link-button"
+                  onClick={() => {
+                    void handleCopyJoinLink();
+                  }}
+                  disabled={Boolean(gmPendingAction)}
+                >
+                  Copy Join Link
+                </button>
+              </div>
+            ) : null}
+            {gmActionError ? (
+              <p
+                className="panel-copy gm-controls-error"
+                role="alert"
+                data-testid="gm-action-error"
+              >
+                {gmActionError}
+              </p>
+            ) : null}
+            {gmPendingAction ? (
+              <p
+                className="panel-copy gm-controls-message"
+                role="status"
+                aria-live="polite"
+                data-testid="gm-action-pending"
+              >
+                Applying GM action...
+              </p>
+            ) : null}
+            {gmActionMessage ? (
+              <p
+                className="panel-copy gm-controls-message"
+                role="status"
+                aria-live="polite"
+                data-testid="gm-action-message"
+              >
+                {gmActionMessage}
+              </p>
+            ) : null}
+            <div className="gm-player-roster">
+              <h3>Player Roster</h3>
+              {gmPlayers.length > 0 ? (
+                <ul className="gm-player-list" data-testid="gm-player-list">
+                  {gmPlayers.map((player) => {
+                    const canRevoke = player.role !== "gm";
+                    return (
+                      <li key={player.tokenId} className="gm-player-item">
+                        <div className="gm-player-details">
+                          <strong>{player.displayName}</strong>
+                          <span>
+                            #{player.tokenId} • {player.role.toUpperCase()}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="join-secondary"
+                          data-testid={`gm-revoke-player-${player.tokenId}`}
+                          onClick={() =>
+                            handleRevokePlayer(player.tokenId, player.displayName)
+                          }
+                          disabled={!canRevoke || Boolean(gmPendingAction)}
+                        >
+                          Revoke
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="panel-copy gm-player-empty">No players are connected.</p>
+              )}
+            </div>
+          </section>
+        ) : null}
 
         <div className="content-grid">
           <DicePoolPanel
@@ -268,10 +1299,13 @@ function App() {
             primaryActionLabel={primaryActionLabel}
             isPrimaryActionDisabled={isPrimaryActionDisabled}
             isRolling={isRolling}
+            isActionSubmitPending={isActionSubmitPending}
             setAttributeDice={setAttributeDice}
             setSkillDice={setSkillDice}
             onRoll={onRoll}
             onRollWithCounts={handleRollWithCounts}
+            rollModifier={rollModifier}
+            onRollModifierChange={setRollModifier}
             importState={characterImport}
             onImportFile={importFromFile}
             onResetImport={resetImport}
@@ -279,13 +1313,396 @@ function App() {
             onSelectSkill={setSelectedSkill}
             onPush={onPush}
             pushActionLabel={`Push ${pushableDiceCount} Dice`}
-            isPushDisabled={isRolling || !hasRolled || !canPush}
-            onClearDice={onClearDice}
+            isPushDisabled={isRolling || !hasRolled || !canPush || isActionSubmitPending}
+            onClearDice={handleClearDice}
             isClearDisabled={!canClearDice}
           />
         </div>
       </section>
     </main>
+  );
+}
+
+DiceRollerApp.propTypes = {
+  sessionSummary: PropTypes.shape({
+    connectionStatus: PropTypes.string.isRequired,
+    connectionTone: PropTypes.oneOf(["online", "pending", "error"]).isRequired,
+    roleLabel: PropTypes.string.isRequired,
+    sessionName: PropTypes.string.isRequired,
+    sceneStrain: PropTypes.number.isRequired,
+    sessionId: PropTypes.number,
+    selfTokenId: PropTypes.number,
+    selfDisplayName: PropTypes.string,
+  }),
+  sessionActions: PropTypes.shape({
+    submitRoll: PropTypes.func,
+    submitPush: PropTypes.func,
+  }),
+  sessionEvents: PropTypes.arrayOf(PropTypes.object),
+  gmControls: PropTypes.shape({
+    joiningEnabled: PropTypes.bool.isRequired,
+    players: PropTypes.arrayOf(PropTypes.object).isRequired,
+    rotateJoinLink: PropTypes.func,
+    setJoiningEnabled: PropTypes.func,
+    resetSceneStrain: PropTypes.func,
+    refreshPlayers: PropTypes.func,
+    revokePlayer: PropTypes.func,
+  }),
+  sessionConnectionMeta: PropTypes.shape({
+    status: PropTypes.string,
+    errorMessage: PropTypes.string,
+    onRetry: PropTypes.func,
+  }),
+};
+
+const resolveMultiplayerMode = ({
+  isJoinRoute,
+  sessionStatus,
+  hasSessionToken,
+}) => {
+  if (isJoinRoute) {
+    return "join";
+  }
+
+  if (sessionStatus === "auth_lost") {
+    return "auth_lost";
+  }
+
+  if (hasSessionToken) {
+    return "session";
+  }
+
+  return "host";
+};
+
+function MultiplayerAuthLostView({ onReset }) {
+  return (
+    <main className="app-shell join-shell" data-mode="auth_lost">
+      <section className="panel join-panel" aria-label="Session ended">
+        <header className="join-header">
+          <p className="eyebrow">Multiplayer</p>
+          <h1>Session Ended</h1>
+        </header>
+        <p className="panel-copy">
+          Your session token is no longer valid. Rejoin with a current invite link.
+        </p>
+        <button type="button" className="pool-action-button" onClick={onReset}>
+          Return to host/join
+        </button>
+      </section>
+    </main>
+  );
+}
+
+MultiplayerAuthLostView.propTypes = {
+  onReset: PropTypes.func.isRequired,
+};
+
+const normalizeSessionText = (value, fallback) => {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue || fallback;
+};
+
+const normalizeSessionCount = (value) => {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+
+  return Math.floor(numeric);
+};
+
+const buildConnectionSummary = (sessionState) => {
+  if (sessionState?.status === "error" || sessionState?.status === "auth_lost") {
+    return {
+      label: "Connection Error",
+      tone: "error",
+    };
+  }
+
+  if (sessionState?.status === "loading") {
+    return {
+      label: "Connecting",
+      tone: "pending",
+    };
+  }
+
+  if (sessionState?.pollingStatus === "backoff") {
+    return {
+      label: "Reconnecting",
+      tone: "pending",
+    };
+  }
+
+  if (sessionState?.pollingStatus === "running" || sessionState?.status === "ready") {
+    return {
+      label: "Connected",
+      tone: "online",
+    };
+  }
+
+  return {
+    label: "Initializing",
+    tone: "pending",
+  };
+};
+
+function SessionView({
+  hasSessionToken,
+  sessionState,
+  bootstrapFromAuth,
+  submitRoll,
+  submitPush,
+  rotateJoinLink,
+  setJoiningEnabled,
+  resetSceneStrain,
+  refreshPlayers,
+  revokePlayer,
+}) {
+  useEffect(() => {
+    if (!hasSessionToken || sessionState?.status !== "idle") {
+      return;
+    }
+
+    void bootstrapFromAuth();
+  }, [bootstrapFromAuth, hasSessionToken, sessionState?.status]);
+
+  const connectionSummary = buildConnectionSummary(sessionState);
+  const roleLabel =
+    sessionState?.role === "gm"
+      ? "GM"
+      : sessionState?.role === "player"
+        ? "Player"
+        : "Unknown";
+  const sessionName = normalizeSessionText(
+    sessionState?.sessionName,
+    normalizeSessionCount(sessionState?.sessionId) > 0
+      ? `Session ${normalizeSessionCount(sessionState?.sessionId)}`
+      : "Session",
+  );
+  const sceneStrain = normalizeSessionCount(sessionState?.sceneStrain);
+  const resolvedSessionActions = useMemo(() => {
+    if (typeof submitRoll !== "function" && typeof submitPush !== "function") {
+      return null;
+    }
+
+    return {
+      submitRoll,
+      submitPush,
+    };
+  }, [submitPush, submitRoll]);
+  const resolvedGmControls = useMemo(() => {
+    if (sessionState?.role !== "gm") {
+      return null;
+    }
+
+    return {
+      joiningEnabled: Boolean(sessionState?.joiningEnabled),
+      players: Array.isArray(sessionState?.players) ? sessionState.players : [],
+      rotateJoinLink,
+      setJoiningEnabled,
+      resetSceneStrain,
+      refreshPlayers,
+      revokePlayer,
+    };
+  }, [
+    refreshPlayers,
+    resetSceneStrain,
+    revokePlayer,
+    rotateJoinLink,
+    sessionState?.joiningEnabled,
+    sessionState?.players,
+    sessionState?.role,
+    setJoiningEnabled,
+  ]);
+
+  return (
+    <DiceRollerApp
+      sessionSummary={{
+        sessionId: normalizeSessionCount(sessionState?.sessionId),
+        connectionStatus: connectionSummary.label,
+        connectionTone: connectionSummary.tone,
+        roleLabel,
+        sessionName,
+        sceneStrain,
+        selfTokenId:
+          normalizeSessionPlayerTokenId(sessionState?.self?.tokenId) ?? undefined,
+        selfDisplayName: normalizeSessionPlayerDisplayName(
+          sessionState?.self?.displayName,
+        ),
+      }}
+      sessionActions={resolvedSessionActions}
+      sessionEvents={Array.isArray(sessionState?.events) ? sessionState.events : []}
+      gmControls={resolvedGmControls}
+      sessionConnectionMeta={{
+        status: sessionState?.status ?? "idle",
+        errorMessage: normalizeSessionText(sessionState?.errorMessage, ""),
+        onRetry: bootstrapFromAuth,
+      }}
+    />
+  );
+}
+
+SessionView.propTypes = {
+  hasSessionToken: PropTypes.bool.isRequired,
+  sessionState: PropTypes.shape({
+    status: PropTypes.string,
+    pollingStatus: PropTypes.string,
+    role: PropTypes.string,
+    sessionId: PropTypes.number,
+    sessionName: PropTypes.string,
+    sceneStrain: PropTypes.number,
+    players: PropTypes.arrayOf(PropTypes.object),
+  }),
+  bootstrapFromAuth: PropTypes.func.isRequired,
+  submitRoll: PropTypes.func,
+  submitPush: PropTypes.func,
+  rotateJoinLink: PropTypes.func,
+  setJoiningEnabled: PropTypes.func,
+  resetSceneStrain: PropTypes.func,
+  refreshPlayers: PropTypes.func,
+  revokePlayer: PropTypes.func,
+};
+
+function App() {
+  const [pathname, setPathname] = useState(getBrowserPathname);
+  const [hash, setHash] = useState(getBrowserHash);
+  const [authVersion, setAuthVersion] = useState(0);
+  const isJoinRoute = isJoinSessionPath(pathname);
+  const joinToken = parseJoinTokenFromHash(hash);
+  const {
+    sessionState,
+    bootstrapFromAuth,
+    submitRoll,
+    submitPush,
+    rotateJoinLink,
+    setJoiningEnabled,
+    resetSceneStrain,
+    refreshPlayers,
+    revokePlayer,
+    resetSession,
+  } = useMultiplayerSession();
+  const sessionAuth = useMemo(() => getSessionAuth(), [authVersion]);
+  const hasSessionToken = Boolean(sessionAuth?.sessionToken?.trim());
+  const mode = resolveMultiplayerMode({
+    isJoinRoute,
+    sessionStatus: sessionState?.status,
+    hasSessionToken,
+  });
+
+  const syncLocation = useCallback(() => {
+    setPathname(getBrowserPathname());
+    setHash(getBrowserHash());
+  }, []);
+
+  const navigateToPath = useCallback(
+    (nextPath) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      window.history.pushState({}, "", nextPath);
+      syncLocation();
+    },
+    [syncLocation],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    window.addEventListener("popstate", syncLocation);
+    window.addEventListener("hashchange", syncLocation);
+
+    return () => {
+      window.removeEventListener("popstate", syncLocation);
+      window.removeEventListener("hashchange", syncLocation);
+    };
+  }, [syncLocation]);
+
+  const exitJoinRoute = useCallback(() => {
+    clearLocationHash(window);
+    navigateToPath(getSessionPathFromJoinPath(pathname));
+  }, [navigateToPath, pathname]);
+
+  const handleJoinSuccess = useCallback(
+    (authState) => {
+      setSessionAuth(authState);
+      setAuthVersion((current) => current + 1);
+      clearLocationHash(window);
+      navigateToPath(getSessionPathFromJoinPath(pathname));
+    },
+    [navigateToPath, pathname],
+  );
+
+  const handleHostSuccess = useCallback((authState) => {
+    setSessionAuth(authState);
+    setAuthVersion((current) => current + 1);
+  }, []);
+
+  const handleResetAfterAuthLost = useCallback(() => {
+    resetSession();
+    setAuthVersion((current) => current + 1);
+    clearLocationHash(window);
+    navigateToPath(getSessionPathFromJoinPath(pathname));
+  }, [navigateToPath, pathname, resetSession]);
+
+  const handleUseInviteLink = useCallback(
+    (resolvedJoinToken) => {
+      const nextPath = buildJoinPathWithToken(pathname, resolvedJoinToken);
+
+      if (!nextPath) {
+        return;
+      }
+
+      navigateToPath(nextPath);
+    },
+    [navigateToPath, pathname],
+  );
+
+  if (mode === "join") {
+    return (
+      <JoinSessionView
+        joinToken={joinToken}
+        onJoinSuccess={handleJoinSuccess}
+        onExitJoin={exitJoinRoute}
+        onUseInviteLink={handleUseInviteLink}
+      />
+    );
+  }
+
+  if (mode === "auth_lost") {
+    return <MultiplayerAuthLostView onReset={handleResetAfterAuthLost} />;
+  }
+
+  if (mode === "host") {
+    return (
+      <HostSessionView
+        onHostSuccess={handleHostSuccess}
+        onUseInviteLink={handleUseInviteLink}
+      />
+    );
+  }
+
+  return (
+    <SessionView
+      hasSessionToken={hasSessionToken}
+      sessionState={sessionState}
+      bootstrapFromAuth={bootstrapFromAuth}
+      submitRoll={submitRoll}
+      submitPush={submitPush}
+      rotateJoinLink={rotateJoinLink}
+      setJoiningEnabled={setJoiningEnabled}
+      resetSceneStrain={resetSceneStrain}
+      refreshPlayers={refreshPlayers}
+      revokePlayer={revokePlayer}
+    />
   );
 }
 

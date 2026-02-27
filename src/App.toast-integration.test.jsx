@@ -7,12 +7,33 @@ import { DEFAULT_DICE_RESULT_DURATION_MS } from "./components/toast/constants.js
 
 const mocks = vi.hoisted(() => ({
   rollSessionState: null,
+  sessionAuth: {
+    sessionToken: "player-token-1",
+  },
   diceResult: vi.fn(),
   noop: vi.fn(),
 }));
 
 vi.mock("./components/DicePoolPanel.jsx", () => ({
-  default: () => <div data-testid="dice-pool-panel" />,
+  default: ({ rollModifier, onRollModifierChange, onClearDice }) => (
+    <div data-testid="dice-pool-panel">
+      <output data-testid="roll-modifier-value">{String(rollModifier)}</output>
+      <button
+        type="button"
+        data-testid="set-modifier-button"
+        onClick={() => onRollModifierChange?.(3)}
+      >
+        Set Modifier
+      </button>
+      <button
+        type="button"
+        data-testid="clear-dice-button"
+        onClick={() => onClearDice?.()}
+      >
+        Clear Dice
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("./components/ErrorBoundary.jsx", () => ({
@@ -69,6 +90,21 @@ vi.mock("./hooks/useToast.js", () => ({
     confirm: () => Promise.resolve(false),
     diceResult: mocks.diceResult,
   }),
+}));
+
+vi.mock("./hooks/useMultiplayerSession.js", () => ({
+  useMultiplayerSession: () => ({
+    sessionState: {
+      status: "idle",
+    },
+    bootstrapFromAuth: mocks.noop,
+    resetSession: mocks.noop,
+  }),
+}));
+
+vi.mock("./lib/session-auth.js", () => ({
+  getSessionAuth: () => mocks.sessionAuth,
+  setSessionAuth: mocks.noop,
 }));
 
 const createRollSessionState = (overrides = {}) => ({
@@ -281,6 +317,41 @@ test("does not render the legacy tray results panel", () => {
   app.unmount();
 });
 
+test("clear dice resets roll modifier to zero", () => {
+  const app = createContainer();
+  const onClearDice = vi.fn();
+
+  mocks.rollSessionState = createRollSessionState({
+    onClearDice,
+  });
+  app.render(<App />);
+
+  const modifierValue = app.container.querySelector(
+    '[data-testid="roll-modifier-value"]',
+  );
+  const setModifierButton = app.container.querySelector(
+    '[data-testid="set-modifier-button"]',
+  );
+  const clearDiceButton = app.container.querySelector(
+    '[data-testid="clear-dice-button"]',
+  );
+
+  expect(modifierValue?.textContent).toBe("0");
+
+  act(() => {
+    setModifierButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(modifierValue?.textContent).toBe("3");
+
+  act(() => {
+    clearDiceButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(modifierValue?.textContent).toBe("0");
+  expect(onClearDice).toHaveBeenCalledTimes(1);
+
+  app.unmount();
+});
+
 test("exposes remote roll ingestion seam and emits remote actor toast payload", () => {
   const app = createContainer();
 
@@ -304,7 +375,7 @@ test("exposes remote roll ingestion seam and emits remote actor toast payload", 
 
   expect(mocks.diceResult).toHaveBeenCalledTimes(1);
   expect(mocks.diceResult).toHaveBeenCalledWith({
-    title: "Watcher pushed",
+    title: "Push Result - Watcher",
     message: "3 successes, 2 banes (with Strain)",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });

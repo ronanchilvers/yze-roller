@@ -154,9 +154,10 @@ test("buildRollToastPayload formats local roll and push messages", () => {
   assert.equal(pushed.total, "1");
 });
 
-test("buildRollToastPayload formats remote actor titles using actorId", () => {
+test("buildRollToastPayload formats remote actor titles using result label and actor name", () => {
   const remote = buildRollToastPayload({
     source: "remote",
+    actorName: "Fred",
     actorId: "Watcher",
     action: "push",
     successes: 2,
@@ -174,10 +175,10 @@ test("buildRollToastPayload formats remote actor titles using actorId", () => {
     occurredAt: 3333,
   });
 
-  assert.equal(remote.title, "Watcher pushed");
+  assert.equal(remote.title, "Push Result - Fred");
   assert.equal(remote.breakdown, "2 successes, 0 banes");
   assert.equal(remote.total, "2");
 
-  assert.equal(fallbackActor.title, "Another player rolled");
+  assert.equal(fallbackActor.title, "Roll Result - Another player");
   assert.equal(fallbackActor.breakdown, "0 successes, 3 banes (with Strain)");
 });
