@@ -66,3 +66,9 @@ if (!variable.trim()) return
 ## Git workflow
 - No commits unless explicitly requested.
 - Describe what changed and why; list follow-up steps when relevant.
+
+## Refactor execution protocol
+- For multi-step refactors, keep each step independently shippable.
+- For each step, follow this sequence: extract or move code, add/update focused tests, then verify with `test`, `build`, and `lint` (after user permission for `npq-hero`/`npm` commands).
+- Keep behavior unchanged unless the step explicitly targets behavior changes.
+- Record durable findings in project memory files (`docs/MEMORY.md` and `docs/DECISIONS.md`) when architecture, ownership, or invariants change.

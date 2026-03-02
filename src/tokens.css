@@ -1,0 +1,61 @@
+/* ── Design tokens ─────────────────────────────────────────────────── */
+
+:root {
+  --ink-900: #152226;
+  --ink-700: #2f474e;
+  --surface-100: #f7f4ec;
+  --surface-200: #ece6da;
+  --panel: #fffdf8;
+  --accent: #bc5e2c;
+  --accent-strong: #944117;
+  --line: #d7cebd;
+  --strain-line: #721e1b;
+  --shadow: 0 14px 30px rgba(37, 40, 26, 0.12);
+  --focus-ring: #1d6f68;
+  --button-text: #fffaf5;
+  --input-bg: #fffffd;
+  --skip-link-bg: #ffffff;
+  --strain-surface-1: #edd3d3;
+  --strain-surface-2: #e08d8b;
+  --summary-surface: #fffdf8;
+  --summary-item-row: #fff7e9;
+  --summary-pill-bg: #fffaf2;
+  --error-bg: #fff5f1;
+  --warning-bg: #fffbe8;
+  --spinner-border: rgba(47, 71, 78, 0.2);
+  --spinner-border-top: rgba(47, 71, 78, 0.7);
+  --shell-glow-a: #fffdf0;
+  --shell-glow-b: #e3efe7;
+  --tab-active-bg: #ffffff;
+  --tab-active-shadow: 0 3px 8px rgba(22, 32, 28, 0.12);
+}
+
+:root[data-theme="dark"] {
+  --ink-900: #eff5f7;
+  --ink-700: #b8c7ce;
+  --surface-100: #0d1418;
+  --surface-200: #172229;
+  --panel: #1a252c;
+  --accent: #e08a56;
+  --accent-strong: #c06c3b;
+  --line: #32444d;
+  --strain-line: #ffc1b9;
+  --shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+  --focus-ring: #72d4cc;
+  --button-text: #1a2329;
+  --input-bg: #0f171c;
+  --skip-link-bg: #223038;
+  --strain-surface-1: #5e3436;
+  --strain-surface-2: #874446;
+  --summary-surface: #1d2b33;
+  --summary-item-row: #25343c;
+  --summary-pill-bg: #2c3d47;
+  --error-bg: #45292c;
+  --warning-bg: #4a3a24;
+  --spinner-border: rgba(184, 199, 206, 0.22);
+  --spinner-border-top: rgba(184, 199, 206, 0.78);
+  --shell-glow-a: #1f2e36;
+  --shell-glow-b: #21352f;
+  --tab-active-bg: #2a3942;
+  --tab-active-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+}

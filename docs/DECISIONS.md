@@ -1,5 +1,29 @@
 # Decisions
 
+- **2026-02-27 — Split `App.css` into focused stylesheet modules with a barrel import**
+  - **Context:** `src/App.css` contained over one thousand lines spanning tokens, layout, top bar, join flow, dice panel, stage, and responsive overrides in a single file.
+  - **Decision:** Partition styles by responsibility into dedicated files (`tokens`, `layout`, component-scoped CSS, and responsive overrides) and keep `src/App.css` as ordered `@import` barrel.
+  - **Consequences:** Styling ownership is clearer and future UI changes can be made in smaller, feature-local files without changing selector behavior.
+  - **Alternatives considered:** Keep one monolithic stylesheet with only comment sections (rejected due to high navigation and review cost).
+
+- **2026-02-27 — Use secure RNG for multiplayer poll error-backoff jitter**
+  - **Context:** `buildErrorBackoffIntervalMs` defaulted its jitter source to `Math.random()`, while the project already standardizes on `cryptoRandom` for fairness/security-sensitive randomness.
+  - **Decision:** Default `buildErrorBackoffIntervalMs` jitter input to `cryptoRandom()` in `src/lib/multiplayer-normalize.js`.
+  - **Consequences:** Backoff jitter now follows the same secure-random baseline as other runtime randomness paths, and tests can still inject deterministic jitter values via the optional function parameter.
+  - **Alternatives considered:** Keep `Math.random()` for non-gameplay backoff jitter (rejected to reduce inconsistent randomness sources).
+
+- **2026-02-27 — Split multiplayer session polling and normalization into dedicated modules**
+  - **Context:** `useMultiplayerSession.js` mixed transport polling loop mechanics, payload normalization/validation helpers, and feature actions in one file.
+  - **Decision:** Move reusable multiplayer helper logic into `src/lib/multiplayer-normalize.js` and isolate timer/ref polling machinery in `src/hooks/useEventPolling.js`, with `useMultiplayerSession` retaining orchestration and public action API.
+  - **Consequences:** Polling behavior remains unchanged with existing tests still passing, while future tuning (timeouts, backoff, cursor handling) can be made in one focused hook/library surface.
+  - **Alternatives considered:** Keep helper/polling code inline in `useMultiplayerSession` until a later rewrite (rejected due to continued file-size and coupling pressure).
+
+- **2026-02-27 — Decompose `App.jsx` phase-1 concerns into focused modules/hooks/components**
+  - **Context:** `App.jsx` accumulated multiplayer normalization, toast ingestion, action submission, GM action orchestration, and session/auth-lost view concerns in one file, making iterative changes risky.
+  - **Decision:** Extract pure normalizers/action helpers into `src/lib/*`, side-effect flows into `src/hooks/*`, and multiplayer shell/panel views into `src/components/*`, while keeping `DiceRollerApp` in `App.jsx` for Phase 1.
+  - **Consequences:** Behavior remains stable with passing tests/build/lint, and remaining Phase 2+ decomposition can proceed with smaller, isolated units.
+  - **Alternatives considered:** Keep all logic in `App.jsx` until a single large rewrite (rejected due to higher regression risk and harder review checkpoints).
+
 - **2026-02-14 — Character import schema and validation**
   - **Context:** Importing character JSON with `attribute_*` and `skill_*` fields, canonical skills defined by mapping file. Attributes are required and must be integers ≥ 1; skills default to 0 if missing or empty.
   - **Decision:** Enforce required attributes and integer-only dice values. Treat missing/empty skill values as 0 without failing import. Ignore non-canonical skills.

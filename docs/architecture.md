@@ -1,118 +1,107 @@
 # Architecture Overview
 
-This document describes the core architecture of the Year Zero Engine Dice Roller, including data flow, module responsibilities, and key contracts between modules.
+This document describes the current module structure for the Year Zero Dice Roller after the 2026-02-27 refactor phases.
 
----
+## High-Level Runtime Flows
 
-## High-Level Data Flow
+### 1) Local roll flow (solo + session mode core)
+1. `DicePoolPanel` collects dice counts/modifier and triggers roll/push actions.
+2. `useRollSession` builds a `rollRequest` and exposes roll state.
+3. `DiceTray3D` runs the 3D simulation and resolves outcomes.
+4. `useSettlementDetection` detects when all dice settle and calls `onRollResolved`.
+5. `useRollSession` updates `currentRoll`/history; `useStrainTracker` updates local strain when authoritative multiplayer strain is not active.
 
-1. **User input (dice selection)**
-   - UI input changes are handled by `usePoolSelection`.
-   - Values are normalized and persisted to localStorage.
+### 2) Multiplayer flow
+1. `App` resolves mode (`host`, `join`, `session`, `auth_lost`) from route + in-memory auth.
+2. `HostSessionView` and `JoinSessionView` create/join sessions and write auth via `session-auth`.
+3. `useMultiplayerSession` bootstraps from `/session`, starts polling via `useEventPolling`, and exposes submit/GM actions.
+4. `useSessionActionSubmit` syncs local roll/push outcomes to multiplayer events with dedupe and pending/error state.
+5. `useRemoteRollToasts` emits remote roll/push toasts while suppressing self echoes.
+6. `SessionView` renders multiplayer connection summary and wraps `DiceRollerApp`.
 
-2. **Roll orchestration**
-   - `useRollSession` builds the dice pool and creates `rollRequest` objects.
-   - `rollRequest` is passed into `DiceTray3D` for simulation.
+## Top-Level Composition
 
-3. **3D simulation**
-   - `DiceTray3D` runs physics (cannon-es) and resolves final face values.
-   - It emits `onRollResolved` with the final dice results.
+- `src/App.jsx`
+  - Orchestrates routing/mode transitions.
+  - Builds `sessionSummary`, `sessionActions`, `gmControls`, `sessionConnectionMeta`.
+  - Wires presentational shells: `SessionView`, `MultiplayerAuthLostView`, `HostSessionView`, `JoinSessionView`.
+- `src/main.jsx`
+  - App bootstrap + toast provider wiring.
 
-4. **Session state update**
-   - `useRollSession` consumes `onRollResolved` and updates `currentRoll` / `previousRoll`.
-   - Strain points are updated via `useStrainTracker`.
+## Hooks (`src/hooks`)
 
-5. **Rendering and history**
-   - `App` renders the current summary and a history of rolls.
+- `useRollSession` — core roll/push lifecycle and history.
+- `useSettlementDetection` — physics settlement detection extracted from `DiceTray3D`.
+- `usePoolSelection` — local dice-count persistence and normalization.
+- `useStrainTracker` — local strain state and reset/increment logic.
+- `useThemePreference` — `light`/`dark`/`system` preference persistence and resolution.
+- `useCharacterImport` — character JSON ingestion and selected attribute/skill state.
+- `useMultiplayerSession` — snapshot bootstrap, event state, submit actions, GM actions.
+- `useEventPolling` — timer/ref polling loop mechanics for `/events`.
+- `useSessionActionSubmit` — local outcome -> session action sync with dedupe.
+- `useRemoteRollToasts` — remote/session roll toast bridge and dedupe.
+- `useToast`, `useLatestRef` — utility hooks.
 
----
+## Library Modules (`src/lib`)
 
-## Module Responsibilities
+### Gameplay and rendering
+- `dice.js`, `roll-session.js`, `strain-points.js`, `roll-modifier.js`
+- `physics.js`, `face-mapping.js`, `viewport-bounds.js`, `textures.js`, `dice-visuals.js`
+- `secure-random.js` (fairness-critical RNG)
 
-### Lib Modules (`src/lib/`)
-- `dice.js` — Pool building, rolling, pushing, normalization presets
-- `secure-random.js` — Cryptographically secure RNG (`cryptoRandom`)
-- `physics.js` — Physics helpers and spawn/launch behavior
-- `textures.js` — Canvas-based texture generation for dice and felt
-- `face-mapping.js` — Quaternion ↔ face mapping
-- `viewport-bounds.js` — Camera-to-bounds calculation
-- `roll-session.js` — Roll/push state transitions and validation helpers
-- `strain-points.js` — Strain point normalization and bane handling
-- `pool-persistence.js` — localStorage persistence with schema guards
-- `dice-visuals.js` — Die color mapping
+### Multiplayer domain
+- `api-client.js`, `app-config.js`
+- `session-auth.js`, `session-snapshot.js`
+- `multiplayer-normalize.js`, `multiplayer-event-reducer.js`
+- `session-event-normalize.js`, `session-action-helpers.js`, `roll-toast-event.js`
+- `join-session-route.js`, `clipboard.js`
 
-### Hooks (`src/hooks/`)
-- `usePoolSelection` — Dice count state + localStorage persistence
-- `useRollSession` — Roll orchestration and history
-- `useStrainTracker` — Strain point state management
-- `useLatestRef` — Ref synchronization utility
+### Persistence / preferences
+- `pool-persistence.js`, `theme-preference.js`
 
-### Components (`src/components/`)
-- `DiceTray3D` — 3D physics simulation and rendering
+## Components (`src/components`)
 
----
+- `DiceTray3D.jsx` — 3D dice simulation and rendering.
+- `DicePoolPanel.jsx` — dice pool controls, manual/import tabs, action row.
+- `SessionView.jsx` — multiplayer session wrapper + bootstrap handoff.
+- `MultiplayerAuthLostView.jsx` — auth-lost recovery shell.
+- `GmControlsPanel.jsx` — GM-only controls surface.
+- `HostSessionView.jsx`, `JoinSessionView.jsx` — multiplayer entry flows.
+- `toast/*` — provider/container/constants for toast notifications.
+- `ErrorBoundary.jsx`, `LucideIcon.jsx` — shared UI utilities.
+
+## Styling Architecture
+
+Global app styles are split into focused files and imported via `src/App.css`:
+
+- `src/tokens.css` — design tokens and theme overrides.
+- `src/layout.css` — application shell and structural layout.
+- `src/components/JoinSessionView.css` — join-mode styles.
+- `src/components/TopBar.css` — top bar, role/session indicators, strain pill.
+- `src/components/DicePoolPanel.css` — panel, tabs, form controls, action row.
+- `src/components/DiceStage.css` — dice stage / canvas layer styles.
+- `src/responsive.css` — responsive overrides.
+
+Toast styling remains in `src/components/toast/Toast.css`.
 
 ## Key Contracts
 
-### `rollRequest` Contract
-Created by `useRollSession`, consumed by `DiceTray3D`.
+### `rollRequest` (local simulation)
+Produced by `useRollSession`, consumed by `DiceTray3D`.
+- `key`, `action`, `dice`, `rerollIds`, `startedAt`
 
-Shape:
-- `key`: unique identifier
-- `action`: `"roll"` or `"push"`
-- `dice`: array of dice objects (id/type/face)
-- `rerollIds`: array of dice ids to re-roll
-- `startedAt`: timestamp (ms)
+### `onRollResolved` (simulation output)
+Produced by `DiceTray3D`, consumed by `useRollSession`.
+- `key`, `action`, `rolledAt`, `dice`
 
-Validation:
-- `isValidRollRequest` in `roll-session.js` (runtime validation at boundary)
+### Session action payloads
+Built from resolved local outcomes and submitted via `useMultiplayerSession`:
+- `roll`: `{ successes, banes }`
+- `push`: `{ successes, banes, strain }`
 
-### `onRollResolved` Contract
-Emitted by `DiceTray3D`, consumed by `useRollSession`.
+### Event normalization boundary
+Incoming session events are normalized through `session-event-normalize` and reduced through `multiplayer-event-reducer` before UI consumption.
 
-Shape:
-- `key`: matches the originating request
-- `action`: `"roll"` or `"push"`
-- `rolledAt`: timestamp (ms)
-- `dice`: array of resolved dice (id/type/face/wasPushed)
+## Security and Trust Boundaries
 
-Validation:
-- `isValidResolution` in `roll-session.js`
-
----
-
-## Strain Flow
-
-1. `useStrainTracker` maintains `normalizedStrainPoints`.
-2. `buildCountsWithStrain` merges strain points into the dice pool.
-3. `useRollSession` updates strain based on new banes via `calculateBaneIncrease`.
-
----
-
-## Year Zero Engine Dice Mechanics (Quick Primer)
-
-- **Dice types:** Attribute, Skill, Strain
-- **Successes:** face value `6`
-- **Banes:** face value `1`
-- **Push:** Re-roll non-1, non-6 results (faces 2–5)
-- **Strain:** banes on strain dice are tracked and can affect future rolls
-
----
-
-## Security Reference
-
-Threat model and trust boundaries are documented in:
-- `docs/security.md`
-
-This includes:
-- RNG guarantees
-- localStorage validation
-- component boundary validation
-- CSP details
-
----
-
-## Notes
-
-- `DiceTray3D` resolves outcomes via physics simulation; `dice.js` roll helpers are used mainly for headless testing and integration tests.
-- The visual layer is intentionally decoupled from state orchestration; data flows through explicit contracts.
+See `docs/security.md` for CSP, RNG guarantees, and client-side validation boundaries.

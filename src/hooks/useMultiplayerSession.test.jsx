@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, useEffect } from "react";
+import PropTypes from "prop-types";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 import { ApiClientError } from "../lib/api-client.js";
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   isApiClientError: vi.fn(),
   getSessionAuth: vi.fn(),
   clearSessionAuth: vi.fn(),
+  cryptoRandom: vi.fn(() => 0.5),
 }));
 
 vi.mock("../lib/api-client.js", async () => {
@@ -33,6 +35,10 @@ vi.mock("../lib/api-client.js", async () => {
 vi.mock("../lib/session-auth.js", () => ({
   getSessionAuth: (...args) => mocks.getSessionAuth(...args),
   clearSessionAuth: (...args) => mocks.clearSessionAuth(...args),
+}));
+
+vi.mock("../lib/secure-random.js", () => ({
+  cryptoRandom: (...args) => mocks.cryptoRandom(...args),
 }));
 
 const createContainer = () => {
@@ -61,6 +67,10 @@ function CaptureMultiplayerSession({ onCapture }) {
   return null;
 }
 
+CaptureMultiplayerSession.propTypes = {
+  onCapture: PropTypes.func.isRequired,
+};
+
 const getLatestHookValue = (capture) => capture.mock.calls.at(-1)?.[0];
 
 const buildSessionSnapshot = (overrides = {}) => ({
@@ -85,6 +95,7 @@ afterEach(() => {
   mocks.isApiClientError.mockReset();
   mocks.getSessionAuth.mockReset();
   mocks.clearSessionAuth.mockReset();
+  mocks.cryptoRandom.mockClear();
   vi.clearAllTimers();
   vi.useRealTimers();
   document.body.innerHTML = "";

@@ -18,14 +18,11 @@ import {
   clampBodyInside,
   spawnBodyInViewport,
   launchRollingBody,
-  nudgeEdgeLeaningDie,
 } from "../lib/physics.js";
-import {
-  topFaceFromQuaternion,
-  quaternionForFaceValue,
-} from "../lib/face-mapping.js";
+import { quaternionForFaceValue } from "../lib/face-mapping.js";
 import { isValidRollRequest } from "../lib/roll-session.js";
 import { calculateBounds } from "../lib/viewport-bounds.js";
+import { useSettlementDetection } from "../hooks/useSettlementDetection.js";
 
 const CHAMFER_SEGMENTS = 3;
 const CHAMFER_RADIUS = DIE_SIZE * 0.08;
@@ -96,6 +93,22 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   useEffect(() => {
     onRollResolvedRef.current = onRollResolved;
   }, [onRollResolved]);
+
+  const evaluateSettlement = useSettlementDetection({
+    bodiesRef,
+    boundsRef,
+    pendingSimulationRef,
+    settleFramesRef,
+    onRollResolvedRef,
+    minSettleMs: MIN_SETTLE_MS,
+    maxSettleMs: MAX_SETTLE_MS,
+    settleLinearSpeed: SETTLE_LINEAR_SPEED,
+    settleAngularSpeed: SETTLE_ANGULAR_SPEED,
+    settleFramesTarget: SETTLE_FRAMES,
+    settleFaceAlignment: SETTLE_FACE_ALIGNMENT,
+    edgeNudgeCooldownMs: EDGE_NUDGE_COOLDOWN_MS,
+    edgeNudgeMaxAttempts: EDGE_NUDGE_MAX_ATTEMPTS,
+  });
 
   useEffect(() => {
     camera.position.set(0, CAMERA_Y, CAMERA_Z);
@@ -399,109 +412,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
       );
     }
 
-    const pending = pendingSimulationRef.current;
-
-    if (!pending || pending.reported) {
-      return;
-    }
-
-    const elapsed = performance.now() - pending.startedAt;
-    let isMoving = false;
-    let hasEdgeLeaningDie = false;
-    const edgeLeaningBodies = [];
-
-    for (const id of pending.rerollSet) {
-      const bodyState = bodiesRef.current.get(id);
-
-      if (!bodyState) {
-        continue;
-      }
-
-      const linearSpeedSq = bodyState.body.velocity.lengthSquared();
-      const angularSpeedSq = bodyState.body.angularVelocity.lengthSquared();
-      const { alignment } = topFaceFromQuaternion(bodyState.body.quaternion);
-
-      if (
-        linearSpeedSq > SETTLE_LINEAR_SPEED * SETTLE_LINEAR_SPEED ||
-        angularSpeedSq > SETTLE_ANGULAR_SPEED * SETTLE_ANGULAR_SPEED
-      ) {
-        isMoving = true;
-        break;
-      }
-
-      if (alignment < SETTLE_FACE_ALIGNMENT) {
-        hasEdgeLeaningDie = true;
-        edgeLeaningBodies.push(bodyState.body);
-      }
-    }
-
-    if (isMoving) {
-      settleFramesRef.current = 0;
-    } else {
-      settleFramesRef.current += 1;
-    }
-
-    let allSettled =
-      elapsed >= MIN_SETTLE_MS &&
-      settleFramesRef.current >= SETTLE_FRAMES &&
-      !hasEdgeLeaningDie;
-
-    if (
-      hasEdgeLeaningDie &&
-      !isMoving &&
-      pending.nudgeAttempts < EDGE_NUDGE_MAX_ATTEMPTS &&
-      elapsed >= MIN_SETTLE_MS &&
-      performance.now() - pending.lastNudgeAt >= EDGE_NUDGE_COOLDOWN_MS
-    ) {
-      for (const body of edgeLeaningBodies) {
-        nudgeEdgeLeaningDie(body);
-      }
-      pending.lastNudgeAt = performance.now();
-      pending.nudgeAttempts += 1;
-      settleFramesRef.current = 0;
-      allSettled = false;
-    } else if (
-      elapsed >= MAX_SETTLE_MS &&
-      hasEdgeLeaningDie &&
-      pending.nudgeAttempts >= EDGE_NUDGE_MAX_ATTEMPTS
-    ) {
-      allSettled = true;
-    } else if (elapsed >= MAX_SETTLE_MS && !hasEdgeLeaningDie) {
-      allSettled = true;
-    }
-
-    if (!allSettled) {
-      return;
-    }
-
-    const resolvedDice = pending.order.map((id) => {
-      const bodyState = bodiesRef.current.get(id);
-      const resolvedFace = bodyState
-        ? topFaceFromQuaternion(bodyState.body.quaternion)
-        : null;
-      const faceValue = resolvedFace?.faceValue ?? 1;
-
-      if (bodyState) {
-        clampBodyInside(bodyState.body, boundsRef.current, false);
-        freezeBodyInPlace(bodyState.body);
-      }
-
-      return {
-        id,
-        type: bodyState?.type ?? DICE_TYPE.ATTRIBUTE,
-        face: faceValue,
-        wasPushed: pending.action === "push" && pending.rerollSet.has(id),
-      };
-    });
-
-    pending.reported = true;
-    pendingSimulationRef.current = null;
-    onRollResolvedRef.current?.({
-      key: pending.key,
-      action: pending.action,
-      rolledAt: pending.rolledAt,
-      dice: resolvedDice,
-    });
+    evaluateSettlement();
   });
 
   const diceList = Array.isArray(dice) ? dice : [];

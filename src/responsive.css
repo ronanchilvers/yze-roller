@@ -1,0 +1,125 @@
+/* ── Responsive overrides ──────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  .top-bar {
+    flex-direction: column;
+  }
+
+  .top-bar-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .theme-select {
+    width: 100%;
+  }
+
+  .strain-status-group {
+    width: 100%;
+  }
+
+  .strain-status-group > * {
+    width: 100%;
+  }
+
+  .control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pool-action-button {
+    grid-column: 1 / -1;
+  }
+
+  .import-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .session-connection-error-row {
+    grid-template-columns: 1fr;
+  }
+
+  .session-connection-error-row .join-secondary {
+    width: 100%;
+  }
+
+  .gm-controls-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-controls-link-row {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-controls-link-row .join-secondary {
+    width: 100%;
+  }
+
+  .gm-player-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gm-player-item .join-secondary {
+    width: 100%;
+  }
+
+  .import-controls .pool-action-button {
+    width: 100%;
+  }
+
+  .import-status-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .import-clear-button {
+    align-self: flex-end;
+  }
+
+  .import-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel-action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .join-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .secondary-action-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 550px) {
+  .app-shell {
+    min-width: 0;
+  }
+
+  .import-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .import-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .import-summary-section {
+    grid-column: auto;
+  }
+
+  .import-summary-section:nth-child(3) {
+    margin-top: -1.5rem;
+  }
+
+  .import-summary-section:nth-child(3) .import-summary-title {
+    display: none;
+  }
+
+  .import-clear-button {
+    width: 100%;
+    align-self: stretch;
+  }
+}
