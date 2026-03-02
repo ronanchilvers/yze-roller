@@ -6,7 +6,7 @@ import { parseJoinTokenFromInviteInput } from "../lib/join-session-route.js";
 const mapCreateSessionErrorCodeToMessage = (code) => {
   switch (code) {
     case "VALIDATION_ERROR":
-      return "Session name must be between 1 and 128 characters.";
+      return "Session name must be 1-128 chars and GM name must be 1-64 chars.";
     case "RATE_LIMITED":
       return "Too many session creation attempts. Please wait and try again.";
     default:
@@ -39,6 +39,7 @@ function HostSessionView({
   onHostSuccess = () => {},
   onUseInviteLink = () => {},
 }) {
+  const [gmName, setGmName] = useState("");
   const [sessionName, setSessionName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,9 +53,15 @@ function HostSessionView({
       return;
     }
 
-    const trimmedName = sessionName.trim();
+    const trimmedGmName = gmName.trim();
+    const trimmedSessionName = sessionName.trim();
 
-    if (!trimmedName) {
+    if (!trimmedGmName) {
+      setErrorMessage("Enter a GM name to create a game.");
+      return;
+    }
+
+    if (!trimmedSessionName) {
       setErrorMessage("Enter a session name to create a game.");
       return;
     }
@@ -64,7 +71,8 @@ function HostSessionView({
 
     try {
       const response = await apiPost("/sessions", {
-        session_name: trimmedName,
+        session_name: trimmedSessionName,
+        display_name: trimmedGmName,
       });
       const authState = normalizeCreateSessionSuccessData(response.data);
 
@@ -107,6 +115,20 @@ function HostSessionView({
         </header>
 
         <form className="join-form" onSubmit={handleSubmit}>
+          <label htmlFor="gmName" className="join-label">
+            GM Name
+          </label>
+          <input
+            id="gmName"
+            name="gmName"
+            type="text"
+            value={gmName}
+            onInput={(event) => setGmName(event.target.value)}
+            maxLength={64}
+            autoComplete="nickname"
+            className="join-input"
+          />
+
           <label htmlFor="sessionName" className="join-label">
             Session Name
           </label>

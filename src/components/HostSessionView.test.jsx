@@ -49,6 +49,7 @@ test("renders host game form", () => {
   });
 
   expect(container.textContent).toContain("Host Game");
+  expect(container.querySelector("#gmName")).not.toBeNull();
   expect(container.querySelector("#sessionName")).not.toBeNull();
   expect(container.querySelector("#inviteLinkInput")).not.toBeNull();
   expect(container.querySelector('button[type="submit"]')).not.toBeNull();
@@ -73,8 +74,14 @@ test("creates session and emits normalized gm auth state on success", async () =
     root.render(<HostSessionView onHostSuccess={onHostSuccess} />);
   });
 
+  const gmNameInput = container.querySelector("#gmName");
   const sessionNameInput = container.querySelector("#sessionName");
   const submitButton = container.querySelector('button[type="submit"]');
+
+  act(() => {
+    gmNameInput.value = " GM Nova ";
+    gmNameInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
 
   act(() => {
     sessionNameInput.value = "Streetwise Night";
@@ -87,6 +94,7 @@ test("creates session and emits normalized gm auth state on success", async () =
 
   expect(mocks.apiPost).toHaveBeenCalledWith("/sessions", {
     session_name: "Streetwise Night",
+    display_name: "GM Nova",
   });
   expect(onHostSuccess).toHaveBeenCalledWith({
     sessionToken: "gm-token-1",
@@ -114,6 +122,12 @@ test("shows mapped error when session creation fails", async () => {
   const submitButton = container.querySelector('button[type="submit"]');
 
   act(() => {
+    const gmNameInput = container.querySelector("#gmName");
+    gmNameInput.value = "GM Nova";
+    gmNameInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  act(() => {
     sessionNameInput.value = "x";
     sessionNameInput.dispatchEvent(new Event("input", { bubbles: true }));
   });
@@ -123,8 +137,33 @@ test("shows mapped error when session creation fails", async () => {
   });
 
   expect(container.textContent).toContain(
-    "Session name must be between 1 and 128 characters.",
+    "Session name must be 1-128 chars and GM name must be 1-64 chars.",
   );
+
+  unmount();
+});
+
+test("blocks submit when gm name is blank", async () => {
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<HostSessionView />);
+  });
+
+  const sessionNameInput = container.querySelector("#sessionName");
+  const submitButton = container.querySelector('button[type="submit"]');
+
+  act(() => {
+    sessionNameInput.value = "Streetwise Night";
+    sessionNameInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await act(async () => {
+    submitButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(mocks.apiPost).not.toHaveBeenCalled();
+  expect(container.textContent).toContain("Enter a GM name to create a game.");
 
   unmount();
 });

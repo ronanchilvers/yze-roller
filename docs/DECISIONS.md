@@ -1,5 +1,11 @@
 # Decisions
 
+- **2026-03-02 - Use `display_name` on `POST /api/sessions` for GM identity capture**
+  - **Context:** Host session creation currently accepts only `session_name`, so GMs cannot set their player-facing name at creation time, while player join already standardizes on `display_name`.
+  - **Decision:** Plan and implement host creation UI/request updates so `POST /api/sessions` includes a required trimmed `display_name` (1..64), reusing the same field name as join flow and updating contract docs/tests accordingly.
+  - **Consequences:** Identity naming stays consistent across host and join flows, and session bootstrap/roster/event displays can rely on one canonical display-name field.
+  - **Alternatives considered:** Add a host-only field name such as `gm_name` (rejected to avoid schema divergence and extra client/server mapping logic).
+
 - **2026-02-27 — Split `App.css` into focused stylesheet modules with a barrel import**
   - **Context:** `src/App.css` contained over one thousand lines spanning tokens, layout, top bar, join flow, dice panel, stage, and responsive overrides in a single file.
   - **Decision:** Partition styles by responsibility into dedicated files (`tokens`, `layout`, component-scoped CSS, and responsive overrides) and keep `src/App.css` as ordered `@import` barrel.
