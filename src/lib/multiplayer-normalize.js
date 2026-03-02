@@ -1,4 +1,5 @@
 import { apiGet, isApiClientError } from "./api-client.js";
+import { cryptoRandom } from "./secure-random.js";
 
 export const EVENTS_POLL_LIMIT = 10;
 export const DEFAULT_POLL_INTERVAL_MS = 500;
@@ -206,7 +207,7 @@ export const scaleIdleInterval = (currentIntervalMs) =>
 
 export const buildErrorBackoffIntervalMs = (
   currentIntervalMs,
-  randomValue = Math.random(),
+  randomValue = cryptoRandom(),
 ) => {
   const numericRandom = Number.isFinite(randomValue) ? randomValue : 0.5;
   const clampedRandom = Math.min(1, Math.max(0, numericRandom));

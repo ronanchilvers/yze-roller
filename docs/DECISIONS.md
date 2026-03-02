@@ -1,5 +1,17 @@
 # Decisions
 
+- **2026-02-27 — Split `App.css` into focused stylesheet modules with a barrel import**
+  - **Context:** `src/App.css` contained over one thousand lines spanning tokens, layout, top bar, join flow, dice panel, stage, and responsive overrides in a single file.
+  - **Decision:** Partition styles by responsibility into dedicated files (`tokens`, `layout`, component-scoped CSS, and responsive overrides) and keep `src/App.css` as ordered `@import` barrel.
+  - **Consequences:** Styling ownership is clearer and future UI changes can be made in smaller, feature-local files without changing selector behavior.
+  - **Alternatives considered:** Keep one monolithic stylesheet with only comment sections (rejected due to high navigation and review cost).
+
+- **2026-02-27 — Use secure RNG for multiplayer poll error-backoff jitter**
+  - **Context:** `buildErrorBackoffIntervalMs` defaulted its jitter source to `Math.random()`, while the project already standardizes on `cryptoRandom` for fairness/security-sensitive randomness.
+  - **Decision:** Default `buildErrorBackoffIntervalMs` jitter input to `cryptoRandom()` in `src/lib/multiplayer-normalize.js`.
+  - **Consequences:** Backoff jitter now follows the same secure-random baseline as other runtime randomness paths, and tests can still inject deterministic jitter values via the optional function parameter.
+  - **Alternatives considered:** Keep `Math.random()` for non-gameplay backoff jitter (rejected to reduce inconsistent randomness sources).
+
 - **2026-02-27 — Split multiplayer session polling and normalization into dedicated modules**
   - **Context:** `useMultiplayerSession.js` mixed transport polling loop mechanics, payload normalization/validation helpers, and feature actions in one file.
   - **Decision:** Move reusable multiplayer helper logic into `src/lib/multiplayer-normalize.js` and isolate timer/ref polling machinery in `src/hooks/useEventPolling.js`, with `useMultiplayerSession` retaining orchestration and public action API.

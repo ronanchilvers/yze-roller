@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   isApiClientError: vi.fn(),
   getSessionAuth: vi.fn(),
   clearSessionAuth: vi.fn(),
+  cryptoRandom: vi.fn(() => 0.5),
 }));
 
 vi.mock("../lib/api-client.js", async () => {
@@ -34,6 +35,10 @@ vi.mock("../lib/api-client.js", async () => {
 vi.mock("../lib/session-auth.js", () => ({
   getSessionAuth: (...args) => mocks.getSessionAuth(...args),
   clearSessionAuth: (...args) => mocks.clearSessionAuth(...args),
+}));
+
+vi.mock("../lib/secure-random.js", () => ({
+  cryptoRandom: (...args) => mocks.cryptoRandom(...args),
 }));
 
 const createContainer = () => {
@@ -90,6 +95,7 @@ afterEach(() => {
   mocks.isApiClientError.mockReset();
   mocks.getSessionAuth.mockReset();
   mocks.clearSessionAuth.mockReset();
+  mocks.cryptoRandom.mockClear();
   vi.clearAllTimers();
   vi.useRealTimers();
   document.body.innerHTML = "";
