@@ -20,6 +20,89 @@
   gap: 0.6rem;
 }
 
+.gm-host-tools-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.gm-host-tools-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+}
+
+.gm-host-tools-toggle-icon {
+  display: block;
+}
+
+.gm-host-tools-dropdown {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  z-index: 31;
+  width: min(15rem, 88vw);
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 0.42rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.gm-host-tools-group {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.gm-host-tools-group + .gm-host-tools-group {
+  border-top: 1px solid var(--line);
+  padding-top: 0.42rem;
+  margin-top: 0.2rem;
+}
+
+.gm-host-tools-menu-item {
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--ink-900);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.42rem 0.5rem;
+  cursor: pointer;
+}
+
+.gm-host-tools-menu-item:hover {
+  background: var(--summary-pill-bg);
+}
+
+.gm-host-tools-menu-item:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
+.gm-host-tools-menu-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.gm-host-tools-link {
+  margin: 0;
+  color: var(--ink-700);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  padding: 0.15rem 0.5rem 0.3rem;
+}
+
+.gm-host-tools-link code {
+  font-size: 0.82rem;
+}
+
 .top-bar-actions {
   display: inline-flex;
   align-items: flex-start;
@@ -102,6 +185,18 @@
   margin-bottom: 0.4rem;
 }
 
+.panel-accordion-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel-accordion-toggle {
+  min-width: 4.3rem;
+  text-align: center;
+}
+
 .session-events-list {
   margin: 0;
   padding: 0;
@@ -146,7 +241,6 @@
 .role-pill-head {
   display: flex;
   align-items: center;
-  min-height: 1.5rem;
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -175,59 +269,9 @@
   margin-bottom: 1rem;
 }
 
-.gm-controls-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.6rem;
-}
-
-.gm-controls-pill {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.16rem 0.52rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--ink-700);
-  background: var(--summary-pill-bg);
-}
-
-.gm-controls-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem;
-}
-
-.gm-controls-link,
 .gm-controls-error,
 .gm-controls-message {
   margin: 0.7rem 0 0;
-}
-
-.gm-controls-link-row {
-  margin-top: 0.7rem;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: start;
-  gap: 0.6rem;
-}
-
-.gm-controls-link-row .gm-controls-link {
-  margin: 0;
-}
-
-.gm-controls-link-row .join-secondary {
-  white-space: nowrap;
-}
-
-.gm-controls-link code {
-  font-size: 0.85rem;
-  overflow-wrap: anywhere;
 }
 
 .gm-controls-error {
@@ -385,4 +429,3 @@ h2 {
 .strain-pill strong {
   font-size: 1.35rem;
 }
-

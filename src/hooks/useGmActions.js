@@ -47,7 +47,13 @@ export const useGmActions = ({ gmControls }) => {
           onSuccess(result);
         }
 
-        setGmActionMessage(successMessage);
+        const resolvedSuccessMessage =
+          typeof successMessage === "function" ? successMessage(result) : successMessage;
+        setGmActionMessage(
+          typeof resolvedSuccessMessage === "string"
+            ? resolvedSuccessMessage
+            : "GM action completed.",
+        );
       } catch {
         if (!isMountedRef.current) {
           return;
@@ -68,10 +74,29 @@ export const useGmActions = ({ gmControls }) => {
       return;
     }
 
+    const rotateAndCopyJoinLink = async () => {
+      const result = await gmControls.rotateJoinLink?.();
+
+      if (!result?.ok) {
+        return result;
+      }
+
+      const joinLink = typeof result?.joinLink === "string" ? result.joinLink.trim() : "";
+      const copied = await copyTextToClipboard(joinLink);
+
+      return {
+        ...result,
+        autoCopiedJoinLink: copied,
+      };
+    };
+
     void runGmAction(
       "rotate_join_link",
-      gmControls.rotateJoinLink,
-      "Join link rotated.",
+      rotateAndCopyJoinLink,
+      (result) =>
+        result?.autoCopiedJoinLink
+          ? "Join link rotated and copied."
+          : "Join link rotated. Unable to copy automatically.",
       (result) => {
         setRotatedJoinLink(
           typeof result?.joinLink === "string" ? result.joinLink.trim() : "",

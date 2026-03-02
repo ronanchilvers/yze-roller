@@ -3,6 +3,7 @@ import {
   lazy,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -43,6 +44,7 @@ import {
 } from "./lib/session-auth.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import GmControlsPanel from "./components/GmControlsPanel.jsx";
+import GmHostToolsMenu from "./components/GmHostToolsMenu.jsx";
 import HostSessionView from "./components/HostSessionView.jsx";
 import JoinSessionView from "./components/JoinSessionView.jsx";
 import MultiplayerAuthLostView from "./components/MultiplayerAuthLostView.jsx";
@@ -99,7 +101,9 @@ function DiceRollerApp({
   const [overrideCounts, setOverrideCounts] = useState(null);
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
   const [isRetryPending, setIsRetryPending] = useState(false);
+  const [isSessionEventsExpanded, setIsSessionEventsExpanded] = useState(false);
   const [rollModifier, setRollModifier] = useState(0);
+  const sessionEventsContentId = useId();
   const visibleSessionEvents = useMemo(
     () => normalizeSessionEventsForFeed(sessionEvents),
     [sessionEvents],
@@ -352,6 +356,18 @@ function DiceRollerApp({
                 />
               ) : null}
               <h1>{resolvedSessionName}</h1>
+              <GmHostToolsMenu
+                gmControls={gmControls}
+                gmPendingAction={gmPendingAction}
+                rotatedJoinLink={rotatedJoinLink}
+                onRotateJoinLink={handleRotateJoinLink}
+                onToggleJoining={handleToggleJoining}
+                onResetSceneStrain={handleResetSceneStrain}
+                onRefreshPlayers={handleRefreshPlayers}
+                onCopyJoinLink={() => {
+                  void handleCopyJoinLink();
+                }}
+              />
             </div>
           </div>
           <div className="top-bar-actions">
@@ -464,42 +480,50 @@ function DiceRollerApp({
           >
             <div className="session-events-head">
               <h2>Session Events</h2>
+              <button
+                type="button"
+                className="join-secondary panel-accordion-toggle"
+                aria-expanded={isSessionEventsExpanded}
+                aria-controls={sessionEventsContentId}
+                data-testid="session-events-toggle"
+                onClick={() => {
+                  setIsSessionEventsExpanded((current) => !current);
+                }}
+              >
+                {isSessionEventsExpanded ? "Hide" : "Show"}
+              </button>
             </div>
-            {visibleSessionEvents.length > 0 ? (
-              <ol className="session-events-list">
-                {visibleSessionEvents.map((event) => (
-                  <li
-                    key={event.id}
-                    className="session-event-item"
-                    data-testid="session-event-item"
-                  >
-                    <span className="session-event-id">#{event.id}</span>
-                    <span>{event.summary}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="panel-copy session-events-empty">
-                No multiplayer events yet.
-              </p>
-            )}
+            {isSessionEventsExpanded ? (
+              <div id={sessionEventsContentId} data-testid="session-events-content">
+                {visibleSessionEvents.length > 0 ? (
+                  <ol className="session-events-list">
+                    {visibleSessionEvents.map((event) => (
+                      <li
+                        key={event.id}
+                        className="session-event-item"
+                        data-testid="session-event-item"
+                      >
+                        <span className="session-event-id">#{event.id}</span>
+                        <span>{event.summary}</span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="panel-copy session-events-empty">
+                    No multiplayer events yet.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </section>
         ) : null}
 
         <GmControlsPanel
           gmControls={gmControls}
           gmPendingAction={gmPendingAction}
-          rotatedJoinLink={rotatedJoinLink}
           gmActionError={gmActionError}
           gmActionMessage={gmActionMessage}
           gmPlayers={gmPlayers}
-          onRotateJoinLink={handleRotateJoinLink}
-          onToggleJoining={handleToggleJoining}
-          onResetSceneStrain={handleResetSceneStrain}
-          onRefreshPlayers={handleRefreshPlayers}
-          onCopyJoinLink={() => {
-            void handleCopyJoinLink();
-          }}
           onRevokePlayer={handleRevokePlayer}
         />
 

@@ -619,6 +619,13 @@ test("session mode renders ordered multiplayer event feed entries", () => {
 
   app.render(<App />);
 
+  const sessionEventsToggle = app.container.querySelector(
+    '[data-testid="session-events-toggle"]',
+  );
+  act(() => {
+    sessionEventsToggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
   const feed = app.container.querySelector('[data-testid="session-events-feed"]');
   const items = Array.from(
     app.container.querySelectorAll('[data-testid="session-event-item"]'),
@@ -632,6 +639,64 @@ test("session mode renders ordered multiplayer event feed entries", () => {
   expect(items[1].textContent).toContain("rolled 2 successes, 1 banes");
   expect(items[2].textContent).toContain("#13");
   expect(items[2].textContent).toContain("Strain points were reset");
+
+  app.unmount();
+});
+
+test("session events panel toggles open and closed", async () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "player-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "player",
+    sessionName: "Streetwise Night",
+    sceneStrain: 4,
+    players: [{ tokenId: 1 }, { tokenId: 2 }],
+    events: [
+      {
+        id: 11,
+        type: "join",
+        payload: {
+          token_id: 31,
+          display_name: "Alice",
+        },
+        actor: {
+          token_id: 31,
+          display_name: "Alice",
+          role: "player",
+        },
+      },
+    ],
+  };
+
+  app.render(<App />);
+
+  const toggle = app.container.querySelector('[data-testid="session-events-toggle"]');
+
+  expect(app.container.querySelector('[data-testid="session-events-content"]')).toBeNull();
+  expect(app.container.querySelectorAll('[data-testid="session-event-item"]')).toHaveLength(0);
+  expect(toggle?.getAttribute("aria-expanded")).toBe("false");
+
+  await act(async () => {
+    toggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(app.container.querySelector('[data-testid="session-events-content"]')).not.toBeNull();
+  expect(app.container.querySelectorAll('[data-testid="session-event-item"]')).toHaveLength(1);
+  expect(toggle?.getAttribute("aria-expanded")).toBe("true");
+
+  await act(async () => {
+    toggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(app.container.querySelector('[data-testid="session-events-content"]')).toBeNull();
+  expect(app.container.querySelectorAll('[data-testid="session-event-item"]')).toHaveLength(0);
+  expect(toggle?.getAttribute("aria-expanded")).toBe("false");
 
   app.unmount();
 });
@@ -823,6 +888,111 @@ test("session mode only renders GM controls for gm role", () => {
   app.render(<App />);
 
   expect(app.container.querySelector('[data-testid="gm-controls-panel"]')).toBeNull();
+  expect(app.container.querySelector('[data-testid="gm-host-tools-toggle"]')).toBeNull();
+
+  app.unmount();
+});
+
+test("gm controls panel toggles open and closed", async () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "gm-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "gm",
+    sessionId: 7,
+    sessionName: "Streetwise Night",
+    joiningEnabled: true,
+    sceneStrain: 4,
+    players: [
+      { tokenId: 1, role: "gm", displayName: "GM" },
+      { tokenId: 31, role: "player", displayName: "Alice" },
+    ],
+  };
+
+  app.render(<App />);
+
+  const toggle = app.container.querySelector('[data-testid="gm-controls-toggle"]');
+
+  expect(app.container.querySelector('[data-testid="gm-controls-content"]')).toBeNull();
+  expect(app.container.querySelector('[data-testid="gm-player-list"]')).toBeNull();
+  expect(toggle?.getAttribute("aria-expanded")).toBe("false");
+
+  await act(async () => {
+    toggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(app.container.querySelector('[data-testid="gm-controls-content"]')).not.toBeNull();
+  expect(app.container.querySelector('[data-testid="gm-player-list"]')).not.toBeNull();
+  expect(toggle?.getAttribute("aria-expanded")).toBe("true");
+
+  await act(async () => {
+    toggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(app.container.querySelector('[data-testid="gm-controls-content"]')).toBeNull();
+  expect(app.container.querySelector('[data-testid="gm-player-list"]')).toBeNull();
+  expect(toggle?.getAttribute("aria-expanded")).toBe("false");
+
+  app.unmount();
+});
+
+test("gm host tools dropdown closes on outside click and Escape", async () => {
+  const app = createContainer();
+  mocks.sessionAuth = {
+    sessionToken: "gm-token-1",
+  };
+  mocks.multiplayerSessionState = {
+    status: "ready",
+    pollingStatus: "running",
+    role: "gm",
+    sessionId: 7,
+    sessionName: "Streetwise Night",
+    joiningEnabled: true,
+    sceneStrain: 4,
+    players: [
+      { tokenId: 1, role: "gm", displayName: "GM" },
+      { tokenId: 31, role: "player", displayName: "Alice" },
+    ],
+  };
+
+  app.render(<App />);
+
+  await act(async () => {
+    app.container
+      .querySelector('[data-testid="gm-host-tools-toggle"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(app.container.querySelector('[data-testid="gm-host-tools-menu"]')).not.toBeNull();
+
+  await act(async () => {
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(app.container.querySelector('[data-testid="gm-host-tools-menu"]')).toBeNull();
+
+  await act(async () => {
+    app.container
+      .querySelector('[data-testid="gm-host-tools-toggle"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(app.container.querySelector('[data-testid="gm-host-tools-menu"]')).not.toBeNull();
+
+  await act(async () => {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(app.container.querySelector('[data-testid="gm-host-tools-menu"]')).toBeNull();
 
   app.unmount();
 });
@@ -873,7 +1043,41 @@ test("session mode wires gm control actions and revoke player action", async () 
 
   app.render(<App />);
 
+  const openHostToolsMenu = async () => {
+    if (app.container.querySelector('[data-testid="gm-host-tools-menu"]')) {
+      return;
+    }
+
+    await act(async () => {
+      app.container
+        .querySelector('[data-testid="gm-host-tools-toggle"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+  };
+  const openGmControlsAccordion = async () => {
+    if (app.container.querySelector('[data-testid="gm-controls-content"]')) {
+      return;
+    }
+
+    await act(async () => {
+      app.container
+        .querySelector('[data-testid="gm-controls-toggle"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+  };
+
   expect(app.container.querySelector('[data-testid="gm-controls-panel"]')).not.toBeNull();
+  const gmPanel = app.container.querySelector('[data-testid="gm-controls-panel"]');
+  expect(gmPanel?.textContent).not.toContain("Host Tools");
+  expect(gmPanel?.querySelector('[data-testid="gm-rotate-link-button"]')).toBeNull();
+  expect(app.container.querySelector('[data-testid="gm-host-tools-toggle"]')).not.toBeNull();
+  await openGmControlsAccordion();
+
+  await openHostToolsMenu();
+
+  expect(app.container.querySelector('[data-testid="gm-host-tools-menu"]')).not.toBeNull();
   expect(app.container.textContent).toContain("Disable Joining");
 
   await act(async () => {
@@ -884,6 +1088,10 @@ test("session mode wires gm control actions and revoke player action", async () 
   });
   expect(mocks.rotateJoinLink).toHaveBeenCalledTimes(1);
   expect(app.container.querySelector('[data-testid="gm-action-pending"]')).not.toBeNull();
+  expect(app.container.querySelector('[data-testid="gm-host-tools-menu"]')).toBeNull();
+
+  await openHostToolsMenu();
+
   expect(
     app.container
       .querySelector('[data-testid="gm-joining-toggle-button"]')
@@ -898,7 +1106,14 @@ test("session mode wires gm control actions and revoke player action", async () 
     await rotateDeferred.promise;
   });
 
-  expect(app.container.textContent).toContain("Join link rotated.");
+  expect(app.container.textContent).toContain("Join link rotated and copied.");
+  expect(mocks.clipboardWriteText).toHaveBeenCalledTimes(1);
+  expect(mocks.clipboardWriteText).toHaveBeenCalledWith(
+    "https://api.example.com/join#join=abc123",
+  );
+
+  await openHostToolsMenu();
+
   expect(app.container.querySelector('[data-testid="gm-copy-link-button"]')).not.toBeNull();
 
   await act(async () => {
@@ -907,10 +1122,13 @@ test("session mode wires gm control actions and revoke player action", async () 
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await Promise.resolve();
   });
-  expect(mocks.clipboardWriteText).toHaveBeenCalledWith(
+  expect(mocks.clipboardWriteText).toHaveBeenLastCalledWith(
     "https://api.example.com/join#join=abc123",
   );
+  expect(mocks.clipboardWriteText).toHaveBeenCalledTimes(2);
   expect(app.container.textContent).toContain("Join link copied.");
+
+  await openHostToolsMenu();
 
   await act(async () => {
     app.container
@@ -920,6 +1138,8 @@ test("session mode wires gm control actions and revoke player action", async () 
   });
   expect(mocks.setJoiningEnabled).toHaveBeenCalledWith(false);
 
+  await openHostToolsMenu();
+
   await act(async () => {
     app.container
       .querySelector('[data-testid="gm-reset-strain-button"]')
@@ -927,6 +1147,8 @@ test("session mode wires gm control actions and revoke player action", async () 
     await Promise.resolve();
   });
   expect(mocks.resetSceneStrain).toHaveBeenCalledTimes(1);
+
+  await openHostToolsMenu();
 
   await act(async () => {
     app.container

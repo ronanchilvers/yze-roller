@@ -42,15 +42,12 @@
     width: 100%;
   }
 
-  .gm-controls-actions {
-    grid-template-columns: 1fr;
+  .gm-host-tools-dropdown {
+    right: auto;
+    left: 0;
   }
 
-  .gm-controls-link-row {
-    grid-template-columns: 1fr;
-  }
-
-  .gm-controls-link-row .join-secondary {
+  .gm-host-tools-menu-item {
     width: 100%;
   }
 
