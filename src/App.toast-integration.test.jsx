@@ -63,7 +63,8 @@ vi.mock("./hooks/useThemePreference.js", () => ({
 vi.mock("./hooks/useStrainTracker.js", () => ({
   useStrainTracker: () => ({
     normalizedStrainPoints: 0,
-    onResetStrain: mocks.noop,
+    onIncrementStrain: mocks.noop,
+    onDecrementStrain: mocks.noop,
     applyBaneIncrement: mocks.noop,
   }),
 }));

@@ -12,7 +12,8 @@ import {
  *   strainPoints: number,
  *   normalizedStrainPoints: number,
  *   setStrainPoints: (value: number | ((prev: number) => number)) => void,
- *   onResetStrain: () => void,
+ *   onIncrementStrain: () => void,
+ *   onDecrementStrain: () => void,
  *   applyBaneIncrement: (baneCount: number) => void
  * }}
  */
@@ -21,8 +22,16 @@ export const useStrainTracker = () => {
 
   const normalizedStrainPoints = normalizeStrainPoints(strainPoints);
 
-  const onResetStrain = () => {
-    setStrainPoints(0);
+  const onIncrementStrain = () => {
+    setStrainPoints((current) =>
+      normalizeStrainPoints(normalizeStrainPoints(current) + 1),
+    );
+  };
+
+  const onDecrementStrain = () => {
+    setStrainPoints((current) =>
+      normalizeStrainPoints(normalizeStrainPoints(current) - 1),
+    );
   };
 
   const applyBaneIncrement = (baneCount) => {
@@ -39,7 +48,8 @@ export const useStrainTracker = () => {
     strainPoints,
     normalizedStrainPoints,
     setStrainPoints,
-    onResetStrain,
+    onIncrementStrain,
+    onDecrementStrain,
     applyBaneIncrement,
   };
 };

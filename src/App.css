@@ -161,7 +161,7 @@ h2 {
 
 .strain-pill {
   display: grid;
-  gap: 0.08rem;
+  gap: 0.3rem;
   min-width: 150px;
   padding: 0.65rem 0.8rem;
   border: 1px solid var(--strain-line);
@@ -173,8 +173,8 @@ h2 {
 .strain-pill-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.45rem;
+  justify-content: center;
+  gap: 0.35rem;
 }
 
 .strain-pill span {
@@ -183,25 +183,37 @@ h2 {
   letter-spacing: 0.08em;
 }
 
-.strain-reset-button {
+.strain-stepper {
+  display: grid;
+  grid-template-columns: auto minmax(1.8rem, auto) auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.strain-adjust-button {
   border: 1px solid var(--strain-line);
   background: var(--summary-pill-bg);
   color: var(--strain-line);
   border-radius: 0.45rem;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.6rem;
+  height: 1.6rem;
   line-height: 1;
   padding: 0;
   cursor: pointer;
+  font: inherit;
+  font-weight: 700;
 }
 
-.strain-reset-button:disabled {
+.strain-adjust-button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
 .strain-pill strong {
   font-size: 1.35rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Content grid & panels ─────────────────────────────────────────── */
@@ -349,7 +361,7 @@ h2 {
 .panel-reset-button:focus-visible,
 .number-field input:focus-visible,
 .modifier-slider:focus-visible,
-.strain-reset-button:focus-visible,
+.strain-adjust-button:focus-visible,
 .pool-tab:focus-visible,
 .theme-select select:focus-visible,
 .import-summary-item:focus-visible {

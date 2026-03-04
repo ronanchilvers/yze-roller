@@ -65,3 +65,9 @@
   - **Decision:** Keep manual input fields as draft strings and run normalization/commit only when the manual `Roll Dice` action is triggered.
   - **Consequences:** Users can clear and retype values naturally; persisted pool counts and roll execution still use normalized numeric bounds.
   - **Alternatives considered:** Keep on-change normalization and rely on cursor UX workarounds (rejected due to poor editing ergonomics).
+
+- **2026-03-04 — Replace strain reset pill with editable stepper**
+  - **Context:** The top-bar strain display exposed only a reset action, but users needed direct manual control over the current strain dice count.
+  - **Decision:** Rename the widget label to `Strain Dice` and replace reset with explicit decrement/increment (`-`/`+`) controls flanking a centered value.
+  - **Consequences:** Strain can now be adjusted one die at a time from the top bar; decrement is clamped at zero through `useStrainTracker` normalization helpers.
+  - **Alternatives considered:** Keep reset-only controls plus manual input field (rejected for slower interaction and unnecessary UI complexity).
