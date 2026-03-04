@@ -86,6 +86,7 @@ const DicePhysicsScene = ({ dice, rollRequest, onRollResolved }) => {
   const materialSets = useMemo(
     () => ({
       [DICE_TYPE.ATTRIBUTE]: createMaterialSet(DICE_TYPE.ATTRIBUTE),
+      [DICE_TYPE.KEY_ATTRIBUTE]: createMaterialSet(DICE_TYPE.KEY_ATTRIBUTE),
       [DICE_TYPE.SKILL]: createMaterialSet(DICE_TYPE.SKILL),
       [DICE_TYPE.STRAIN]: createMaterialSet(DICE_TYPE.STRAIN),
       [DICE_TYPE.MODIFIER]: createMaterialSet(DICE_TYPE.MODIFIER),

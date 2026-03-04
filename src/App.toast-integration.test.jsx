@@ -12,8 +12,40 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("./components/DicePoolPanel.jsx", () => ({
-  default: ({ onClearDice }) => (
+  default: ({ onClearDice, onPrimaryAction, onRollWithCounts }) => (
     <div data-testid="dice-pool-panel">
+      <button
+        type="button"
+        data-testid="roll-with-key-button"
+        onClick={() =>
+          onRollWithCounts?.({
+            attributeDice: 4,
+            skillDice: 2,
+            isKeyAttributeRoll: true,
+          })
+        }
+      >
+        Roll With Key
+      </button>
+      <button
+        type="button"
+        data-testid="roll-no-key-button"
+        onClick={() =>
+          onRollWithCounts?.({
+            attributeDice: 4,
+            skillDice: 2,
+          })
+        }
+      >
+        Roll Without Key
+      </button>
+      <button
+        type="button"
+        data-testid="primary-roll-button"
+        onClick={() => onPrimaryAction?.()}
+      >
+        Primary Roll
+      </button>
       <button
         type="button"
         data-testid="clear-dice-button"
@@ -325,6 +357,48 @@ test("clear dice resets roll modifier to zero", () => {
   });
   expect(modifierValue?.textContent).toBe("0");
   expect(onClearDice).toHaveBeenCalledTimes(1);
+
+  app.unmount();
+});
+
+test("import roll with key attribute requests bonus key attribute die", () => {
+  const app = createContainer();
+  const onRoll = vi.fn();
+
+  mocks.rollSessionState = createRollSessionState({
+    onRoll,
+  });
+  app.render(<App />);
+
+  const rollWithKeyButton = app.container.querySelector(
+    '[data-testid="roll-with-key-button"]',
+  );
+  act(() => {
+    rollWithKeyButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(onRoll).toHaveBeenCalledWith({ includeKeyAttributeDie: true });
+
+  app.unmount();
+});
+
+test("import roll without key attribute requests a standard roll", () => {
+  const app = createContainer();
+  const onRoll = vi.fn();
+
+  mocks.rollSessionState = createRollSessionState({
+    onRoll,
+  });
+  app.render(<App />);
+
+  const rollNoKeyButton = app.container.querySelector(
+    '[data-testid="roll-no-key-button"]',
+  );
+  act(() => {
+    rollNoKeyButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(onRoll).toHaveBeenCalledWith({ includeKeyAttributeDie: false });
 
   app.unmount();
 });

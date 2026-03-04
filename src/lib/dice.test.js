@@ -27,6 +27,7 @@ test("normalizeDiceCount enforces bounds and handles malformed input", () => {
 test("sanitizePoolCounts guards invalid structures with safe defaults", () => {
   assert.deepEqual(sanitizePoolCounts(null), {
     attributeDice: 1,
+    keyAttributeDice: 0,
     skillDice: 0,
     strainDice: 0,
     modifierDice: 0,
@@ -40,6 +41,26 @@ test("sanitizePoolCounts guards invalid structures with safe defaults", () => {
     }),
     {
       attributeDice: 1,
+      keyAttributeDice: 0,
+      skillDice: 0,
+      strainDice: 0,
+      modifierDice: 0,
+    },
+  );
+});
+
+test("sanitizePoolCounts allows zero regular attribute dice when key attribute die is present", () => {
+  assert.deepEqual(
+    sanitizePoolCounts({
+      attributeDice: 0,
+      keyAttributeDice: 1,
+      skillDice: 0,
+      strainDice: 0,
+      modifierDice: 0,
+    }),
+    {
+      attributeDice: 0,
+      keyAttributeDice: 1,
       skillDice: 0,
       strainDice: 0,
       modifierDice: 0,
@@ -144,6 +165,7 @@ test("buildDicePool creates expected number of typed dice", () => {
 test("buildDicePool includes modifier dice when requested", () => {
   const pool = buildDicePool({
     attributeDice: 1,
+    keyAttributeDice: 0,
     skillDice: 1,
     strainDice: 0,
     modifierDice: 2,
@@ -155,6 +177,46 @@ test("buildDicePool includes modifier dice when requested", () => {
       .filter((die) => die.type === DICE_TYPE.MODIFIER)
       .map((die) => die.id),
     ["modifier-1", "modifier-2"],
+  );
+});
+
+test("buildDicePool includes key attribute dice when requested", () => {
+  const pool = buildDicePool({
+    attributeDice: 1,
+    keyAttributeDice: 1,
+    skillDice: 0,
+    strainDice: 0,
+    modifierDice: 0,
+  });
+
+  assert.equal(
+    pool.filter((die) => die.type === DICE_TYPE.KEY_ATTRIBUTE).length,
+    1,
+  );
+  assert.deepEqual(
+    pool
+      .filter((die) => die.type === DICE_TYPE.KEY_ATTRIBUTE)
+      .map((die) => die.id),
+    ["key-attribute-1"],
+  );
+});
+
+test("buildDicePool preserves zero regular attribute dice with key attribute die", () => {
+  const pool = buildDicePool({
+    attributeDice: 0,
+    keyAttributeDice: 1,
+    skillDice: 0,
+    strainDice: 0,
+    modifierDice: 0,
+  });
+
+  assert.equal(
+    pool.filter((die) => die.type === DICE_TYPE.ATTRIBUTE).length,
+    0,
+  );
+  assert.equal(
+    pool.filter((die) => die.type === DICE_TYPE.KEY_ATTRIBUTE).length,
+    1,
   );
 });
 
@@ -250,6 +312,7 @@ test("pushPool is non-throwing for malformed input", () => {
 test("sanitizePoolCounts ignores prototype pollution attempts", () => {
   const maliciousInput = {
     attributeDice: 5,
+    keyAttributeDice: 2,
     skillDice: 2,
     __proto__: { polluted: true },
     constructor: { name: "FakeConstructor" },
@@ -260,6 +323,7 @@ test("sanitizePoolCounts ignores prototype pollution attempts", () => {
   // Should return expected values
   assert.deepEqual(sanitized, {
     attributeDice: 5,
+    keyAttributeDice: 1,
     skillDice: 2,
     strainDice: 0,
     modifierDice: 0,

@@ -36,8 +36,19 @@ const getSkillButton = (container, skillName) => {
   return match ? match.querySelector("button") : null;
 };
 
+const getAttributeButton = (container, attributeName) => {
+  const items = Array.from(
+    container.querySelectorAll(".import-summary-content li"),
+  );
+  const match = items.find((item) => item.textContent?.includes(attributeName));
+  return match ? match.querySelector("button") : null;
+};
+
 const baseCharacter = {
   name: 'Bessie "Mope" Collins',
+  archetype: "Card Twister",
+  keyAttributeKey: "empathy",
+  keyAttributeLabel: "Empathy",
   attributes: {
     strength: 1,
     agility: 2,
@@ -294,8 +305,36 @@ test("switching to import tab shows fields and actions for a loaded character", 
 
   expect(container.querySelector("#characterImport")).not.toBeNull();
   expect(container.querySelector(".import-summary")).not.toBeNull();
+  expect(container.querySelector(".import-character-name")?.textContent).toBe(
+    'Bessie "Mope" Collins - Card Twister',
+  );
   expect(container.querySelectorAll(".import-summary-item").length).toBeGreaterThan(0);
   expect(getButtonByText(container, "Clear Character")).toBeDefined();
+
+  unmount();
+});
+
+test("highlights the imported key attribute in the attribute summary", () => {
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<TestHarness />);
+  });
+
+  const importTab = getButtonByText(container, "Import Character");
+  act(() => {
+    importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  const keyLabel = container.querySelector(
+    ".import-summary-attribute-label.is-key-attribute",
+  );
+  expect(keyLabel?.textContent?.trim()).toBe("Empathy");
+  const keyCountButton = getAttributeButton(container, "Empathy");
+  expect(keyCountButton?.textContent?.trim()).toBe("5");
+  expect(keyCountButton?.classList.contains("is-key-attribute-count")).toBe(
+    true,
+  );
 
   unmount();
 });
@@ -322,6 +361,7 @@ test("selecting a skill auto-selects the mapped attribute and locks attribute se
   expect(onRollWithCounts).toHaveBeenCalledWith({
     attributeDice: 2,
     skillDice: 3,
+    isKeyAttributeRoll: false,
   });
 
   unmount();
@@ -348,6 +388,72 @@ test("roll from import tab uses attribute and skill dice counts", () => {
   expect(onRollWithCounts).toHaveBeenCalledWith({
     attributeDice: 3,
     skillDice: 2,
+    isKeyAttributeRoll: false,
+  });
+
+  unmount();
+});
+
+test("skill rows show mapped attributes without brackets and with distinct attribute labels", () => {
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<TestHarness />);
+  });
+
+  const importTab = getButtonByText(container, "Import Character");
+  act(() => {
+    importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  const skillLabels = Array.from(
+    container.querySelectorAll(".import-summary-skill-label"),
+  ).map((node) => node.textContent?.trim());
+  const attributeLabels = Array.from(
+    container.querySelectorAll(".import-summary-skill-attribute"),
+  ).map((node) => node.textContent?.trim());
+  const groupedLabels = Array.from(
+    container.querySelectorAll(".import-summary-skill-label-group"),
+  ).map((node) => node.textContent ?? "");
+
+  expect(skillLabels).toContain("Sneak");
+  expect(skillLabels).toContain("Streetwise");
+  expect(skillLabels).toContain("Hoodwink");
+  expect(attributeLabels).toContain("Agility");
+  expect(attributeLabels).toContain("Wits");
+  expect(attributeLabels).toContain("Empathy");
+  expect(groupedLabels).toContain("SneakAgility");
+  expect(groupedLabels).toContain("StreetwiseWits");
+  expect(groupedLabels).toContain("HoodwinkEmpathy");
+  expect(groupedLabels.some((value) => value.includes("("))).toBe(false);
+  expect(groupedLabels.some((value) => value.includes(")"))).toBe(false);
+  expect(groupedLabels.some((value) => value.includes("-"))).toBe(false);
+
+  unmount();
+});
+
+test("rolling a key attribute includes key attribute roll flag", () => {
+  const onRollWithCounts = vi.fn();
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
+  });
+
+  const importTab = getButtonByText(container, "Import Character");
+  act(() => {
+    importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  const empathyButton = getAttributeButton(container, "Empathy");
+  act(() => {
+    empathyButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(onRollWithCounts).toHaveBeenCalledWith({
+    attributeDice: 4,
+    skillDice: 0,
+    isKeyAttributeRoll: true,
   });
 
   unmount();

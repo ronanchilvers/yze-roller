@@ -8,11 +8,56 @@ export const REQUIRED_ATTRIBUTES = Object.freeze({
   wits: "Wits",
   empathy: "Empathy",
 });
+const FALLBACK_ARCHETYPE = "Unknown Archetype";
 
 const normalizeKey = (value) =>
   String(value ?? "")
     .trim()
     .toLowerCase();
+
+const normalizeArchetype = (value) => {
+  const archetype = String(value ?? "").trim();
+  return archetype || FALLBACK_ARCHETYPE;
+};
+
+const ATTRIBUTE_KEYS = Object.keys(REQUIRED_ATTRIBUTES);
+
+const normalizeKeyAttribute = (value) => {
+  const normalized = normalizeKey(value);
+  if (!normalized) {
+    return {
+      keyAttributeKey: null,
+      keyAttributeLabel: null,
+      warning: null,
+    };
+  }
+
+  if (ATTRIBUTE_KEYS.includes(normalized)) {
+    return {
+      keyAttributeKey: normalized,
+      keyAttributeLabel: REQUIRED_ATTRIBUTES[normalized],
+      warning: null,
+    };
+  }
+
+  const labelMatch =
+    ATTRIBUTE_KEYS.find(
+      (key) => REQUIRED_ATTRIBUTES[key].toLowerCase() === normalized,
+    ) ?? null;
+  if (!labelMatch) {
+    return {
+      keyAttributeKey: null,
+      keyAttributeLabel: null,
+      warning: `Unrecognized key attribute "${String(value)}"; key attribute bonus disabled.`,
+    };
+  }
+
+  return {
+    keyAttributeKey: labelMatch,
+    keyAttributeLabel: REQUIRED_ATTRIBUTES[labelMatch],
+    warning: null,
+  };
+};
 
 const toInteger = (value) => {
   if (typeof value === "number" && Number.isInteger(value)) {
@@ -135,6 +180,15 @@ export const parseCharacterImport = (
   const errors = [];
   const warnings = [];
   const lookup = buildLookup(source);
+  const archetype = normalizeArchetype(lookup.get("archetype"));
+  const {
+    keyAttributeKey,
+    keyAttributeLabel,
+    warning: keyAttributeWarning,
+  } = normalizeKeyAttribute(lookup.get("attribute"));
+  if (keyAttributeWarning) {
+    warnings.push(keyAttributeWarning);
+  }
 
   const attributes = {};
   for (const [attributeKey, label] of Object.entries(REQUIRED_ATTRIBUTES)) {
@@ -207,6 +261,9 @@ export const parseCharacterImport = (
     warnings,
     character: {
       name: buildDisplayName(source),
+      archetype,
+      keyAttributeKey,
+      keyAttributeLabel,
       attributes,
       skills: normalizedSkills,
       skillAttributes,
