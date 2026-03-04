@@ -48,7 +48,7 @@ export const formatRollOutcomeSummary = (input) => {
   const source = input && typeof input === "object" ? input : {};
   const successes = normalizeCount(source.successes);
   const banes = normalizeCount(source.banes);
-  const withStrain = Boolean(source.hasStrain) ? " (with Strain)" : "";
+  const withStrain = source.hasStrain ? " (with Strain)" : "";
   return `${successes} successes, ${banes} banes${withStrain}`;
 };
 
