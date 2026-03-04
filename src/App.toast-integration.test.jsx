@@ -12,16 +12,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("./components/DicePoolPanel.jsx", () => ({
-  default: ({ rollModifier, onRollModifierChange, onClearDice }) => (
+  default: ({ onClearDice }) => (
     <div data-testid="dice-pool-panel">
-      <output data-testid="roll-modifier-value">{String(rollModifier)}</output>
-      <button
-        type="button"
-        data-testid="set-modifier-button"
-        onClick={() => onRollModifierChange?.(3)}
-      >
-        Set Modifier
-      </button>
       <button
         type="button"
         data-testid="clear-dice-button"
@@ -63,7 +55,8 @@ vi.mock("./hooks/useThemePreference.js", () => ({
 vi.mock("./hooks/useStrainTracker.js", () => ({
   useStrainTracker: () => ({
     normalizedStrainPoints: 0,
-    onResetStrain: mocks.noop,
+    onIncrementStrain: mocks.noop,
+    onDecrementStrain: mocks.noop,
     applyBaneIncrement: mocks.noop,
   }),
 }));
@@ -309,10 +302,10 @@ test("clear dice resets roll modifier to zero", () => {
   app.render(<App />);
 
   const modifierValue = app.container.querySelector(
-    '[data-testid="roll-modifier-value"]',
+    '[aria-label="Current modifier dice"] strong',
   );
-  const setModifierButton = app.container.querySelector(
-    '[data-testid="set-modifier-button"]',
+  const incrementModifierButton = app.container.querySelector(
+    '[aria-label="Increase modifier"]',
   );
   const clearDiceButton = app.container.querySelector(
     '[data-testid="clear-dice-button"]',
@@ -321,9 +314,11 @@ test("clear dice resets roll modifier to zero", () => {
   expect(modifierValue?.textContent).toBe("0");
 
   act(() => {
-    setModifierButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    incrementModifierButton.dispatchEvent(
+      new MouseEvent("click", { bubbles: true }),
+    );
   });
-  expect(modifierValue?.textContent).toBe("3");
+  expect(modifierValue?.textContent).toBe("+1");
 
   act(() => {
     clearDiceButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
