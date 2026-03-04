@@ -56,6 +56,8 @@ function App() {
 
   const [overrideCounts, setOverrideCounts] = useState(null);
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
+  const [pendingIncludeKeyAttributeDie, setPendingIncludeKeyAttributeDie] =
+    useState(false);
   const [rollModifier, setRollModifier] = useState(0);
   const normalizedRollModifier = normalizeRollModifier(rollModifier);
   const formattedRollModifier =
@@ -163,12 +165,20 @@ function App() {
       return;
     }
 
-    setOverrideCounts(counts);
-    setPendingRollCounts(counts);
+    const nextCounts = {
+      attributeDice: counts.attributeDice,
+      skillDice: counts.skillDice,
+    };
+    setOverrideCounts(nextCounts);
+    setPendingRollCounts(nextCounts);
+    setPendingIncludeKeyAttributeDie(counts.isKeyAttributeRoll === true);
   };
 
   const handleClearDice = () => {
     setRollModifier(0);
+    setPendingRollCounts(null);
+    setOverrideCounts(null);
+    setPendingIncludeKeyAttributeDie(false);
     onClearDice();
   };
 
@@ -185,10 +195,11 @@ function App() {
       return;
     }
 
-    onRoll();
+    onRoll({ includeKeyAttributeDie: pendingIncludeKeyAttributeDie });
     setPendingRollCounts(null);
     setOverrideCounts(null);
-  }, [pendingRollCounts, isRolling, onRoll]);
+    setPendingIncludeKeyAttributeDie(false);
+  }, [pendingRollCounts, isRolling, onRoll, pendingIncludeKeyAttributeDie]);
 
   useEffect(() => {
     if (!currentRoll) {

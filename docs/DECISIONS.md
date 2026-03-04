@@ -77,3 +77,21 @@
   - **Decision:** Remove the `Dice Modifier` slider from `DicePoolPanel` and add a top-bar `Modifier` stepper that mirrors the Strain Dice control pattern, with clamped bounds of `-3..+3`.
   - **Consequences:** Modifier and strain controls now share one interaction model and location; modifier theming is now handled by dedicated purple pill tokens in `App.css`.
   - **Alternatives considered:** Keep slider and add duplicate top-bar control (rejected to avoid redundant state controls and UI clutter).
+
+- **2026-03-04 — Import key-attribute bonus applies only to import quick-rolls**
+  - **Context:** Imported JSON now includes `archetype` and `attribute` fields for class identity and key attribute die bonuses, while manual rolls do not carry explicit imported attribute context.
+  - **Decision:** Parse and normalize archetype/key-attribute metadata during import, display imported names as `<name> - <archetype>`, highlight the key attribute in summary UI, and apply a single key-attribute bonus die only for import quick-rolls where the clicked attribute matches the imported key attribute.
+  - **Consequences:** Bonus behavior is deterministic and tied to explicit import actions; manual tab rolls remain unchanged and cannot accidentally gain imported bonuses.
+  - **Alternatives considered:** Apply key bonus to manual rolls whenever a character is loaded (rejected due to ambiguous attribute intent in manual mode).
+
+- **2026-03-04 — Key attribute die removal ordering under negative modifiers**
+  - **Context:** Modifier logic previously knew only regular attribute dice, skill dice, and strain dice.
+  - **Decision:** Extend modifier math to support `keyAttributeDice` with removal priority `skill -> regular attribute -> key attribute`, while preserving the existing minimum floor of one total attribute die.
+  - **Consequences:** Key attribute die is treated as the last removable attribute die and is effectively protected by the minimum-floor rule in common import scenarios.
+  - **Alternatives considered:** Allow modifiers to reduce total attribute dice to zero (rejected to preserve existing floor behavior and avoid breakage in roll assumptions).
+
+- **2026-03-04 — Allow zero regular attribute dice when key attribute die exists**
+  - **Context:** Post-modifier counts correctly reduced regular attribute dice to `0` in key-die rolls, but pool sanitization later clamped regular `attributeDice` back to `1`, nullifying the subtraction effect.
+  - **Decision:** In pool sanitization, permit `attributeDice` to be `0` whenever `keyAttributeDice > 0`.
+  - **Consequences:** Negative modifiers now correctly remove non-key attribute dice while preserving the key die as the final protected die.
+  - **Alternatives considered:** Lower attribute minimum globally to `0` (rejected to avoid changing non-key roll assumptions).

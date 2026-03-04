@@ -433,9 +433,29 @@ h2 {
   color: var(--ink-700);
 }
 
-.import-summary-content li span {
+.import-summary-content li > span {
   color: var(--ink-700);
   flex: 1;
+}
+
+.import-summary-skill-label-group {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.import-summary-skill-label {
+  color: var(--ink-900);
+}
+
+.import-summary-skill-attribute {
+  color: var(--ink-700);
+  opacity: 0.64;
+  margin-left: 1rem;
+}
+
+.import-summary-content li .import-summary-attribute-label.is-key-attribute {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .import-summary-item {
@@ -456,6 +476,11 @@ h2 {
 .import-summary-item:hover {
   border-color: var(--accent-strong);
   color: var(--ink-900);
+}
+
+.import-summary-item.is-key-attribute-count {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .import-summary-item:focus-visible {

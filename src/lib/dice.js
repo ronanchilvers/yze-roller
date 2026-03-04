@@ -4,6 +4,7 @@ export const MAX_DICE = 20;
 export const MAX_STRAIN_DICE = 999;
 export const DICE_TYPE = Object.freeze({
   ATTRIBUTE: "attribute",
+  KEY_ATTRIBUTE: "key-attribute",
   SKILL: "skill",
   STRAIN: "strain",
   MODIFIER: "modifier",
@@ -42,6 +43,13 @@ export const MODIFIER_DICE_OPTS = Object.freeze({
   fallback: 0,
 });
 
+/** Normalization options for key attribute dice (min 0, max 1, fallback 0). */
+export const KEY_ATTRIBUTE_DICE_OPTS = Object.freeze({
+  min: 0,
+  max: 1,
+  fallback: 0,
+});
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const toSafeInteger = (value, fallback) => {
@@ -68,12 +76,21 @@ export const normalizeDiceCount = (value, options = {}) => {
 
 export const sanitizePoolCounts = (counts) => {
   const source = counts && typeof counts === "object" ? counts : {};
+  const keyAttributeDice = normalizeDiceCount(
+    source.keyAttributeDice,
+    KEY_ATTRIBUTE_DICE_OPTS,
+  );
+  const allowZeroAttributeDice = keyAttributeDice > 0;
 
   return {
     attributeDice: normalizeDiceCount(
       source.attributeDice,
-      ATTRIBUTE_DICE_OPTS,
+      {
+        ...ATTRIBUTE_DICE_OPTS,
+        min: allowZeroAttributeDice ? 0 : ATTRIBUTE_DICE_OPTS.min,
+      },
     ),
+    keyAttributeDice,
     skillDice: normalizeDiceCount(source.skillDice, SKILL_DICE_OPTS),
     strainDice: normalizeDiceCount(source.strainDice, STRAIN_DICE_OPTS),
     modifierDice: normalizeDiceCount(source.modifierDice, MODIFIER_DICE_OPTS),
@@ -93,6 +110,7 @@ export const getDieId = (die, index) => {
 
 const normalizeDieType = (value) => {
   if (
+    value === DICE_TYPE.KEY_ATTRIBUTE ||
     value === DICE_TYPE.SKILL ||
     value === DICE_TYPE.STRAIN ||
     value === DICE_TYPE.MODIFIER
@@ -130,6 +148,14 @@ export const buildDicePool = (counts) => {
     pool.push({
       id: `attribute-${index + 1}`,
       type: DICE_TYPE.ATTRIBUTE,
+      face: null,
+    });
+  }
+
+  for (let index = 0; index < normalized.keyAttributeDice; index += 1) {
+    pool.push({
+      id: `key-attribute-${index + 1}`,
+      type: DICE_TYPE.KEY_ATTRIBUTE,
       face: null,
     });
   }
@@ -273,7 +299,7 @@ export const summarizeRoll = (dicePool) => {
  * resolves faces via physics simulation), but serves as the public API
  * for non-visual / integration testing (e.g. strain accumulation tests).
  *
- * @param {{ attributeDice?: number, skillDice?: number, strainDice?: number, modifierDice?: number }} counts
+ * @param {{ attributeDice?: number, keyAttributeDice?: number, skillDice?: number, strainDice?: number, modifierDice?: number }} counts
  * @param {() => number} [randomSource=cryptoRandom]
  * @returns {{ dice: object[], outcomes: object, pushableDiceIds: string[], canPush: boolean }}
  */

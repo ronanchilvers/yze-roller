@@ -1,5 +1,6 @@
 import {
   ATTRIBUTE_DICE_OPTS,
+  KEY_ATTRIBUTE_DICE_OPTS,
   SKILL_DICE_OPTS,
   STRAIN_DICE_OPTS,
   normalizeDiceCount,
@@ -27,10 +28,15 @@ export const applyRollModifierToCounts = (counts, modifier) => {
     source.attributeDice,
     ATTRIBUTE_DICE_OPTS,
   );
+  const normalizedKeyAttribute = normalizeDiceCount(
+    source.keyAttributeDice,
+    KEY_ATTRIBUTE_DICE_OPTS,
+  );
 
   if (normalizedModifier >= 0) {
     return {
       attributeDice: normalizedAttribute,
+      keyAttributeDice: normalizedKeyAttribute,
       skillDice: normalizedSkill,
       strainDice: normalizedStrain,
       modifierDice: normalizedModifier,
@@ -38,6 +44,7 @@ export const applyRollModifierToCounts = (counts, modifier) => {
   }
 
   let attributeDice = normalizedAttribute;
+  let keyAttributeDice = normalizedKeyAttribute;
   let skillDice = normalizedSkill;
   let remainingRemoval = Math.abs(normalizedModifier);
 
@@ -45,12 +52,27 @@ export const applyRollModifierToCounts = (counts, modifier) => {
   skillDice -= skillRemoval;
   remainingRemoval -= skillRemoval;
 
-  const removableAttributeDice = Math.max(0, attributeDice - 1);
+  const removableAttributeDice = Math.max(
+    0,
+    attributeDice + keyAttributeDice - 1,
+  );
   const attributeRemoval = Math.min(removableAttributeDice, remainingRemoval);
-  attributeDice -= attributeRemoval;
+  const regularAttributeRemoval = Math.min(attributeDice, attributeRemoval);
+  attributeDice -= regularAttributeRemoval;
+  remainingRemoval -= regularAttributeRemoval;
+
+  const remainingRemovableAttributeDice =
+    removableAttributeDice - regularAttributeRemoval;
+  const keyAttributeRemoval = Math.min(
+    keyAttributeDice,
+    remainingRemoval,
+    remainingRemovableAttributeDice,
+  );
+  keyAttributeDice -= keyAttributeRemoval;
 
   return {
     attributeDice,
+    keyAttributeDice,
     skillDice,
     strainDice: normalizedStrain,
     modifierDice: 0,

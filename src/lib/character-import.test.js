@@ -14,6 +14,8 @@ const createValidCharacter = () => ({
   firstname: "Bessie",
   lastname: "Collins",
   nickname: "Mope",
+  archetype: "Card Twister",
+  attribute: "Empathy",
   attribute_strength: "1",
   attribute_agility: "2",
   attribute_wits: "3",
@@ -168,4 +170,39 @@ test("parseCharacterImport normalizes attributes to required keys", () => {
   for (const attributeKey of Object.keys(REQUIRED_ATTRIBUTES)) {
     assert.ok(Number.isInteger(result.character.attributes[attributeKey]));
   }
+});
+
+test("parseCharacterImport includes archetype and canonical key attribute", () => {
+  const payload = createValidCharacter();
+  const result = parseCharacterImport(payload);
+
+  assert.equal(result.isValid, true);
+  assert.equal(result.character.archetype, "Card Twister");
+  assert.equal(result.character.keyAttributeKey, "empathy");
+  assert.equal(result.character.keyAttributeLabel, "Empathy");
+});
+
+test("parseCharacterImport accepts key attribute labels case-insensitively", () => {
+  const payload = createValidCharacter();
+  payload.attribute = "wItS";
+
+  const result = parseCharacterImport(payload);
+  assert.equal(result.isValid, true);
+  assert.equal(result.character.keyAttributeKey, "wits");
+  assert.equal(result.character.keyAttributeLabel, "Wits");
+});
+
+test("parseCharacterImport warns and disables bonus for unrecognized key attributes", () => {
+  const payload = createValidCharacter();
+  payload.attribute = "Luck";
+
+  const result = parseCharacterImport(payload);
+  assert.equal(result.isValid, true);
+  assert.equal(result.character.keyAttributeKey, null);
+  assert.equal(result.character.keyAttributeLabel, null);
+  assert.ok(
+    result.warnings.some((warning) =>
+      warning.includes("Unrecognized key attribute"),
+    ),
+  );
 });

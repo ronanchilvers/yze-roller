@@ -19,6 +19,7 @@ test("positive modifier adds modifier dice without changing base dice", () => {
     applyRollModifierToCounts(
       {
         attributeDice: 3,
+        keyAttributeDice: 0,
         skillDice: 2,
         strainDice: 4,
       },
@@ -26,6 +27,7 @@ test("positive modifier adds modifier dice without changing base dice", () => {
     ),
     {
       attributeDice: 3,
+      keyAttributeDice: 0,
       skillDice: 2,
       strainDice: 4,
       modifierDice: 2,
@@ -38,6 +40,7 @@ test("negative modifier removes skill dice before attribute dice", () => {
     applyRollModifierToCounts(
       {
         attributeDice: 4,
+        keyAttributeDice: 0,
         skillDice: 2,
         strainDice: 3,
       },
@@ -45,6 +48,7 @@ test("negative modifier removes skill dice before attribute dice", () => {
     ),
     {
       attributeDice: 3,
+      keyAttributeDice: 0,
       skillDice: 0,
       strainDice: 3,
       modifierDice: 0,
@@ -57,6 +61,7 @@ test("negative modifier never removes strain dice", () => {
     applyRollModifierToCounts(
       {
         attributeDice: 2,
+        keyAttributeDice: 0,
         skillDice: 0,
         strainDice: 5,
       },
@@ -64,6 +69,7 @@ test("negative modifier never removes strain dice", () => {
     ),
     {
       attributeDice: 1,
+      keyAttributeDice: 0,
       skillDice: 0,
       strainDice: 5,
       modifierDice: 0,
@@ -76,6 +82,7 @@ test("negative modifier never reduces pool below one attribute die", () => {
     applyRollModifierToCounts(
       {
         attributeDice: 1,
+        keyAttributeDice: 0,
         skillDice: 0,
         strainDice: 999,
       },
@@ -83,8 +90,51 @@ test("negative modifier never reduces pool below one attribute die", () => {
     ),
     {
       attributeDice: 1,
+      keyAttributeDice: 0,
       skillDice: 0,
       strainDice: 999,
+      modifierDice: 0,
+    },
+  );
+});
+
+test("positive modifier preserves key attribute die", () => {
+  assert.deepEqual(
+    applyRollModifierToCounts(
+      {
+        attributeDice: 2,
+        keyAttributeDice: 1,
+        skillDice: 1,
+        strainDice: 0,
+      },
+      2,
+    ),
+    {
+      attributeDice: 2,
+      keyAttributeDice: 1,
+      skillDice: 1,
+      strainDice: 0,
+      modifierDice: 2,
+    },
+  );
+});
+
+test("negative modifier removes regular attribute dice before key attribute dice", () => {
+  assert.deepEqual(
+    applyRollModifierToCounts(
+      {
+        attributeDice: 2,
+        keyAttributeDice: 1,
+        skillDice: 0,
+        strainDice: 0,
+      },
+      -3,
+    ),
+    {
+      attributeDice: 0,
+      keyAttributeDice: 1,
+      skillDice: 0,
+      strainDice: 0,
       modifierDice: 0,
     },
   );

@@ -128,6 +128,7 @@ const DicePoolPanel = ({
     if (!character || !attributeKey) {
       return;
     }
+    const isKeyAttributeRoll = character?.keyAttributeKey === attributeKey;
 
     onSelectAttribute?.(attributeKey);
     onSelectSkill?.(skillKey);
@@ -139,6 +140,7 @@ const DicePoolPanel = ({
       onRollWithCounts({
         attributeDice: attributeValue,
         skillDice: skillValue,
+        isKeyAttributeRoll,
       });
       return;
     }
@@ -152,7 +154,7 @@ const DicePoolPanel = ({
     }
 
     if (typeof onRoll === "function") {
-      onRoll();
+      onRoll({ includeKeyAttributeDie: isKeyAttributeRoll });
       return;
     }
 
@@ -271,7 +273,9 @@ const DicePoolPanel = ({
               {fileName ? null : <p>No character loaded yet.</p>}
               {status === "loading" ? <p>Loading character…</p> : null}
               {character ? (
-                <h3 className="import-character-name">{character.name}</h3>
+                <h3 className="import-character-name">
+                  {`${character.name} - ${character.archetype}`}
+                </h3>
               ) : null}
             </div>
             {isImportReady ? (
@@ -296,12 +300,21 @@ const DicePoolPanel = ({
                       {attributeOptions.map((attributeKey) => {
                         const attributeValue =
                           character?.attributes?.[attributeKey] ?? 0;
+                        const isKeyAttribute =
+                          attributeKey === character?.keyAttributeKey;
+                        const displayAttributeValue = isKeyAttribute
+                          ? attributeValue + 1
+                          : attributeValue;
                         return (
                           <li key={attributeKey}>
-                            <span>{buildAttributeLabel(attributeKey)}</span>{" "}
+                            <span
+                              className={`import-summary-attribute-label ${isKeyAttribute ? "is-key-attribute" : ""}`}
+                            >
+                              {buildAttributeLabel(attributeKey)}
+                            </span>{" "}
                             <button
                               type="button"
-                              className="import-summary-item"
+                              className={`import-summary-item ${isKeyAttribute ? "is-key-attribute-count" : ""}`}
                               onClick={() =>
                                 handleSummaryRoll({
                                   attributeKey,
@@ -311,7 +324,7 @@ const DicePoolPanel = ({
                               disabled={isRolling || status === "loading"}
                               aria-label={`Roll ${buildAttributeLabel(attributeKey)} dice`}
                             >
-                              {attributeValue}
+                              {displayAttributeValue}
                             </button>
                           </li>
                         );
@@ -339,7 +352,16 @@ const DicePoolPanel = ({
                           : "";
                         return (
                           <li key={skill}>
-                            <span>{skill}</span>{" "}
+                            <span className="import-summary-skill-label-group">
+                              <span className="import-summary-skill-label">
+                                {skill}
+                              </span>
+                              {attributeLabel ? (
+                                <span className="import-summary-skill-attribute">
+                                  {attributeLabel}
+                                </span>
+                              ) : null}
+                            </span>{" "}
                             <button
                               type="button"
                               className="import-summary-item"
@@ -380,7 +402,16 @@ const DicePoolPanel = ({
                           : "";
                         return (
                           <li key={skill}>
-                            <span>{skill}</span>{" "}
+                            <span className="import-summary-skill-label-group">
+                              <span className="import-summary-skill-label">
+                                {skill}
+                              </span>
+                              {attributeLabel ? (
+                                <span className="import-summary-skill-attribute">
+                                  {attributeLabel}
+                                </span>
+                              ) : null}
+                            </span>{" "}
                             <button
                               type="button"
                               className="import-summary-item"

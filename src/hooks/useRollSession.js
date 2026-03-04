@@ -59,7 +59,7 @@ const createHistoryEntry = (roll, key, rolledAt) => {
  *   setIsHistoryOpen: (value: boolean) => void,
  *   isRolling: boolean,
  *   canPush: boolean,
- *   onRoll: () => void,
+ *   onRoll: (options?: { includeKeyAttributeDie?: boolean }) => void,
  *   onPush: () => void,
  *   onClearDice: () => void,
  *   onRollResolved: (resolution: object) => void
@@ -85,10 +85,11 @@ export const useRollSession = ({
 
   const isRolling = Boolean(rollRequest);
 
-  const onRoll = () => {
+  const onRoll = (options = {}) => {
     if (isRolling) {
       return;
     }
+    const includeKeyAttributeDie = options?.includeKeyAttributeDie === true;
 
     const countsWithStrain = buildCountsWithStrain(
       {
@@ -97,8 +98,12 @@ export const useRollSession = ({
       },
       normalizedStrainPoints,
     );
+    const countsWithBonusDie = {
+      ...countsWithStrain,
+      keyAttributeDice: includeKeyAttributeDie ? 1 : 0,
+    };
     const modifiedCounts = applyRollModifierToCounts(
-      countsWithStrain,
+      countsWithBonusDie,
       rollModifier,
     );
     const dicePool = buildDicePool(modifiedCounts);
