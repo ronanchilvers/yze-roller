@@ -10,6 +10,7 @@ import {
 
 const TAB_MANUAL = "manual";
 const TAB_IMPORT = "import";
+const TAB_HISTORY = "history";
 
 const buildAttributeLabel = (attributeKey) =>
   REQUIRED_ATTRIBUTES[attributeKey] ?? attributeKey;
@@ -47,6 +48,7 @@ const DicePoolPanel = ({
   isPushDisabled,
   onClearDice,
   isClearDisabled,
+  recentResults,
 }) => {
   const [activeTab, setActiveTab] = useState(TAB_MANUAL);
   const [manualAttributeInput, setManualAttributeInput] = useState(
@@ -82,6 +84,28 @@ const DicePoolPanel = ({
   const skillColumnSplit = Math.ceil(skillOptions.length / 2);
   const skillColumnOne = skillOptions.slice(0, skillColumnSplit);
   const skillColumnTwo = skillOptions.slice(skillColumnSplit);
+  const safeRecentResults = useMemo(() => {
+    if (!Array.isArray(recentResults)) {
+      return [];
+    }
+
+    return recentResults
+      .map((entry, index) => {
+        const summary =
+          typeof entry?.summary === "string" ? entry.summary.trim() : "";
+        if (!summary) {
+          return null;
+        }
+
+        const id =
+          typeof entry?.id === "string" && entry.id
+            ? entry.id
+            : `recent-result-${index}`;
+
+        return { id, summary };
+      })
+      .filter(Boolean);
+  }, [recentResults]);
 
   useEffect(() => {
     setManualAttributeInput(String(attributeDice));
@@ -210,6 +234,15 @@ const DicePoolPanel = ({
         >
           Import Character
         </button>
+        <button
+          type="button"
+          role="tab"
+          className={`pool-tab ${activeTab === TAB_HISTORY ? "is-active" : ""}`}
+          aria-selected={activeTab === TAB_HISTORY}
+          onClick={() => handleTabChange(TAB_HISTORY)}
+        >
+          Roll History
+        </button>
       </div>
 
       {activeTab === TAB_MANUAL ? (
@@ -251,7 +284,9 @@ const DicePoolPanel = ({
             {isRolling ? "Rolling..." : primaryActionLabel}
           </button>
         </div>
-      ) : (
+      ) : null}
+
+      {activeTab === TAB_IMPORT ? (
         <div className="import-panel" role="tabpanel">
           <div className="import-controls">
             <label className="file-field" htmlFor="characterImport">
@@ -447,7 +482,23 @@ const DicePoolPanel = ({
             </div>
           ) : null}
         </div>
-      )}
+      ) : null}
+
+      {activeTab === TAB_HISTORY ? (
+        <div className="history-panel" role="tabpanel">
+          {safeRecentResults.length > 0 ? (
+            <ul className="history-list">
+              {safeRecentResults.map((result) => (
+                <li key={result.id} className="history-item">
+                  {result.summary}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="history-empty">No roll history yet.</p>
+          )}
+        </div>
+      ) : null}
       <div className="panel-action-row">
         <button
           type="button"
@@ -496,6 +547,12 @@ DicePoolPanel.propTypes = {
   isPushDisabled: PropTypes.bool.isRequired,
   onClearDice: PropTypes.func.isRequired,
   isClearDisabled: PropTypes.bool.isRequired,
+  recentResults: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      summary: PropTypes.string,
+    }),
+  ),
 };
 
 export default DicePoolPanel;

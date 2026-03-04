@@ -3,6 +3,8 @@ import { test, vi } from "vitest";
 import {
   ROLL_TOAST_DEDUPE_BUCKET_MS,
   buildRollToastPayload,
+  formatRollHistorySummary,
+  formatRollOutcomeSummary,
   getRollToastDedupKey,
   normalizeRollToastEvent,
 } from "./roll-toast-event.js";
@@ -152,6 +154,48 @@ test("buildRollToastPayload formats local roll and push messages", () => {
   assert.equal(pushed.title, "Push Result");
   assert.equal(pushed.breakdown, "1 successes, 1 banes (with Strain)");
   assert.equal(pushed.total, "1");
+});
+
+test("formatRollOutcomeSummary uses a consistent successes/banes format", () => {
+  assert.equal(
+    formatRollOutcomeSummary({
+      successes: 3,
+      banes: 2,
+      hasStrain: false,
+    }),
+    "3 successes, 2 banes",
+  );
+
+  assert.equal(
+    formatRollOutcomeSummary({
+      successes: "1.9",
+      banes: 1,
+      hasStrain: true,
+    }),
+    "1 successes, 1 banes (with Strain)",
+  );
+});
+
+test("formatRollHistorySummary prefixes roll and push outcomes", () => {
+  assert.equal(
+    formatRollHistorySummary({
+      action: "roll",
+      successes: 2,
+      banes: 0,
+      hasStrain: false,
+    }),
+    "Roll result - 2 successes, 0 banes",
+  );
+
+  assert.equal(
+    formatRollHistorySummary({
+      action: "push",
+      successes: 1,
+      banes: 3,
+      hasStrain: true,
+    }),
+    "Push result - 1 successes, 3 banes (with Strain)",
+  );
 });
 
 test("buildRollToastPayload formats remote actor titles using actorId", () => {

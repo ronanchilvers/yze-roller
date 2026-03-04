@@ -39,6 +39,32 @@ const normalizeOccurredAt = (value) => {
 };
 
 /**
+ * Formats roll outcomes in a shared readable form.
+ *
+ * @param {unknown} input
+ * @returns {string}
+ */
+export const formatRollOutcomeSummary = (input) => {
+  const source = input && typeof input === "object" ? input : {};
+  const successes = normalizeCount(source.successes);
+  const banes = normalizeCount(source.banes);
+  const withStrain = Boolean(source.hasStrain) ? " (with Strain)" : "";
+  return `${successes} successes, ${banes} banes${withStrain}`;
+};
+
+/**
+ * Formats a roll/push history line using normalized event semantics.
+ *
+ * @param {unknown} event
+ * @returns {string}
+ */
+export const formatRollHistorySummary = (event) => {
+  const normalized = normalizeRollToastEvent(event);
+  const actionLabel = normalized.action === "push" ? "Push result" : "Roll result";
+  return `${actionLabel} - ${formatRollOutcomeSummary(normalized)}`;
+};
+
+/**
  * Normalizes incoming roll event payloads from local and remote sources.
  * Uses non-throwing defaults so malformed external payloads degrade safely.
  *
@@ -124,8 +150,7 @@ export const getRollToastDedupKey = (event) => {
  */
 export const buildRollToastPayload = (event) => {
   const normalized = normalizeRollToastEvent(event);
-  const withStrain = normalized.hasStrain ? " (with Strain)" : "";
-  const summary = `${normalized.successes} successes, ${normalized.banes} banes${withStrain}`;
+  const summary = formatRollOutcomeSummary(normalized);
 
   const title =
     normalized.source === "remote"
@@ -147,4 +172,3 @@ export const buildRollToastPayload = (event) => {
     occurredAt: normalized.occurredAt,
   };
 };
-

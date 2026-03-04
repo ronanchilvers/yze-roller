@@ -84,6 +84,7 @@ const TestHarness = ({
   isPushDisabled = true,
   onClearDice = vi.fn(),
   isClearDisabled = false,
+  recentResults = [],
 }) => {
   TestHarness.propTypes = {
     importStateOverrides: PropTypes.object,
@@ -102,6 +103,7 @@ const TestHarness = ({
     isPushDisabled: PropTypes.bool,
     onClearDice: PropTypes.func,
     isClearDisabled: PropTypes.bool,
+    recentResults: PropTypes.arrayOf(PropTypes.object),
   };
   const [importState, setImportState] = useState({
     fileName: "Bessie-Collins.json",
@@ -134,6 +136,7 @@ const TestHarness = ({
       isPushDisabled={isPushDisabled}
       onClearDice={onClearDice}
       isClearDisabled={isClearDisabled}
+      recentResults={recentResults}
       onSelectAttribute={(value) =>
         setImportState((current) => ({
           ...current,
@@ -165,6 +168,22 @@ test("renders manual tab by default", () => {
   expect(container.querySelector("#skillDice")).not.toBeNull();
   expect(container.querySelector("#rollModifier")).toBeNull();
   expect(container.querySelector("#characterImport")).toBeNull();
+  expect(getButtonByText(container, "Roll History")).toBeDefined();
+
+  unmount();
+});
+
+test("renders pool tabs in manual, import, history order", () => {
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<TestHarness />);
+  });
+
+  const tabLabels = Array.from(container.querySelectorAll(".pool-tabs .pool-tab")).map(
+    (tab) => tab.textContent?.trim(),
+  );
+  expect(tabLabels).toEqual(["Manual", "Import Character", "Roll History"]);
 
   unmount();
 });
@@ -286,6 +305,60 @@ test("switching to import tab shows JSON upload when no character is loaded", ()
   expect(container.querySelector(".import-summary")).toBeNull();
   expect(container.querySelector(".import-summary-item")).toBeNull();
   expect(getButtonByText(container, "Clear Character")).toBeUndefined();
+
+  unmount();
+});
+
+test("switching to history tab shows empty state when there are no entries", () => {
+  const { container, root, unmount } = createContainer();
+
+  act(() => {
+    root.render(<TestHarness recentResults={[]} />);
+  });
+
+  const historyTab = getButtonByText(container, "Roll History");
+  act(() => {
+    historyTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(container.querySelector(".history-panel")).not.toBeNull();
+  expect(container.querySelector(".history-list")).toBeNull();
+  expect(container.querySelector(".history-empty")?.textContent?.trim()).toBe(
+    "No roll history yet.",
+  );
+
+  unmount();
+});
+
+test("switching to history tab renders roll history entries", () => {
+  const { container, root, unmount } = createContainer();
+  const recentResults = [
+    {
+      id: "roll-1",
+      summary: "Roll result - 2 successes, 1 banes",
+    },
+    {
+      id: "push-1",
+      summary: "Push result - 2 successes, 2 banes (with Strain)",
+    },
+  ];
+
+  act(() => {
+    root.render(<TestHarness recentResults={recentResults} />);
+  });
+
+  const historyTab = getButtonByText(container, "Roll History");
+  act(() => {
+    historyTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  const historyItems = Array.from(container.querySelectorAll(".history-item")).map(
+    (item) => item.textContent?.trim(),
+  );
+  expect(historyItems).toEqual([
+    "Roll result - 2 successes, 1 banes",
+    "Push result - 2 successes, 2 banes (with Strain)",
+  ]);
 
   unmount();
 });

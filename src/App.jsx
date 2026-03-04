@@ -370,6 +370,7 @@ function App() {
             isPushDisabled={isRolling || !hasRolled || !canPush}
             onClearDice={handleClearDice}
             isClearDisabled={!canClearDice}
+            recentResults={recentResults}
           />
         </div>
       </section>
