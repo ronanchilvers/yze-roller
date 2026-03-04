@@ -55,6 +55,7 @@ if (!variable.trim()) return
 - Validate and normalize any imported or persisted data before use.
 - Guard for missing/null fields before rendering arrays or accessing properties.
 - Prefer non-throwing fallbacks when data is malformed.
+- Add explicit tests for capped collections (for example `slice`-based history limits) so max-item behavior cannot drift silently.
 
 ## Boundaries
 - ✅ **Always:** Keep changes in `src/` unless explicitly asked otherwise.

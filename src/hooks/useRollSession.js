@@ -6,6 +6,7 @@ import {
   transitionWithPush,
   transitionWithRoll,
 } from "../lib/roll-session.js";
+import { formatRollHistorySummary } from "../lib/roll-toast-event.js";
 import {
   buildCountsWithStrain,
   calculateBaneIncrease,
@@ -14,15 +15,6 @@ import { applyRollModifierToCounts } from "../lib/roll-modifier.js";
 import { useLatestRef } from "./useLatestRef.js";
 
 const MAX_PREVIOUS_RESULTS = 10;
-
-const formatRollSummary = (roll) => {
-  if (!roll) {
-    return "No results yet";
-  }
-
-  const withStrain = roll.outcomes.hasStrain ? " (with Strain)" : "";
-  return `${roll.outcomes.successes} successes, ${roll.outcomes.banes} banes${withStrain}`;
-};
 
 /**
  * Creates a history entry for a completed roll.
@@ -35,7 +27,12 @@ const formatRollSummary = (roll) => {
 const createHistoryEntry = (roll, key, rolledAt) => {
   return {
     id: `${key}-${rolledAt}`,
-    summary: formatRollSummary(roll),
+    summary: formatRollHistorySummary({
+      action: roll?.action,
+      successes: roll?.outcomes?.successes,
+      banes: roll?.outcomes?.banes,
+      hasStrain: roll?.outcomes?.hasStrain,
+    }),
   };
 };
 

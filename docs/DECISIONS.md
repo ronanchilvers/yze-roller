@@ -95,3 +95,9 @@
   - **Decision:** In pool sanitization, permit `attributeDice` to be `0` whenever `keyAttributeDice > 0`.
   - **Consequences:** Negative modifiers now correctly remove non-key attribute dice while preserving the key die as the final protected die.
   - **Alternatives considered:** Lower attribute minimum globally to `0` (rejected to avoid changing non-key roll assumptions).
+
+- **2026-03-04 — Roll history UI uses local session entries with shared formatting**
+  - **Context:** The UI had roll result toasts and hook-level `recentResults`, but no visible history panel after tray results removal.
+  - **Decision:** Add a `Roll History` tab in `DicePoolPanel`, feed it from existing local `recentResults`, keep `Clear Dice` from wiping history, and centralize summary wording in `roll-toast-event` with history format `Roll|Push result - X successes, Y banes (with Strain)`.
+  - **Consequences:** History and toast wording stay consistent, feature scope remains local-only (remote bridge events still toast-only), and no persistence model changes were introduced.
+  - **Alternatives considered:** Include remote bridge events in history or clear history on `Clear Dice` (both rejected to keep scope and behavior aligned with current local session flow).
