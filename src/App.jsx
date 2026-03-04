@@ -16,6 +16,11 @@ import {
   ROLL_TOAST_DEDUPE_BUCKET_MS,
   normalizeRollToastEvent,
 } from "./lib/roll-toast-event.js";
+import {
+  MAX_ROLL_MODIFIER,
+  MIN_ROLL_MODIFIER,
+  normalizeRollModifier,
+} from "./lib/roll-modifier.js";
 import DicePoolPanel from "./components/DicePoolPanel.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
@@ -52,6 +57,11 @@ function App() {
   const [overrideCounts, setOverrideCounts] = useState(null);
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
   const [rollModifier, setRollModifier] = useState(0);
+  const normalizedRollModifier = normalizeRollModifier(rollModifier);
+  const formattedRollModifier =
+    normalizedRollModifier > 0
+      ? `+${normalizedRollModifier}`
+      : String(normalizedRollModifier);
 
   const effectiveAttributeDice = overrideCounts?.attributeDice ?? attributeDice;
   const effectiveSkillDice = overrideCounts?.skillDice ?? skillDice;
@@ -69,7 +79,7 @@ function App() {
   } = useRollSession({
     attributeDice: effectiveAttributeDice,
     skillDice: effectiveSkillDice,
-    rollModifier,
+    rollModifier: normalizedRollModifier,
     normalizedStrainPoints,
     onBaneIncrement: applyBaneIncrement,
   });
@@ -135,6 +145,18 @@ function App() {
   const onDecrementStrainDice = useCallback(() => {
     onDecrementStrain();
   }, [onDecrementStrain]);
+
+  const onIncrementModifierDice = useCallback(() => {
+    setRollModifier((current) =>
+      normalizeRollModifier(normalizeRollModifier(current) + 1),
+    );
+  }, []);
+
+  const onDecrementModifierDice = useCallback(() => {
+    setRollModifier((current) =>
+      normalizeRollModifier(normalizeRollModifier(current) - 1),
+    );
+  }, []);
 
   const handleRollWithCounts = (counts) => {
     if (!counts) {
@@ -261,6 +283,32 @@ function App() {
                 <option value="dark">Dark</option>
               </select>
             </label>
+            <output className="strain-pill modifier-pill" aria-label="Current modifier dice">
+              <div className="strain-pill-head">
+                <span>Modifier</span>
+              </div>
+              <div className="strain-stepper">
+                <button
+                  type="button"
+                  className="strain-adjust-button"
+                  aria-label="Decrease modifier"
+                  onClick={onDecrementModifierDice}
+                  disabled={normalizedRollModifier <= MIN_ROLL_MODIFIER}
+                >
+                  -
+                </button>
+                <strong>{formattedRollModifier}</strong>
+                <button
+                  type="button"
+                  className="strain-adjust-button"
+                  aria-label="Increase modifier"
+                  onClick={onIncrementModifierDice}
+                  disabled={normalizedRollModifier >= MAX_ROLL_MODIFIER}
+                >
+                  +
+                </button>
+              </div>
+            </output>
             <output className="strain-pill" aria-label="Current strain dice">
               <div className="strain-pill-head">
                 <span>Strain Dice</span>
@@ -301,8 +349,6 @@ function App() {
             setSkillDice={setSkillDice}
             onRoll={onRoll}
             onRollWithCounts={handleRollWithCounts}
-            rollModifier={rollModifier}
-            onRollModifierChange={setRollModifier}
             importState={characterImport}
             onImportFile={importFromFile}
             onResetImport={resetImport}

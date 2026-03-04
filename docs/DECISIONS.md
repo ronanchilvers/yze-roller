@@ -71,3 +71,9 @@
   - **Decision:** Rename the widget label to `Strain Dice` and replace reset with explicit decrement/increment (`-`/`+`) controls flanking a centered value.
   - **Consequences:** Strain can now be adjusted one die at a time from the top bar; decrement is clamped at zero through `useStrainTracker` normalization helpers.
   - **Alternatives considered:** Keep reset-only controls plus manual input field (rejected for slower interaction and unnecessary UI complexity).
+
+- **2026-03-04 — Replace dice modifier slider with top-bar stepper**
+  - **Context:** Modifier adjustments were on a panel slider separate from the new top-bar strain stepper and used different interaction semantics.
+  - **Decision:** Remove the `Dice Modifier` slider from `DicePoolPanel` and add a top-bar `Modifier` stepper that mirrors the Strain Dice control pattern, with clamped bounds of `-3..+3`.
+  - **Consequences:** Modifier and strain controls now share one interaction model and location; modifier theming is now handled by dedicated purple pill tokens in `App.css`.
+  - **Alternatives considered:** Keep slider and add duplicate top-bar control (rejected to avoid redundant state controls and UI clutter).
