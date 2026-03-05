@@ -57,6 +57,10 @@ if (!variable.trim()) return
 - Prefer non-throwing fallbacks when data is malformed.
 - Add explicit tests for capped collections (for example `slice`-based history limits) so max-item behavior cannot drift silently.
 
+## Testing expectations
+- Prefer semantic UI assertions over brittle concatenated text checks, especially for split-label patterns (for example label text + nested badge/count spans).
+- For split labels, assert the name and count parts via stable selectors/classes rather than relying on combined `textContent` formatting.
+
 ## Boundaries
 - ✅ **Always:** Keep changes in `src/` unless explicitly asked otherwise.
 - ✅ **Always:** Minimize dependencies and make sure to include vanilla options when suggesting solutions

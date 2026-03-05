@@ -1,7 +1,7 @@
 # Dice Modifier Implementation Plan
 
 ## Summary
-Add a roll-time dice modifier (`-3` to `+3`, default `0`) that affects the final rolled pool for both Manual and Import Character rolls without mutating visible Attribute/Skill counts in the UI. Positive modifiers add new purple modifier dice; negative modifiers remove dice from Skill first, then Attribute, while never removing Strain dice and never dropping below 1 Attribute die.
+Add a roll-time dice modifier (`-3` to `+3`, default `0`) that affects the final rolled pool for both Manual and Character rolls without mutating visible Attribute/Skill counts in the UI. Positive modifiers add new purple modifier dice; negative modifiers remove dice from Skill first, then Attribute, while never removing Strain dice and never dropping below 1 Attribute die.
 
 ## Relevant Current Context
 - Roll requests are created in `src/hooks/useRollSession.js` via `buildCountsWithStrain(...)` + `buildDicePool(...)`.

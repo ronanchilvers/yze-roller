@@ -479,8 +479,17 @@ h2 {
 
 .import-summary-skill-attribute {
   color: var(--ink-700);
-  opacity: 0.64;
+  opacity: 0.5;
   margin-left: 1rem;
+}
+
+.import-summary-skill-label span,
+.import-summary-skill-attribute span {
+    padding: 0 0.25rem;
+    margin-left: 0.25rem;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+    background: var(--summary-pill-bg);
 }
 
 .import-summary-content li .import-summary-attribute-label.is-key-attribute {
@@ -658,12 +667,19 @@ h2 {
 
   .top-bar-actions {
     width: 100%;
-    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: stretch;
   }
 
-  .theme-select,
-  .strain-pill {
+  .top-bar-actions .theme-select {
+    flex: 1 0 100%;
     width: 100%;
+  }
+
+  .top-bar-actions .strain-pill {
+    flex: 1 1 calc(50% - 0.4rem);
+    width: calc(50% - 0.4rem);
+    min-width: 0;
   }
 
   .control-grid {

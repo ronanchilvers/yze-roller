@@ -183,7 +183,7 @@ test("renders pool tabs in manual, import, history order", () => {
   const tabLabels = Array.from(container.querySelectorAll(".pool-tabs .pool-tab")).map(
     (tab) => tab.textContent?.trim(),
   );
-  expect(tabLabels).toEqual(["Manual", "Import Character", "Roll History"]);
+  expect(tabLabels).toEqual(["Manual", "Character", "Roll History"]);
 
   unmount();
 });
@@ -296,7 +296,7 @@ test("switching to import tab shows JSON upload when no character is loaded", ()
     );
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -371,7 +371,7 @@ test("switching to import tab shows fields and actions for a loaded character", 
     root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -394,7 +394,7 @@ test("highlights the imported key attribute in the attribute summary", () => {
     root.render(<TestHarness />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -420,7 +420,7 @@ test("selecting a skill auto-selects the mapped attribute and locks attribute se
     root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -448,7 +448,7 @@ test("roll from import tab uses attribute and skill dice counts", () => {
     root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -467,14 +467,14 @@ test("roll from import tab uses attribute and skill dice counts", () => {
   unmount();
 });
 
-test("skill rows show mapped attributes without brackets and with distinct attribute labels", () => {
+test("skill rows show skill and attribute labels with badge counts and combined total buttons", () => {
   const { container, root, unmount } = createContainer();
 
   act(() => {
     root.render(<TestHarness />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -485,22 +485,19 @@ test("skill rows show mapped attributes without brackets and with distinct attri
   const attributeLabels = Array.from(
     container.querySelectorAll(".import-summary-skill-attribute"),
   ).map((node) => node.textContent?.trim());
-  const groupedLabels = Array.from(
-    container.querySelectorAll(".import-summary-skill-label-group"),
-  ).map((node) => node.textContent ?? "");
+  const normalizeLabel = (value) => value?.replace(/\s+/g, " ").trim();
+  const normalizedSkillLabels = skillLabels.map(normalizeLabel);
+  const normalizedAttributeLabels = attributeLabels.map(normalizeLabel);
 
-  expect(skillLabels).toContain("Sneak");
-  expect(skillLabels).toContain("Streetwise");
-  expect(skillLabels).toContain("Hoodwink");
-  expect(attributeLabels).toContain("Agility");
-  expect(attributeLabels).toContain("Wits");
-  expect(attributeLabels).toContain("Empathy");
-  expect(groupedLabels).toContain("SneakAgility");
-  expect(groupedLabels).toContain("StreetwiseWits");
-  expect(groupedLabels).toContain("HoodwinkEmpathy");
-  expect(groupedLabels.some((value) => value.includes("("))).toBe(false);
-  expect(groupedLabels.some((value) => value.includes(")"))).toBe(false);
-  expect(groupedLabels.some((value) => value.includes("-"))).toBe(false);
+  expect(normalizedSkillLabels).toContain("Sneak3");
+  expect(normalizedSkillLabels).toContain("Streetwise2");
+  expect(normalizedSkillLabels).toContain("Hoodwink2");
+  expect(normalizedAttributeLabels).toContain("Agility2");
+  expect(normalizedAttributeLabels).toContain("Wits3");
+  expect(normalizedAttributeLabels).toContain("Empathy5");
+  expect(getSkillButton(container, "Sneak")?.textContent?.trim()).toBe("5");
+  expect(getSkillButton(container, "Streetwise")?.textContent?.trim()).toBe("5");
+  expect(getSkillButton(container, "Hoodwink")?.textContent?.trim()).toBe("7");
 
   unmount();
 });
@@ -513,7 +510,7 @@ test("rolling a key attribute includes key attribute roll flag", () => {
     root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -547,7 +544,7 @@ test("import roll defers to primary action when in push mode", () => {
     );
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });

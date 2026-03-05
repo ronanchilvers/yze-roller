@@ -1,10 +1,10 @@
 # Character Import Plan (Dice Pool Tabs)
 
 ## Summary
-Introduce a new “Import Character” tab inside the Dice Pool panel. This tab accepts a JSON file containing attribute and skill dice, validates it defensively, and allows rolling either an attribute alone or a skill + its associated attribute. The existing Dice Pool behavior remains unchanged in the “Manual” tab. Changes are limited to `src/`.
+Introduce a new “Character” tab inside the Dice Pool panel. This tab accepts a JSON file containing attribute and skill dice, validates it defensively, and allows rolling either an attribute alone or a skill + its associated attribute. The existing Dice Pool behavior remains unchanged in the “Manual” tab. Changes are limited to `src/`.
 
 ## Goals
-- Import character data from a local JSON file.
+- character data from a local JSON file.
 - Validate attribute/skill dice counts and skill→attribute relationships.
 - Provide a UI to select an attribute or a skill to roll.
 - Preserve current Dice Pool behavior in a separate tab.
@@ -43,7 +43,7 @@ Notes:
 ## UX Overview
 ### Dice Pool Panel Tabs
 - **Tab A — Manual:** existing behavior (unchanged).
-- **Tab B — Import Character:**
+- **Tab B — Character:**
   - File input for `.json`
   - Validation feedback (success/error list)
   - Character display name (firstname "nickname" lastname, with sensible fallback)
