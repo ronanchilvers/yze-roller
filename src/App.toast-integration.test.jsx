@@ -179,14 +179,14 @@ test("emits one local roll toast for a newly resolved roll and skips duplicates"
       pushableDiceIds: [],
       dice: [],
     },
-    recentResults: [{ id: "1-1710000000000", summary: "2 successes, 1 banes" }],
+    recentResults: [{ id: "1-1710000000000", summary: "2 successes, 1 bane" }],
   });
   app.render(<App />);
 
   expect(mocks.diceResult).toHaveBeenCalledTimes(1);
   expect(mocks.diceResult).toHaveBeenCalledWith({
     title: "Roll Result",
-    message: "Sneak (Agility) - 2 successes, 1 banes",
+    message: "Sneak (Agility) - 2 successes, 1 bane",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });
 
@@ -240,7 +240,7 @@ test("clear state does not emit a synthetic local roll toast", () => {
       pushableDiceIds: [],
       dice: [],
     },
-    recentResults: [{ id: "clear-case-1710000004000", summary: "2 successes, 1 banes" }],
+    recentResults: [{ id: "clear-case-1710000004000", summary: "2 successes, 1 bane" }],
   });
 
   app.render(<App />);
@@ -249,7 +249,7 @@ test("clear state does not emit a synthetic local roll toast", () => {
   nowSpy.mockReturnValue(1710000008000);
   mocks.rollSessionState = createRollSessionState({
     currentRoll: null,
-    recentResults: [{ id: "clear-case-1710000004000", summary: "2 successes, 1 banes" }],
+    recentResults: [{ id: "clear-case-1710000004000", summary: "2 successes, 1 bane" }],
   });
 
   app.render(<App />);
@@ -275,7 +275,7 @@ test("emits push result toast with strain summary", () => {
       pushableDiceIds: [],
       dice: [],
     },
-    recentResults: [{ id: "push-1710000003000", summary: "1 successes, 2 banes (with Strain)" }],
+    recentResults: [{ id: "push-1710000003000", summary: "1 success, 2 banes (with Strain)" }],
   });
 
   app.render(<App />);
@@ -283,7 +283,7 @@ test("emits push result toast with strain summary", () => {
   expect(mocks.diceResult).toHaveBeenCalledTimes(1);
   expect(mocks.diceResult).toHaveBeenCalledWith({
     title: "Push Result",
-    message: "Empathy - 1 successes, 2 banes (with Strain)",
+    message: "Empathy - 1 success, 2 banes (with Strain)",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });
 

@@ -178,7 +178,7 @@ test("buildRollToastPayload formats local roll and push messages", () => {
   assert.equal(rolled.total, "3");
 
   assert.equal(pushed.title, "Push Result");
-  assert.equal(pushed.breakdown, "1 successes, 1 banes (with Strain)");
+  assert.equal(pushed.breakdown, "1 success, 1 bane (with Strain)");
   assert.equal(pushed.total, "1");
 });
 
@@ -214,7 +214,7 @@ test("formatRollOutcomeSummary uses a consistent successes/banes format", () => 
       banes: 1,
       hasStrain: true,
     }),
-    "1 successes, 1 banes (with Strain)",
+    "1 success, 1 bane (with Strain)",
   );
 });
 
@@ -236,7 +236,7 @@ test("formatRollHistorySummary prefixes roll and push outcomes", () => {
       banes: 3,
       hasStrain: true,
     }),
-    "Push result - 1 successes, 3 banes (with Strain)",
+    "Push result - 1 success, 3 banes (with Strain)",
   );
 });
 
@@ -249,7 +249,7 @@ test("formatRollHistorySummary includes roll type when provided", () => {
       banes: 1,
       hasStrain: false,
     }),
-    "Roll result - Hoodwink (Empathy) - 2 successes, 1 banes",
+    "Roll result - Hoodwink (Empathy) - 2 successes, 1 bane",
   );
 });
 

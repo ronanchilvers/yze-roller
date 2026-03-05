@@ -87,7 +87,7 @@ test("completed rolls add roll type labels to history entries", () => {
 
   expect(captured.currentRoll?.rollTypeLabel).toBe("Sneak (Agility)");
   expect(captured.recentResults[0]?.summary).toBe(
-    "Roll result - Sneak (Agility) - 1 successes, 0 banes",
+    "Roll result - Sneak (Agility) - 1 success, 0 banes",
   );
 
   app.unmount();
@@ -145,7 +145,7 @@ test("push history entries keep the original roll type label", () => {
 
   expect(captured.currentRoll?.rollTypeLabel).toBe("Hoodwink (Empathy)");
   expect(captured.recentResults[0]?.summary).toBe(
-    "Push result - Hoodwink (Empathy) - 1 successes, 1 banes",
+    "Push result - Hoodwink (Empathy) - 1 success, 1 bane",
   );
 
   app.unmount();

@@ -25,6 +25,10 @@ const normalizeRollTypeLabel = (value) => {
   return normalizeString(value);
 };
 
+const formatCountLabel = (count, singular, plural) => {
+  return `${count} ${count === 1 ? singular : plural}`;
+};
+
 const normalizeCount = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -53,7 +57,11 @@ export const formatRollOutcomeSummary = (input) => {
   const successes = normalizeCount(source.successes);
   const banes = normalizeCount(source.banes);
   const withStrain = source.hasStrain ? " (with Strain)" : "";
-  return `${successes} successes, ${banes} banes${withStrain}`;
+  return `${formatCountLabel(successes, "success", "successes")}, ${formatCountLabel(
+    banes,
+    "bane",
+    "banes",
+  )}${withStrain}`;
 };
 
 const formatRollResultSummary = (normalizedEvent) => {
