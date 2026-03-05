@@ -183,7 +183,7 @@ test("renders pool tabs in manual, import, history order", () => {
   const tabLabels = Array.from(container.querySelectorAll(".pool-tabs .pool-tab")).map(
     (tab) => tab.textContent?.trim(),
   );
-  expect(tabLabels).toEqual(["Manual", "Import Character", "Roll History"]);
+  expect(tabLabels).toEqual(["Manual", "Character", "Roll History"]);
 
   unmount();
 });
@@ -296,7 +296,7 @@ test("switching to import tab shows JSON upload when no character is loaded", ()
     );
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -371,7 +371,7 @@ test("switching to import tab shows fields and actions for a loaded character", 
     root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -394,7 +394,7 @@ test("highlights the imported key attribute in the attribute summary", () => {
     root.render(<TestHarness />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -420,7 +420,7 @@ test("selecting a skill auto-selects the mapped attribute and locks attribute se
     root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -448,7 +448,7 @@ test("roll from import tab uses attribute and skill dice counts", () => {
     root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -474,7 +474,7 @@ test("skill rows show mapped attributes without brackets and with distinct attri
     root.render(<TestHarness />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -513,7 +513,7 @@ test("rolling a key attribute includes key attribute roll flag", () => {
     root.render(<TestHarness onRollWithCounts={onRollWithCounts} />);
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
@@ -547,7 +547,7 @@ test("import roll defers to primary action when in push mode", () => {
     );
   });
 
-  const importTab = getButtonByText(container, "Import Character");
+  const importTab = getButtonByText(container, "Character");
   act(() => {
     importTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });

@@ -232,7 +232,7 @@ const DicePoolPanel = ({
           aria-selected={activeTab === TAB_IMPORT}
           onClick={() => handleTabChange(TAB_IMPORT)}
         >
-          Import Character
+          Character
         </button>
         <button
           type="button"
