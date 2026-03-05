@@ -667,12 +667,19 @@ h2 {
 
   .top-bar-actions {
     width: 100%;
-    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: stretch;
   }
 
-  .theme-select,
-  .strain-pill {
+  .top-bar-actions .theme-select {
+    flex: 1 0 100%;
     width: 100%;
+  }
+
+  .top-bar-actions .strain-pill {
+    flex: 1 1 calc(50% - 0.4rem);
+    width: calc(50% - 0.4rem);
+    min-width: 0;
   }
 
   .control-grid {
