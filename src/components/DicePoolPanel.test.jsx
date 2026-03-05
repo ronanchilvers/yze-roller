@@ -435,6 +435,7 @@ test("selecting a skill auto-selects the mapped attribute and locks attribute se
     attributeDice: 2,
     skillDice: 3,
     isKeyAttributeRoll: false,
+    rollTypeLabel: "Sneak (Agility)",
   });
 
   unmount();
@@ -462,6 +463,7 @@ test("roll from import tab uses attribute and skill dice counts", () => {
     attributeDice: 3,
     skillDice: 2,
     isKeyAttributeRoll: false,
+    rollTypeLabel: "Streetwise (Wits)",
   });
 
   unmount();
@@ -524,6 +526,7 @@ test("rolling a key attribute includes key attribute roll flag", () => {
     attributeDice: 4,
     skillDice: 0,
     isKeyAttributeRoll: true,
+    rollTypeLabel: "Empathy",
   });
 
   unmount();

@@ -21,6 +21,10 @@ const normalizeSource = (value) => {
   return value === "remote" ? "remote" : "local";
 };
 
+const normalizeRollTypeLabel = (value) => {
+  return normalizeString(value);
+};
+
 const normalizeCount = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -52,6 +56,16 @@ export const formatRollOutcomeSummary = (input) => {
   return `${successes} successes, ${banes} banes${withStrain}`;
 };
 
+const formatRollResultSummary = (normalizedEvent) => {
+  const summary = formatRollOutcomeSummary(normalizedEvent);
+
+  if (!normalizedEvent.rollTypeLabel) {
+    return summary;
+  }
+
+  return `${normalizedEvent.rollTypeLabel} - ${summary}`;
+};
+
 /**
  * Formats a roll/push history line using normalized event semantics.
  *
@@ -61,7 +75,7 @@ export const formatRollOutcomeSummary = (input) => {
 export const formatRollHistorySummary = (event) => {
   const normalized = normalizeRollToastEvent(event);
   const actionLabel = normalized.action === "push" ? "Push result" : "Roll result";
-  return `${actionLabel} - ${formatRollOutcomeSummary(normalized)}`;
+  return `${actionLabel} - ${formatRollResultSummary(normalized)}`;
 };
 
 /**
@@ -75,6 +89,7 @@ export const formatRollHistorySummary = (event) => {
  *   actorId: string,
  *   actorName: string,
  *   action: "roll" | "push",
+ *   rollTypeLabel: string,
  *   successes: number,
  *   banes: number,
  *   hasStrain: boolean,
@@ -90,6 +105,7 @@ export const normalizeRollToastEvent = (input) => {
     actorId: normalizeString(source.actorId),
     actorName: normalizeString(source.actorName),
     action: normalizeAction(source.action),
+    rollTypeLabel: normalizeRollTypeLabel(source.rollTypeLabel),
     successes: normalizeCount(source.successes),
     banes: normalizeCount(source.banes),
     hasStrain: Boolean(source.hasStrain),
@@ -126,6 +142,7 @@ export const getRollToastDedupKey = (event) => {
     normalized.source,
     actorSegment,
     normalized.action,
+    normalized.rollTypeLabel || "generic",
     `s${normalized.successes}`,
     `b${normalized.banes}`,
     normalized.hasStrain ? "strain" : "clean",
@@ -150,7 +167,7 @@ export const getRollToastDedupKey = (event) => {
  */
 export const buildRollToastPayload = (event) => {
   const normalized = normalizeRollToastEvent(event);
-  const summary = formatRollOutcomeSummary(normalized);
+  const resultSummary = formatRollResultSummary(normalized);
 
   const title =
     normalized.source === "remote"
@@ -163,8 +180,8 @@ export const buildRollToastPayload = (event) => {
 
   return {
     title,
-    message: summary,
-    breakdown: summary,
+    message: resultSummary,
+    breakdown: resultSummary,
     total: String(normalized.successes),
     source: normalized.source,
     actorId: normalized.actorId,

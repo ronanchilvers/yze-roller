@@ -58,6 +58,7 @@ function App() {
   const [pendingRollCounts, setPendingRollCounts] = useState(null);
   const [pendingIncludeKeyAttributeDie, setPendingIncludeKeyAttributeDie] =
     useState(false);
+  const [pendingRollTypeLabel, setPendingRollTypeLabel] = useState(null);
   const [rollModifier, setRollModifier] = useState(0);
   const normalizedRollModifier = normalizeRollModifier(rollModifier);
   const formattedRollModifier =
@@ -172,6 +173,11 @@ function App() {
     setOverrideCounts(nextCounts);
     setPendingRollCounts(nextCounts);
     setPendingIncludeKeyAttributeDie(counts.isKeyAttributeRoll === true);
+    setPendingRollTypeLabel(
+      typeof counts.rollTypeLabel === "string" && counts.rollTypeLabel.trim()
+        ? counts.rollTypeLabel.trim()
+        : null,
+    );
   };
 
   const handleClearDice = () => {
@@ -179,6 +185,7 @@ function App() {
     setPendingRollCounts(null);
     setOverrideCounts(null);
     setPendingIncludeKeyAttributeDie(false);
+    setPendingRollTypeLabel(null);
     onClearDice();
   };
 
@@ -195,11 +202,21 @@ function App() {
       return;
     }
 
-    onRoll({ includeKeyAttributeDie: pendingIncludeKeyAttributeDie });
+    onRoll({
+      includeKeyAttributeDie: pendingIncludeKeyAttributeDie,
+      rollTypeLabel: pendingRollTypeLabel ?? undefined,
+    });
     setPendingRollCounts(null);
     setOverrideCounts(null);
     setPendingIncludeKeyAttributeDie(false);
-  }, [pendingRollCounts, isRolling, onRoll, pendingIncludeKeyAttributeDie]);
+    setPendingRollTypeLabel(null);
+  }, [
+    pendingRollCounts,
+    isRolling,
+    onRoll,
+    pendingIncludeKeyAttributeDie,
+    pendingRollTypeLabel,
+  ]);
 
   useEffect(() => {
     if (!currentRoll) {
@@ -219,6 +236,7 @@ function App() {
       eventId: localToastKey,
       source: "local",
       action: currentRoll?.action,
+      rollTypeLabel: currentRoll?.rollTypeLabel,
       successes: currentRoll?.outcomes?.successes,
       banes: currentRoll?.outcomes?.banes,
       hasStrain: currentRoll?.outcomes?.hasStrain,

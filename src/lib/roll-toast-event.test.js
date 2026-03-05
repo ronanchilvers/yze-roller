@@ -26,6 +26,7 @@ test("normalizeRollToastEvent normalizes a valid local event", () => {
     actorId: "",
     actorName: "",
     action: "roll",
+    rollTypeLabel: "",
     successes: 3,
     banes: 1,
     hasStrain: false,
@@ -39,6 +40,7 @@ test("normalizeRollToastEvent normalizes valid remote actor data", () => {
     actorId: "Player-42",
     actorName: "Alex",
     action: "push",
+    rollTypeLabel: "Scout (Wits)",
     successes: 4.9,
     banes: 0.2,
     hasStrain: 1,
@@ -51,6 +53,7 @@ test("normalizeRollToastEvent normalizes valid remote actor data", () => {
     actorId: "Player-42",
     actorName: "Alex",
     action: "push",
+    rollTypeLabel: "Scout (Wits)",
     successes: 4,
     banes: 0,
     hasStrain: true,
@@ -79,6 +82,7 @@ test("normalizeRollToastEvent applies non-throwing fallbacks for malformed input
     actorId: "",
     actorName: "",
     action: "roll",
+    rollTypeLabel: "",
     successes: 0,
     banes: 0,
     hasStrain: false,
@@ -129,6 +133,28 @@ test("getRollToastDedupKey is stable and unique across different buckets", () =>
   assert.notEqual(first, third);
 });
 
+test("getRollToastDedupKey differs for different roll types in the same bucket", () => {
+  const baseEvent = {
+    source: "local",
+    action: "roll",
+    successes: 2,
+    banes: 1,
+    hasStrain: false,
+    occurredAt: 4000,
+  };
+
+  const sneakKey = getRollToastDedupKey({
+    ...baseEvent,
+    rollTypeLabel: "Sneak (Agility)",
+  });
+  const hoodwinkKey = getRollToastDedupKey({
+    ...baseEvent,
+    rollTypeLabel: "Hoodwink (Empathy)",
+  });
+
+  assert.notEqual(sneakKey, hoodwinkKey);
+});
+
 test("buildRollToastPayload formats local roll and push messages", () => {
   const rolled = buildRollToastPayload({
     source: "local",
@@ -154,6 +180,22 @@ test("buildRollToastPayload formats local roll and push messages", () => {
   assert.equal(pushed.title, "Push Result");
   assert.equal(pushed.breakdown, "1 successes, 1 banes (with Strain)");
   assert.equal(pushed.total, "1");
+});
+
+test("buildRollToastPayload prefixes the roll type in the message when provided", () => {
+  const payload = buildRollToastPayload({
+    source: "local",
+    action: "roll",
+    rollTypeLabel: "Sneak (Agility)",
+    successes: 3,
+    banes: 2,
+    hasStrain: false,
+    occurredAt: 999,
+  });
+
+  assert.equal(payload.title, "Roll Result");
+  assert.equal(payload.message, "Sneak (Agility) - 3 successes, 2 banes");
+  assert.equal(payload.breakdown, "Sneak (Agility) - 3 successes, 2 banes");
 });
 
 test("formatRollOutcomeSummary uses a consistent successes/banes format", () => {
@@ -195,6 +237,19 @@ test("formatRollHistorySummary prefixes roll and push outcomes", () => {
       hasStrain: true,
     }),
     "Push result - 1 successes, 3 banes (with Strain)",
+  );
+});
+
+test("formatRollHistorySummary includes roll type when provided", () => {
+  assert.equal(
+    formatRollHistorySummary({
+      action: "roll",
+      rollTypeLabel: "Hoodwink (Empathy)",
+      successes: 2,
+      banes: 1,
+      hasStrain: false,
+    }),
+    "Roll result - Hoodwink (Empathy) - 2 successes, 1 banes",
   );
 });
 

@@ -22,6 +22,7 @@ vi.mock("./components/DicePoolPanel.jsx", () => ({
             attributeDice: 4,
             skillDice: 2,
             isKeyAttributeRoll: true,
+            rollTypeLabel: "Empathy",
           })
         }
       >
@@ -34,6 +35,7 @@ vi.mock("./components/DicePoolPanel.jsx", () => ({
           onRollWithCounts?.({
             attributeDice: 4,
             skillDice: 2,
+            rollTypeLabel: "Sneak (Agility)",
           })
         }
       >
@@ -173,6 +175,7 @@ test("emits one local roll toast for a newly resolved roll and skips duplicates"
         banes: 1,
         hasStrain: false,
       },
+      rollTypeLabel: "Sneak (Agility)",
       pushableDiceIds: [],
       dice: [],
     },
@@ -183,7 +186,7 @@ test("emits one local roll toast for a newly resolved roll and skips duplicates"
   expect(mocks.diceResult).toHaveBeenCalledTimes(1);
   expect(mocks.diceResult).toHaveBeenCalledWith({
     title: "Roll Result",
-    message: "2 successes, 1 banes",
+    message: "Sneak (Agility) - 2 successes, 1 banes",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });
 
@@ -268,6 +271,7 @@ test("emits push result toast with strain summary", () => {
         banes: 2,
         hasStrain: true,
       },
+      rollTypeLabel: "Empathy",
       pushableDiceIds: [],
       dice: [],
     },
@@ -279,7 +283,7 @@ test("emits push result toast with strain summary", () => {
   expect(mocks.diceResult).toHaveBeenCalledTimes(1);
   expect(mocks.diceResult).toHaveBeenCalledWith({
     title: "Push Result",
-    message: "1 successes, 2 banes (with Strain)",
+    message: "Empathy - 1 successes, 2 banes (with Strain)",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });
 
@@ -377,7 +381,10 @@ test("import roll with key attribute requests bonus key attribute die", () => {
     rollWithKeyButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
-  expect(onRoll).toHaveBeenCalledWith({ includeKeyAttributeDie: true });
+  expect(onRoll).toHaveBeenCalledWith({
+    includeKeyAttributeDie: true,
+    rollTypeLabel: "Empathy",
+  });
 
   app.unmount();
 });
@@ -398,7 +405,10 @@ test("import roll without key attribute requests a standard roll", () => {
     rollNoKeyButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
-  expect(onRoll).toHaveBeenCalledWith({ includeKeyAttributeDie: false });
+  expect(onRoll).toHaveBeenCalledWith({
+    includeKeyAttributeDie: false,
+    rollTypeLabel: "Sneak (Agility)",
+  });
 
   app.unmount();
 });
@@ -417,6 +427,7 @@ test("exposes remote roll ingestion seam and emits remote actor toast payload", 
       source: "local",
       actorId: "Watcher",
       action: "push",
+      rollTypeLabel: "Scout (Wits)",
       successes: 3,
       banes: 2,
       hasStrain: true,
@@ -427,7 +438,7 @@ test("exposes remote roll ingestion seam and emits remote actor toast payload", 
   expect(mocks.diceResult).toHaveBeenCalledTimes(1);
   expect(mocks.diceResult).toHaveBeenCalledWith({
     title: "Watcher pushed",
-    message: "3 successes, 2 banes (with Strain)",
+    message: "Scout (Wits) - 3 successes, 2 banes (with Strain)",
     duration: DEFAULT_DICE_RESULT_DURATION_MS,
   });
 

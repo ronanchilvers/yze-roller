@@ -1,5 +1,13 @@
 import { summarizeRoll } from "./dice.js";
 
+const normalizeRollTypeLabel = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
+};
+
 /**
  * Validates the shape of a rollRequest object from useRollSession.
  * Guards against malformed objects that could cause silent failures or
@@ -94,11 +102,13 @@ export const createRollSnapshot = (rollResult, options = {}) => {
     ? options.rolledAt
     : Date.now();
   const action = options.action === "push" ? "push" : "roll";
+  const rollTypeLabel = normalizeRollTypeLabel(options.rollTypeLabel);
 
   return {
     ...summary,
     action,
     rolledAt,
+    rollTypeLabel,
   };
 };
 
@@ -106,6 +116,7 @@ export const transitionWithRoll = (sessionState, rollResult, options = {}) => {
   const snapshot = createRollSnapshot(rollResult, {
     action: "roll",
     rolledAt: options.rolledAt,
+    rollTypeLabel: options.rollTypeLabel,
   });
   const normalizedSession = normalizeSession(sessionState);
 
@@ -132,6 +143,9 @@ export const transitionWithPush = (sessionState, pushResult, options = {}) => {
   const snapshot = createRollSnapshot(pushResult, {
     action: "push",
     rolledAt: options.rolledAt,
+    rollTypeLabel:
+      normalizeRollTypeLabel(options.rollTypeLabel) ||
+      normalizeRollTypeLabel(normalizedSession.currentRoll?.rollTypeLabel),
   });
 
   if (!snapshot) {

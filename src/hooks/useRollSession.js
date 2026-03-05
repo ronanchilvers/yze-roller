@@ -16,6 +16,14 @@ import { useLatestRef } from "./useLatestRef.js";
 
 const MAX_PREVIOUS_RESULTS = 10;
 
+const normalizeRollTypeLabel = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
+};
+
 /**
  * Creates a history entry for a completed roll.
  *
@@ -29,6 +37,7 @@ const createHistoryEntry = (roll, key, rolledAt) => {
     id: `${key}-${rolledAt}`,
     summary: formatRollHistorySummary({
       action: roll?.action,
+      rollTypeLabel: roll?.rollTypeLabel,
       successes: roll?.outcomes?.successes,
       banes: roll?.outcomes?.banes,
       hasStrain: roll?.outcomes?.hasStrain,
@@ -56,7 +65,7 @@ const createHistoryEntry = (roll, key, rolledAt) => {
  *   setIsHistoryOpen: (value: boolean) => void,
  *   isRolling: boolean,
  *   canPush: boolean,
- *   onRoll: (options?: { includeKeyAttributeDie?: boolean }) => void,
+ *   onRoll: (options?: { includeKeyAttributeDie?: boolean, rollTypeLabel?: string }) => void,
  *   onPush: () => void,
  *   onClearDice: () => void,
  *   onRollResolved: (resolution: object) => void
@@ -112,6 +121,7 @@ export const useRollSession = ({
       dice: dicePool,
       rerollIds: dicePool.map((die) => die.id),
       startedAt: Date.now(),
+      rollTypeLabel: normalizeRollTypeLabel(options?.rollTypeLabel),
     });
   };
 
@@ -130,6 +140,7 @@ export const useRollSession = ({
       dice: currentRoll?.dice ?? [],
       rerollIds: currentRoll?.pushableDiceIds ?? [],
       startedAt: Date.now(),
+      rollTypeLabel: normalizeRollTypeLabel(currentRoll?.rollTypeLabel),
     });
   };
 
@@ -168,6 +179,9 @@ export const useRollSession = ({
       if (resolution.action === "push") {
         nextState = transitionWithPush(currentSession, resolvedRoll, {
           rolledAt,
+          rollTypeLabel: normalizeRollTypeLabel(
+            currentSession.currentRoll?.rollTypeLabel,
+          ),
         });
         const isFirstPush = currentSession.currentRoll?.action !== "push";
         const baneIncrease = calculateBaneIncrease(
@@ -179,6 +193,7 @@ export const useRollSession = ({
       } else {
         nextState = transitionWithRoll(currentSession, resolvedRoll, {
           rolledAt,
+          rollTypeLabel: normalizeRollTypeLabel(activeRequest?.rollTypeLabel),
         });
       }
 
