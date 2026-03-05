@@ -467,7 +467,7 @@ test("roll from import tab uses attribute and skill dice counts", () => {
   unmount();
 });
 
-test("skill rows show bracketed skill and attribute counts and combined total buttons", () => {
+test("skill rows show skill and attribute labels with badge counts and combined total buttons", () => {
   const { container, root, unmount } = createContainer();
 
   act(() => {
@@ -485,13 +485,16 @@ test("skill rows show bracketed skill and attribute counts and combined total bu
   const attributeLabels = Array.from(
     container.querySelectorAll(".import-summary-skill-attribute"),
   ).map((node) => node.textContent?.trim());
+  const normalizeLabel = (value) => value?.replace(/\s+/g, " ").trim();
+  const normalizedSkillLabels = skillLabels.map(normalizeLabel);
+  const normalizedAttributeLabels = attributeLabels.map(normalizeLabel);
 
-  expect(skillLabels).toContain("Sneak [3]");
-  expect(skillLabels).toContain("Streetwise [2]");
-  expect(skillLabels).toContain("Hoodwink [2]");
-  expect(attributeLabels).toContain("Agility [2]");
-  expect(attributeLabels).toContain("Wits [3]");
-  expect(attributeLabels).toContain("Empathy [5]");
+  expect(normalizedSkillLabels).toContain("Sneak3");
+  expect(normalizedSkillLabels).toContain("Streetwise2");
+  expect(normalizedSkillLabels).toContain("Hoodwink2");
+  expect(normalizedAttributeLabels).toContain("Agility2");
+  expect(normalizedAttributeLabels).toContain("Wits3");
+  expect(normalizedAttributeLabels).toContain("Empathy5");
   expect(getSkillButton(container, "Sneak")?.textContent?.trim()).toBe("5");
   expect(getSkillButton(container, "Streetwise")?.textContent?.trim()).toBe("5");
   expect(getSkillButton(container, "Hoodwink")?.textContent?.trim()).toBe("7");

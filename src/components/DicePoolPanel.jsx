@@ -232,9 +232,13 @@ const DicePoolPanel = ({
     return (
       <li key={skill}>
         <span className="import-summary-skill-label-group">
-          <span className="import-summary-skill-label">{skill}<span>{skillValue}</span></span>
+          <span className="import-summary-skill-label">
+            {skill}
+            <span>{skillValue}</span>
+          </span>
           <span className="import-summary-skill-attribute">
-            {attributeLabel}<span>{displayAttributeValue}</span>
+            {attributeLabel}
+            <span>{displayAttributeValue}</span>
           </span>
         </span>{" "}
         <button
