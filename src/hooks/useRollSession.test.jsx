@@ -150,3 +150,44 @@ test("push history entries keep the original roll type label", () => {
 
   app.unmount();
 });
+
+test("history keeps only the 10 most recent rolls", () => {
+  let captured;
+  const app = createContainer();
+
+  app.render(
+    <CaptureRollSession
+      onCapture={(session) => {
+        captured = session;
+      }}
+    />,
+  );
+
+  for (let index = 1; index <= 11; index += 1) {
+    act(() => {
+      captured.onRoll({ rollTypeLabel: `Roll ${index}` });
+    });
+
+    const requestKey = captured.rollRequest?.key;
+    expect(requestKey).toBeDefined();
+
+    act(() => {
+      captured.onRollResolved({
+        key: requestKey,
+        action: "roll",
+        rolledAt: index,
+        dice: [{ id: `attribute-${index}`, type: "attribute", face: 6 }],
+      });
+    });
+  }
+
+  expect(captured.recentResults).toHaveLength(10);
+  expect(captured.recentResults[0]?.summary).toBe(
+    "Roll result - Roll 11 - 1 success, 0 banes",
+  );
+  expect(captured.recentResults[9]?.summary).toBe(
+    "Roll result - Roll 2 - 1 success, 0 banes",
+  );
+
+  app.unmount();
+});

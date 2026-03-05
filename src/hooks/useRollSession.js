@@ -206,7 +206,7 @@ export const useRollSession = ({
           rolledAt,
         );
         setRecentResults((current) =>
-          [entry, ...current].slice(0, MAX_PREVIOUS_RESULTS + 1),
+          [entry, ...current].slice(0, MAX_PREVIOUS_RESULTS),
         );
       }
       setRollRequest(null);
