@@ -483,6 +483,15 @@ h2 {
   margin-left: 1rem;
 }
 
+.import-summary-skill-label span,
+.import-summary-skill-attribute span {
+    padding: 0 0.25rem;
+    margin-left: 0.25rem;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+    background: var(--summary-pill-bg);
+}
+
 .import-summary-content li .import-summary-attribute-label.is-key-attribute {
   color: var(--accent);
   font-weight: 700;
