@@ -36,6 +36,19 @@ const buildAttributeKeyFromLabel = (label) => {
   );
 };
 
+const buildRollTypeLabel = ({ attributeKey, skillKey = null, attributeLabel = null }) => {
+  const normalizedSkill = String(skillKey ?? "").trim();
+  const normalizedAttributeLabel = String(attributeLabel ?? "").trim();
+
+  if (normalizedSkill) {
+    return normalizedAttributeLabel
+      ? `${normalizedSkill} (${normalizedAttributeLabel})`
+      : normalizedSkill;
+  }
+
+  return buildAttributeLabel(attributeKey);
+};
+
 const DicePoolPanel = ({
   attributeDice,
   skillDice,
@@ -162,6 +175,9 @@ const DicePoolPanel = ({
       return;
     }
     const isKeyAttributeRoll = character?.keyAttributeKey === attributeKey;
+    const attributeLabel = skillKey
+      ? character?.skillAttributes?.[skillKey] ?? null
+      : null;
 
     onSelectAttribute?.(attributeKey);
     onSelectSkill?.(skillKey);
@@ -174,6 +190,11 @@ const DicePoolPanel = ({
         attributeDice: attributeValue,
         skillDice: skillValue,
         isKeyAttributeRoll,
+        rollTypeLabel: buildRollTypeLabel({
+          attributeKey,
+          skillKey,
+          attributeLabel,
+        }),
       });
       return;
     }

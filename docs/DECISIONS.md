@@ -101,3 +101,9 @@
   - **Decision:** Add a `Roll History` tab in `DicePoolPanel`, feed it from existing local `recentResults`, keep `Clear Dice` from wiping history, and centralize summary wording in `roll-toast-event` with history format `Roll|Push result - X successes, Y banes (with Strain)`.
   - **Consequences:** History and toast wording stay consistent, feature scope remains local-only (remote bridge events still toast-only), and no persistence model changes were introduced.
   - **Alternatives considered:** Include remote bridge events in history or clear history on `Clear Dice` (both rejected to keep scope and behavior aligned with current local session flow).
+
+- **2026-03-05 — Roll results include named roll type only when the source is explicit**
+  - **Context:** Toasts and roll history needed to show what was rolled, but the current manual tab stores only numeric dice counts while imported quick-rolls have explicit attribute/skill names at selection time.
+  - **Decision:** Add optional `rollTypeLabel` metadata to the local roll request/session/event path, populate it for imported quick-rolls as `Attribute` or `Skill (Attribute)`, preserve it across pushes, and prefix toast/history result text with it when present. Keep manual-tab rolls generic until the UI captures explicit names there.
+  - **Consequences:** Named imported rolls and their pushes now produce clearer result text without inventing ambiguous labels for manual rolls; remote integrations can opt into the same output by supplying `rollTypeLabel`.
+  - **Alternatives considered:** Infer manual labels from numeric counts (rejected as ambiguous) and change toast titles instead of result text (rejected to preserve current title structure).

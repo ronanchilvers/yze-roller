@@ -17,11 +17,12 @@ test("createRollSnapshot returns normalized summary data", () => {
         { id: "s-1", type: "skill", face: 2 },
       ],
     },
-    { action: "roll", rolledAt: 42 },
+    { action: "roll", rolledAt: 42, rollTypeLabel: "Sneak (Agility)" },
   );
 
   assert.equal(snapshot.action, "roll");
   assert.equal(snapshot.rolledAt, 42);
+  assert.equal(snapshot.rollTypeLabel, "Sneak (Agility)");
   assert.deepEqual(snapshot.outcomes, {
     successes: 1,
     banes: 0,
@@ -54,6 +55,18 @@ test("transitionWithRoll shifts current roll into previous roll", () => {
   assert.equal(second.currentRoll.outcomes.successes, 1);
 });
 
+test("transitionWithRoll preserves the roll type label", () => {
+  const rolled = transitionWithRoll(
+    {},
+    {
+      dice: [{ id: "a-1", type: "attribute", face: 6 }],
+    },
+    { rolledAt: 150, rollTypeLabel: "Empathy" },
+  );
+
+  assert.equal(rolled.currentRoll.rollTypeLabel, "Empathy");
+});
+
 test("transitionWithPush updates session only when current roll can push", () => {
   const rolled = transitionWithRoll(
     {},
@@ -81,6 +94,32 @@ test("transitionWithPush updates session only when current roll can push", () =>
   assert.equal(pushed.currentRoll.action, "push");
   assert.equal(pushed.currentRoll.rolledAt, 201);
   assert.equal(pushed.currentRoll.outcomes.banes, 1);
+});
+
+test("transitionWithPush preserves the original roll type label", () => {
+  const rolled = transitionWithRoll(
+    {},
+    {
+      dice: [
+        { id: "a-1", type: "attribute", face: 6 },
+        { id: "s-1", type: "skill", face: 2 },
+      ],
+    },
+    { rolledAt: 210, rollTypeLabel: "Sneak (Agility)" },
+  );
+
+  const pushed = transitionWithPush(
+    rolled,
+    {
+      dice: [
+        { id: "a-1", type: "attribute", face: 6 },
+        { id: "s-1", type: "skill", face: 1 },
+      ],
+    },
+    { rolledAt: 211 },
+  );
+
+  assert.equal(pushed.currentRoll.rollTypeLabel, "Sneak (Agility)");
 });
 
 test("transitionWithPush is a no-op when no pushable dice exist", () => {

@@ -5,7 +5,7 @@ import { getDieColor } from "./dice-visuals.js";
 
 test("getDieColor resolves known and fallback types", () => {
   assert.equal(getDieColor(DICE_TYPE.ATTRIBUTE), "#55aa5f");
-  assert.equal(getDieColor(DICE_TYPE.KEY_ATTRIBUTE), "#12411a");
+  assert.equal(getDieColor(DICE_TYPE.KEY_ATTRIBUTE), "#185922");
   assert.equal(getDieColor(DICE_TYPE.SKILL), "#e1c74b");
   assert.equal(getDieColor(DICE_TYPE.STRAIN), "#d15c5c");
   assert.equal(getDieColor(DICE_TYPE.MODIFIER), "#7a4cc9");
